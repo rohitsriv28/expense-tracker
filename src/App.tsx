@@ -17,16 +17,20 @@ function App() {
 
   // Handle network status changes
   useEffect(() => {
-    if (isOffline !== lastOnlineStatus) {
+    // Only show toast when status actually changes
+    if (lastOnlineStatus !== null && isOffline !== lastOnlineStatus) {
       setShowNetworkToast(true);
       setLastOnlineStatus(isOffline);
 
-      // Auto-dismiss toast after 5 seconds
+      // Auto-dismiss toast after 3 seconds
       const timer = setTimeout(() => {
         setShowNetworkToast(false);
-      }, 5000);
+      }, 3000);
 
       return () => clearTimeout(timer);
+    } else if (lastOnlineStatus === null) {
+      // Initialize on first load
+      setLastOnlineStatus(isOffline);
     }
   }, [isOffline, lastOnlineStatus]);
 
