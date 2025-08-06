@@ -40,7 +40,7 @@ export interface Expense {
   editCount: number;
   createdAt?: Timestamp; // Optional: track when expense was created
   updatedAt?: Timestamp; // Optional: track when expense was last updated
-  category?: string; // Optional: expense category
+  category?: string; 
   tags?: string[]; // Optional: expense tags for better organization
 }
 
