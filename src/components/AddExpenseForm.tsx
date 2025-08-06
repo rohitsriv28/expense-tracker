@@ -2,7 +2,7 @@ import { useState } from "react";
 import { addExpense } from "../services/expenseService";
 import { Timestamp } from "firebase/firestore";
 import { useAuth } from "../services/authService";
-import { Plus, Calendar, DollarSign, FileText } from "lucide-react";
+import { Plus, Calendar, IndianRupee, FileText } from "lucide-react";
 
 export default function AddExpenseForm() {
   const [amount, setAmount] = useState("");
@@ -66,7 +66,7 @@ export default function AddExpenseForm() {
               Amount
             </label>
             <div className="relative">
-              <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <IndianRupee className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="number"
                 step="0.01"

@@ -1,6 +1,6 @@
 import type { Expense } from "../services/firebase";
 import { getCurrentMonth, getWeekRange } from "../utils/dateUtils";
-import { Calendar, TrendingUp, DollarSign, BarChart3 } from "lucide-react";
+import { Calendar, TrendingUp, IndianRupee, BarChart3 } from "lucide-react";
 
 interface InsightsSummaryProps {
   expenses: Expense[];
@@ -68,7 +68,7 @@ export default function InsightsSummary({ expenses }: InsightsSummaryProps) {
   return (
     <div className="mb-8">
       <div className="flex items-center mb-6">
-        <DollarSign className="w-6 h-6 text-gray-600 mr-2" />
+        <IndianRupee className="w-6 h-6 text-gray-600 mr-2" />
         <h2 className="text-xl font-semibold text-gray-800">
           Spending Overview
         </h2>

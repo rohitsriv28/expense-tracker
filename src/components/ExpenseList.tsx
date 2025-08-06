@@ -6,7 +6,7 @@ import {
   Edit3,
   Save,
   Calendar,
-  Receipt,
+  ReceiptIndianRupee,
   AlertCircle,
   CheckCircle,
 } from "lucide-react";
@@ -56,7 +56,7 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
   if (expenses.length === 0) {
     return (
       <div className="text-center py-12">
-        <Receipt className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+        <ReceiptIndianRupee className="w-16 h-16 text-gray-300 mx-auto mb-4" />
         <h3 className="text-lg font-medium text-gray-500 mb-2">
           No expenses yet
         </h3>
@@ -68,7 +68,7 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
   return (
     <div className="space-y-4">
       <div className="flex items-center mb-6 p-4">
-        <Receipt className="w-6 h-6 text-gray-600 mr-2" />
+        <ReceiptIndianRupee className="w-6 h-6 text-gray-600 mr-2" />
         <h2 className="text-xl font-semibold text-gray-800">Recent Expenses</h2>
         <span className="ml-auto bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-medium">
           {expenses.length} {expenses.length === 1 ? "expense" : "expenses"}

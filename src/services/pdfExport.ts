@@ -15,618 +15,372 @@ interface CompanyInfo {
   logo?: Uint8Array;
 }
 
+/**
+ * Generates a professional PDF expense report.
+ * @param expenses Array of expense objects.
+ * @param companyInfo Optional company information for header.
+ * @param reportTitle Optional report title.
+ * @returns PDF bytes as Uint8Array.
+ */
 export const generateExpensePDF = async (
   expenses: Expense[],
   companyInfo?: CompanyInfo,
-  reportTitle: string = "Expense Report"
-) => {
+  reportTitle = "Expense Report"
+): Promise<Uint8Array> => {
   const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage(PageSizes.A4);
+  let page = pdfDoc.addPage(PageSizes.A4);
   const { width, height } = page.getSize();
 
-  // Font setup
+  // Embed fonts
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-  // Professional color scheme - Red, Black, Grey
-  const primaryRed = rgb(0.8, 0.1, 0.1); // Professional red
-  const darkRed = rgb(0.6, 0.05, 0.05); // Darker red for accents
-  const charcoalBlack = rgb(0.1, 0.1, 0.1); // Almost black
-  const darkGrey = rgb(0.3, 0.3, 0.3); // Dark grey
-  const mediumGrey = rgb(0.5, 0.5, 0.5); // Medium grey
-  const lightGrey = rgb(0.9, 0.9, 0.9); // Light grey
-  const veryLightGrey = rgb(0.95, 0.95, 0.95); // Very light grey
-  const white = rgb(1, 1, 1); // Pure white
-
-  // Better margin system
-  const margins = {
-    top: 50,
-    bottom: 60,
-    left: 50,
-    right: 50,
+  // Color palette
+  const colors = {
+    primary: rgb(0.8, 0.1, 0.1),
+    accent: rgb(0.6, 0.05, 0.05),
+    black: rgb(0.1, 0.1, 0.1),
+    greyDark: rgb(0.3, 0.3, 0.3),
+    greyMid: rgb(0.5, 0.5, 0.5),
+    greyLight: rgb(0.9, 0.9, 0.9),
+    greyLighter: rgb(0.95, 0.95, 0.95),
+    white: rgb(1, 1, 1),
   };
 
-  const contentWidth = width - margins.left - margins.right;
-  let currentY = height - margins.top;
+  // Margins
+  const margin = { top: 50, bottom: 60, left: 50, right: 50 };
+  const contentWidth = width - margin.left - margin.right;
+  let cursorY = height - margin.top;
 
-  // Helper functions with improved spacing
-  const drawLine = (
-    y: number,
-    color = mediumGrey,
-    thickness = 0.5,
-    leftOffset = 0,
-    rightOffset = 0
-  ) => {
+  // Helpers
+  const drawLine = (y: number, color = colors.greyMid, thickness = 0.5) =>
     page.drawLine({
-      start: { x: margins.left + leftOffset, y },
-      end: { x: width - margins.right - rightOffset, y },
-      thickness,
+      start: { x: margin.left, y },
+      end: { x: width - margin.right, y },
       color,
+      thickness,
     });
-  };
 
-  const drawBackground = (
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    color = lightGrey
-  ) => {
+  const drawBox = (x: number, y: number, w: number, h: number, color: any) =>
     page.drawRectangle({ x, y, width: w, height: h, color });
-  };
 
-  // ENHANCED HEADER SECTION
-  const headerHeight = 80;
-
-  // Main header background
-  drawBackground(
-    0,
-    currentY - headerHeight + 20,
-    width,
-    headerHeight,
-    charcoalBlack
-  );
-
-  // Red accent stripe at top
-  drawBackground(0, currentY - 5, width, 5, primaryRed);
-
-  // Company/Header content with better spacing
-  currentY -= 20;
+  // --- Header ---
+  const headerH = 80;
+  drawBox(0, cursorY - headerH + 20, width, headerH, colors.black);
+  drawBox(0, cursorY - 5, width, 5, colors.primary);
+  cursorY -= 25;
 
   if (companyInfo) {
-    // Company name with proper spacing
     page.drawText(companyInfo.name.toUpperCase(), {
-      x: margins.left + 15,
-      y: currentY,
+      x: margin.left + 15,
+      y: cursorY,
       size: 18,
       font: boldFont,
-      color: white,
+      color: colors.white,
     });
-
-    currentY -= 22;
-
-    // Address with better formatting
+    cursorY -= 22;
     page.drawText(companyInfo.address, {
-      x: margins.left + 15,
-      y: currentY,
+      x: margin.left + 15,
+      y: cursorY,
       size: 9,
       font: regularFont,
-      color: rgb(0.8, 0.8, 0.8),
+      color: colors.greyLight,
     });
-
-    // Contact info on same line if available
     if (companyInfo.phone || companyInfo.email) {
-      currentY -= 12;
-      const contactInfo = [companyInfo.phone, companyInfo.email]
+      cursorY -= 12;
+      const contact = [companyInfo.phone, companyInfo.email]
         .filter(Boolean)
-        .join("  |  ");
-      page.drawText(contactInfo, {
-        x: margins.left + 15,
-        y: currentY,
+        .join(" | ");
+      page.drawText(contact, {
+        x: margin.left + 15,
+        y: cursorY,
         size: 8,
         font: regularFont,
-        color: rgb(0.7, 0.7, 0.7),
+        color: colors.greyMid,
       });
     }
   } else {
-    // Default header
-    page.drawText("EXPENSE MANAGEMENT SYSTEM", {
-      x: margins.left + 15,
-      y: currentY,
+    page.drawText("CASHFLOW", {
+      x: margin.left + 15,
+      y: cursorY,
       size: 16,
       font: boldFont,
-      color: white,
+      color: colors.white,
     });
-    currentY -= 18;
-    page.drawText("Professional Financial Reporting", {
-      x: margins.left + 15,
-      y: currentY,
+    cursorY -= 18;
+    page.drawText("Expense Tracking & Reporting", {
+      x: margin.left + 15,
+      y: cursorY,
       size: 9,
       font: regularFont,
-      color: rgb(0.8, 0.8, 0.8),
+      color: colors.greyLight,
     });
   }
+  cursorY -= 40;
 
-  currentY -= 40;
-
-  // TITLE SECTION WITH IMPROVED LAYOUT
-  const titleSectionHeight = 50;
-
-  // Title background with better proportions
-  drawBackground(
-    margins.left - 10,
-    currentY - titleSectionHeight + 15,
+  // --- Title ---
+  const titleH = 50;
+  drawBox(
+    margin.left - 10,
+    cursorY - titleH + 15,
     contentWidth + 20,
-    titleSectionHeight,
-    veryLightGrey
+    titleH,
+    colors.greyLighter
   );
-
-  // Red accent line on left
-  drawBackground(
-    margins.left - 10,
-    currentY - titleSectionHeight + 15,
-    4,
-    titleSectionHeight,
-    primaryRed
-  );
-
-  // Title text with better positioning
+  drawBox(margin.left - 10, cursorY - titleH + 15, 4, titleH, colors.primary);
   page.drawText(reportTitle.toUpperCase(), {
-    x: margins.left + 10,
-    y: currentY - 5,
+    x: margin.left + 10,
+    y: cursorY - 5,
     size: 24,
     font: boldFont,
-    color: charcoalBlack,
+    color: colors.black,
   });
-
-  // Report metadata - properly aligned
-  const today = new Date();
-  const reportDate = today.toLocaleDateString("en-IN", {
+  const dateStr = new Date().toLocaleDateString("en-IN", {
     day: "2-digit",
     month: "short",
     year: "numeric",
   });
-
-  const metadataX = width - margins.right - 150;
-  page.drawText(`Generated: ${reportDate}`, {
-    x: metadataX,
-    y: currentY - 5,
+  page.drawText(`Date: ${dateStr}`, {
+    x: width - margin.right - 150,
+    y: cursorY - 5,
     size: 8,
     font: regularFont,
-    color: mediumGrey,
+    color: colors.greyMid,
   });
+  cursorY -= 70;
 
-  page.drawText(`Doc ID: EXP-${Date.now().toString().slice(-6)}`, {
-    x: metadataX,
-    y: currentY - 18,
-    size: 8,
-    font: regularFont,
-    color: mediumGrey,
-  });
-
-  currentY -= 70;
-
-  // IMPROVED SUMMARY SECTION
+  // --- Summary Section ---
   const total = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const avgExpense = expenses.length > 0 ? total / expenses.length : 0;
-
-  // Section header with better styling
-  const sectionHeaderHeight = 25;
-  drawBackground(
-    margins.left - 10,
-    currentY - sectionHeaderHeight + 10,
+  const avg = expenses.length ? total / expenses.length : 0;
+  drawBox(
+    margin.left - 10,
+    cursorY - 25 + 10,
     contentWidth + 20,
-    sectionHeaderHeight,
-    primaryRed
+    25,
+    colors.primary
   );
-
   page.drawText("FINANCIAL SUMMARY", {
-    x: margins.left,
-    y: currentY - 8,
+    x: margin.left,
+    y: cursorY - 8,
     size: 11,
     font: boldFont,
-    color: white,
+    color: colors.white,
   });
+  cursorY -= 40;
 
-  currentY -= 40;
-
-  // Summary cards with better proportions and spacing
-  const cardSpacing = 15;
-  const cardWidth = (contentWidth - cardSpacing * 2) / 3;
-  const cardHeight = 45;
-
-  // Card positions
-  const card1X = margins.left;
-  const card2X = margins.left + cardWidth + cardSpacing;
-  const card3X = margins.left + (cardWidth + cardSpacing) * 2;
-
-  // Card 1 - Total Amount
-  drawBackground(card1X, currentY - cardHeight, cardWidth, cardHeight, white);
-  drawBackground(card1X, currentY - 3, cardWidth, 3, primaryRed);
-
-  // Add subtle border
-  page.drawRectangle({
-    x: card1X,
-    y: currentY - cardHeight,
-    width: cardWidth,
-    height: cardHeight,
-    borderColor: lightGrey,
-    borderWidth: 1,
-  });
-
-  page.drawText("TOTAL EXPENSES", {
-    x: card1X + 8,
-    y: currentY - 15,
-    size: 7,
-    font: boldFont,
-    color: mediumGrey,
-  });
-
-  page.drawText(
-    `Rs. ${total.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
-    {
-      x: card1X + 8,
-      y: currentY - 32,
+  // Summary cards layout
+  const cardW = (contentWidth - 30) / 3;
+  const cardH = 45;
+  [
+    { label: "TOTAL EXPENSES", value: `Rs. ${total.toFixed(2)}` },
+    { label: "TRANSACTIONS", value: `${expenses.length}` },
+    { label: "AVERAGE", value: `Rs. ${avg.toFixed(2)}` },
+  ].forEach((card, i) => {
+    const x = margin.left + i * (cardW + 15);
+    drawBox(x, cursorY - cardH, cardW, cardH, colors.white);
+    drawBox(x, cursorY - 3, cardW, 3, colors.primary);
+    page.drawRectangle({
+      x,
+      y: cursorY - cardH,
+      width: cardW,
+      height: cardH,
+      borderColor: colors.greyLight,
+      borderWidth: 1,
+    });
+    page.drawText(card.label, {
+      x: x + 8,
+      y: cursorY - 15,
+      size: 7,
+      font: boldFont,
+      color: colors.greyMid,
+    });
+    page.drawText(card.value, {
+      x: x + 8,
+      y: cursorY - 32,
       size: 14,
       font: boldFont,
-      color: charcoalBlack,
-    }
-  );
-
-  // Card 2 - Transaction Count
-  drawBackground(card2X, currentY - cardHeight, cardWidth, cardHeight, white);
-  drawBackground(card2X, currentY - 3, cardWidth, 3, primaryRed);
-
-  page.drawRectangle({
-    x: card2X,
-    y: currentY - cardHeight,
-    width: cardWidth,
-    height: cardHeight,
-    borderColor: lightGrey,
-    borderWidth: 1,
-  });
-
-  page.drawText("TOTAL TRANSACTIONS", {
-    x: card2X + 8,
-    y: currentY - 15,
-    size: 7,
-    font: boldFont,
-    color: mediumGrey,
-  });
-
-  page.drawText(`${expenses.length} Items`, {
-    x: card2X + 8,
-    y: currentY - 32,
-    size: 14,
-    font: boldFont,
-    color: charcoalBlack,
-  });
-
-  // Card 3 - Average
-  drawBackground(card3X, currentY - cardHeight, cardWidth, cardHeight, white);
-  drawBackground(card3X, currentY - 3, cardWidth, 3, primaryRed);
-
-  page.drawRectangle({
-    x: card3X,
-    y: currentY - cardHeight,
-    width: cardWidth,
-    height: cardHeight,
-    borderColor: lightGrey,
-    borderWidth: 1,
-  });
-
-  page.drawText("AVERAGE EXPENSE", {
-    x: card3X + 8,
-    y: currentY - 15,
-    size: 7,
-    font: boldFont,
-    color: mediumGrey,
-  });
-
-  page.drawText(`Rs. ${avgExpense.toFixed(2)}`, {
-    x: card3X + 8,
-    y: currentY - 32,
-    size: 14,
-    font: boldFont,
-    color: charcoalBlack,
-  });
-
-  currentY -= 65;
-
-  // Period information with better formatting
-  if (expenses.length > 0) {
-    const dates = expenses
-      .map((e) => e.date.toDate())
-      .sort((a, b) => a.getTime() - b.getTime());
-    const startDate = dates[0].toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
+      color: colors.black,
     });
-    const endDate = dates[dates.length - 1].toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
+  });
+  cursorY -= 65;
 
-    page.drawText(`Report Period: ${startDate} — ${endDate}`, {
-      x: margins.left,
-      y: currentY,
-      size: 9,
-      font: regularFont,
-      color: darkGrey,
-    });
-
-    currentY -= 30;
-  }
-
-  // ENHANCED TABLE DESIGN
-  const tableHeaderHeight = 28;
-
-  // Table header with better styling
-  drawBackground(
-    margins.left - 5,
-    currentY - tableHeaderHeight + 8,
+  // --- Table Header ---
+  drawBox(
+    margin.left - 5,
+    cursorY - 28 + 8,
     contentWidth + 10,
-    tableHeaderHeight,
-    charcoalBlack
+    28,
+    colors.black
   );
-
-  // Column headers with better spacing
-  const colPositions = {
-    date: margins.left + 8,
-    description: margins.left + 95,
-    amount: width - margins.right - 80,
+  const cols = {
+    date: margin.left + 8,
+    desc: margin.left + 95,
+    amount: width - margin.right - 80,
   };
-
-  page.drawText("DATE", {
-    x: colPositions.date,
-    y: currentY - 5,
-    size: 9,
-    font: boldFont,
-    color: white,
+  ["DATE", "DESCRIPTION", "AMOUNT"].forEach((h, idx) => {
+    const x = idx === 0 ? cols.date : idx === 1 ? cols.desc : cols.amount;
+    page.drawText(h, {
+      x,
+      y: cursorY - 5,
+      size: 9,
+      font: boldFont,
+      color: colors.white,
+    });
   });
+  cursorY -= 40;
 
-  page.drawText("DESCRIPTION", {
-    x: colPositions.description,
-    y: currentY - 5,
-    size: 9,
-    font: boldFont,
-    color: white,
-  });
-
-  page.drawText("AMOUNT", {
-    x: colPositions.amount,
-    y: currentY - 5,
-    size: 9,
-    font: boldFont,
-    color: white,
-  });
-
-  currentY -= 40;
-
-  // Table rows with improved styling
-  let itemCount = 0;
-  let currentPage = page;
-  const rowHeight = 25;
-  const minBottomMargin = 100;
-
-  for (const expense of expenses) {
-    // Check for new page with better margins
-    if (currentY < minBottomMargin) {
-      currentPage = pdfDoc.addPage(PageSizes.A4);
-      currentY = height - margins.top - 20;
-
-      // Redraw header on new page
-      drawBackground(
-        margins.left - 5,
-        currentY - tableHeaderHeight + 8,
+  // Table rows
+  let count = 0;
+  const rowH = 25;
+  for (const exp of expenses) {
+    if (cursorY < margin.bottom + 100) {
+      page = pdfDoc.addPage(PageSizes.A4);
+      cursorY = height - margin.top - 20;
+      // redraw header row
+      drawBox(
+        margin.left - 5,
+        cursorY - 28 + 8,
         contentWidth + 10,
-        tableHeaderHeight,
-        charcoalBlack
+        28,
+        colors.black
       );
-
-      currentPage.drawText("DATE", {
-        x: colPositions.date,
-        y: currentY - 5,
-        size: 9,
-        font: boldFont,
-        color: white,
+      ["DATE", "DESCRIPTION", "AMOUNT"].forEach((h, idx) => {
+        const x = idx === 0 ? cols.date : idx === 1 ? cols.desc : cols.amount;
+        page.drawText(h, {
+          x,
+          y: cursorY - 5,
+          size: 9,
+          font: boldFont,
+          color: colors.white,
+        });
       });
-      currentPage.drawText("DESCRIPTION", {
-        x: colPositions.description,
-        y: currentY - 5,
-        size: 9,
-        font: boldFont,
-        color: white,
-      });
-      currentPage.drawText("AMOUNT", {
-        x: colPositions.amount,
-        y: currentY - 5,
-        size: 9,
-        font: boldFont,
-        color: white,
-      });
-
-      currentY -= 40;
+      cursorY -= 40;
     }
 
-    // Alternating row colors with better contrast
-    const rowBg = itemCount % 2 === 0 ? white : veryLightGrey;
-    currentPage.drawRectangle({
-      x: margins.left - 5,
-      y: currentY - rowHeight + 5,
+    const bg = count % 2 ? colors.greyLighter : colors.white;
+    page.drawRectangle({
+      x: margin.left - 5,
+      y: cursorY - rowH + 5,
       width: contentWidth + 10,
-      height: rowHeight,
-      color: rowBg,
+      height: rowH,
+      color: bg,
     });
-
-    // Subtle left border for rows
-    currentPage.drawRectangle({
-      x: margins.left - 5,
-      y: currentY - rowHeight + 5,
+    page.drawRectangle({
+      x: margin.left - 5,
+      y: cursorY - rowH + 5,
       width: 2,
-      height: rowHeight,
-      color: lightGrey,
+      height: rowH,
+      color: colors.greyLight,
     });
 
-    // Format date properly
-    const dateStr = expense.date.toDate().toLocaleDateString("en-IN", {
+    const dateStrShort = exp.date.toDate().toLocaleDateString("en-IN", {
       day: "2-digit",
       month: "short",
       year: "2-digit",
     });
-
-    // Truncate description with proper length
-    let description = expense.remarks;
-    const maxDescLength = 55;
-    if (description.length > maxDescLength) {
-      description = description.substring(0, maxDescLength - 3) + "...";
-    }
-
-    // Row content with better alignment
-    currentPage.drawText(dateStr, {
-      x: colPositions.date,
-      y: currentY - 8,
+    page.drawText(dateStrShort, {
+      x: cols.date,
+      y: cursorY - 8,
       size: 8,
       font: regularFont,
-      color: charcoalBlack,
+      color: colors.black,
     });
 
-    currentPage.drawText(description, {
-      x: colPositions.description,
-      y: currentY - 8,
+    let desc = exp.remarks;
+    if (desc.length > 55) desc = desc.slice(0, 52) + "...";
+    page.drawText(desc, {
+      x: cols.desc,
+      y: cursorY - 8,
       size: 8,
       font: regularFont,
-      color: charcoalBlack,
+      color: colors.black,
     });
 
-    currentPage.drawText(
-      `Rs. ${expense.amount.toLocaleString("en-IN", {
-        minimumFractionDigits: 2,
-      })}`,
+    page.drawText(
+      `Rs. ${exp.amount.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
       {
-        x: colPositions.amount,
-        y: currentY - 8,
+        x: cols.amount,
+        y: cursorY - 8,
         size: 8,
         font: boldFont,
-        color: darkRed,
+        color: colors.accent,
       }
     );
 
-    currentY -= rowHeight;
-    itemCount++;
+    cursorY -= rowH;
+    count++;
   }
 
-  // ENHANCED TOTAL SECTION
-  currentY -= 15;
-
-  // Grand total with professional styling
-  const totalSectionHeight = 35;
-  drawBackground(
-    margins.left - 10,
-    currentY - totalSectionHeight + 10,
+  // --- Grand Total ---
+  cursorY -= 15;
+  drawBox(
+    margin.left - 10,
+    cursorY - 35 + 10,
     contentWidth + 20,
-    totalSectionHeight,
-    charcoalBlack
+    35,
+    colors.black
   );
-
-  // Red accent at top
-  drawBackground(
-    margins.left - 10,
-    currentY - 5,
-    contentWidth + 20,
-    3,
-    primaryRed
-  );
-
-  currentPage.drawText("GRAND TOTAL", {
-    x: width - margins.right - 200,
-    y: currentY - 15,
+  drawBox(margin.left - 10, cursorY - 5, contentWidth + 20, 3, colors.primary);
+  page.drawText("GRAND TOTAL", {
+    x: width - margin.right - 200,
+    y: cursorY - 15,
     size: 12,
     font: boldFont,
-    color: white,
+    color: colors.white,
+  });
+  page.drawText(`Rs. ${total.toFixed(2)}`, {
+    x: width - margin.right - 100,
+    y: cursorY - 15,
+    size: 16,
+    font: boldFont,
+    color: colors.white,
   });
 
-  currentPage.drawText(
-    `Rs. ${total.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
-    {
-      x: width - margins.right - 100,
-      y: currentY - 15,
-      size: 16,
-      font: boldFont,
-      color: white,
-    }
-  );
-
-  // PROFESSIONAL FOOTER
-  currentY -= 60;
-
-  // Ensure footer fits on current page
-  if (currentY < margins.bottom + 40) {
-    currentPage = pdfDoc.addPage(PageSizes.A4);
-    currentY = height - margins.top - 50;
+  // --- Footer ---
+  cursorY -= 60;
+  if (cursorY < margin.bottom + 40) {
+    page = pdfDoc.addPage(PageSizes.A4);
+    cursorY = height - margin.top - 50;
   }
-
-  // Footer separator
-  drawLine(currentY + 15, primaryRed, 1.5);
-  currentY -= 5;
-
-  // Footer background
-  drawBackground(0, currentY - 30, width, 35, veryLightGrey);
-
-  // Footer content with better spacing
-  const footerText = `Document generated on ${today.toLocaleDateString(
+  drawLine(cursorY + 15, colors.primary, 1.5);
+  drawBox(0, cursorY - 30, width, 35, colors.greyLighter);
+  const now = new Date();
+  const footerText = `Generated on ${now.toLocaleDateString(
     "en-IN"
-  )} at ${today.toLocaleTimeString("en-IN", { hour12: false })}`;
-  currentPage.drawText(footerText, {
-    x: margins.left,
-    y: currentY - 10,
+  )} at ${now.toLocaleTimeString("en-IN", { hour12: false })}`;
+  page.drawText(footerText, {
+    x: margin.left,
+    y: cursorY - 10,
     size: 7,
     font: regularFont,
-    color: mediumGrey,
+    color: colors.greyMid,
   });
-
-  currentPage.drawText("CONFIDENTIAL FINANCIAL DOCUMENT", {
-    x: margins.left,
-    y: currentY - 22,
+  page.drawText("CONFIDENTIAL", {
+    x: margin.left,
+    y: cursorY - 22,
     size: 7,
     font: boldFont,
-    color: darkRed,
+    color: colors.accent,
   });
 
-  // Enhanced page numbering
+  // Page numbers
   const pages = pdfDoc.getPages();
-  pages.forEach((pg, index) => {
-    // Page number with better styling
+  pages.forEach((pg, idx) => {
     pg.drawRectangle({
-      x: width - margins.right - 45,
-      y: margins.bottom - 25,
+      x: width - margin.right - 45,
+      y: margin.bottom - 25,
       width: 40,
       height: 18,
-      color: charcoalBlack,
+      color: colors.black,
     });
-
-    pg.drawText(`${index + 1} of ${pages.length}`, {
-      x: width - margins.right - 35,
-      y: margins.bottom - 20,
+    pg.drawText(`${idx + 1} / ${pages.length}`, {
+      x: width - margin.right - 35,
+      y: margin.bottom - 20,
       size: 8,
       font: boldFont,
-      color: white,
+      color: colors.white,
     });
   });
 
-  return await pdfDoc.save();
+  return pdfDoc.save();
 };
-
-// Enhanced usage example:
-/*
-const companyInfo = {
-  name: "Acme Corporation Ltd.",
-  address: "Tower A, Business Park, Sector 18, Gurugram, Haryana - 122015",
-  phone: "+91 124 456 7890",
-  email: "finance@acmecorp.com"
-};
-
-const pdfBytes = await generateExpensePDF(expenses, companyInfo, "Monthly Expense Report");
-*/
