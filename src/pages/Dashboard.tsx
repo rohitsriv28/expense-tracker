@@ -23,13 +23,62 @@ import {
   Target,
   Zap,
   Eye,
+  X,
 } from "lucide-react";
+import {
+  getStartOfDay,
+  getStartOfWeek,
+  getStartOfMonth,
+  getStartOfYear,
+  toLocalISODateString,
+} from "../utils/dateUtils";
+import DatePicker from "../components/DatePicker";
+
+// // DatePicker Component
+// const DatePicker = ({
+//   label,
+//   value,
+//   onChange,
+//   max,
+// }: {
+//   label: string;
+//   value: Date;
+//   onChange: (date: Date) => void;
+//   max?: Date;
+// }) => {
+//   return (
+//     <div className="flex flex-col">
+//       <label className="text-sm font-medium text-gray-700 mb-1">{label}</label>
+//       <input
+//         type="date"
+//         value={toLocalISODateString(value)}
+//         onChange={(e) => {
+//           // Parse as local date
+//           const [year, month, day] = e.target.value.split("-").map(Number);
+//           const newDate = new Date(year, month - 1, day);
+//           onChange(newDate);
+//         }}
+//         max={max ? toLocalISODateString(max) : undefined}
+//         className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+//       />
+//     </div>
+//   );
+// };
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [lastSync, setLastSync] = useState<Date>(new Date());
+  const [isDateModalOpen, setIsDateModalOpen] = useState(false);
+  const [dateRange, setDateRange] = useState<{
+    start: Date;
+    end: Date;
+    preset?: string;
+  }>({
+    start: new Date(),
+    end: new Date(),
+  });
 
   // Refs for smooth scrolling
   const expenseFormRef = useRef<HTMLDivElement>(null);
@@ -49,13 +98,26 @@ export default function Dashboard() {
   }, [user]);
 
   const handleExport = async () => {
+    setIsDateModalOpen(true);
+  };
+
+  const confirmExport = async () => {
+    setIsDateModalOpen(false);
     try {
       if (expenses.length === 0) {
         alert("No expenses to export");
         return;
       }
 
-      const pdfBytes = await generateExpensePDF(expenses);
+      const pdfBytes = await generateExpensePDF(
+        expenses,
+        undefined,
+        "Expense Report",
+        {
+          start: dateRange.start,
+          end: dateRange.end,
+        }
+      );
       const blob = new Blob([pdfBytes], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -79,6 +141,34 @@ export default function Dashboard() {
     if (ref.current) {
       ref.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
+  };
+
+  const applyPreset = (preset: "today" | "week" | "month" | "year") => {
+    const now = new Date();
+    let start: Date;
+
+    switch (preset) {
+      case "today":
+        start = getStartOfDay(now);
+        break;
+      case "week":
+        start = getStartOfWeek(now);
+        break;
+      case "month":
+        start = getStartOfMonth(now);
+        break;
+      case "year":
+        start = getStartOfYear(now);
+        break;
+      default:
+        start = now;
+    }
+
+    setDateRange({
+      start,
+      end: now,
+      preset,
+    });
   };
 
   // Calculate stats
@@ -367,6 +457,87 @@ export default function Dashboard() {
           </>
         )}
       </div>
+
+      {/* Date Range Modal */}
+      {isDateModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg w-full max-w-md p-6">
+            <h3 className="text-xl font-bold mb-4">Select Date Range</h3>
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <button
+                onClick={() => applyPreset("today")}
+                className={`${
+                  dateRange.preset === "today"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-gray-100 hover:bg-gray-200"
+                } px-4 py-2 rounded-lg`}
+              >
+                Today
+              </button>
+              <button
+                onClick={() => applyPreset("week")}
+                className={`${
+                  dateRange.preset === "week"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-gray-100 hover:bg-gray-200"
+                } px-4 py-2 rounded-lg`}
+              >
+                This Week
+              </button>
+              <button
+                onClick={() => applyPreset("month")}
+                className={`${
+                  dateRange.preset === "month"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-gray-100 hover:bg-gray-200"
+                } px-4 py-2 rounded-lg`}
+              >
+                This Month
+              </button>
+              <button
+                onClick={() => applyPreset("year")}
+                className={`${
+                  dateRange.preset === "year"
+                    ? "bg-indigo-600 text-white"
+                    : "bg-gray-100 hover:bg-gray-200"
+                } px-4 py-2 rounded-lg`}
+              >
+                This Year
+              </button>
+            </div>
+            <div className="space-y-4 mb-6">
+              <DatePicker
+                label="Start Date"
+                value={dateRange.start}
+                onChange={(d) =>
+                  setDateRange((prev) => ({ ...prev, start: d }))
+                }
+                max={new Date()}
+              />
+              <DatePicker
+                label="End Date"
+                value={dateRange.end}
+                onChange={(d) => setDateRange((prev) => ({ ...prev, end: d }))}
+                max={new Date()}
+              />
+            </div>
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => setIsDateModalOpen(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmExport}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              >
+                Generate Report
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
