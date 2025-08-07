@@ -23,14 +23,12 @@ import {
   Target,
   Zap,
   Eye,
-  X,
 } from "lucide-react";
 import {
   getStartOfDay,
   getStartOfWeek,
   getStartOfMonth,
   getStartOfYear,
-  toLocalISODateString,
 } from "../utils/dateUtils";
 import DatePicker from "../components/DatePicker";
 

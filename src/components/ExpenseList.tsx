@@ -8,7 +8,6 @@ import {
   getStartOfMonth,
   getEndOfPeriod,
   getFilterLabel,
-  getCurrentMonth,
 } from "../utils/dateUtils";
 import {
   Edit3,
@@ -82,10 +81,15 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
       return expenseDate >= startDate && expenseDate <= endDate;
     });
 
-    // Sort by date (newest first)
-    filtered.sort(
-      (a, b) => b.date.toDate().getTime() - a.date.toDate().getTime()
-    );
+    // Sort by date (newest first) and then by creation time
+    filtered.sort((a, b) => {
+      // First sort by expense date (newest first)
+      const dateDiff = b.date.toMillis() - a.date.toMillis();
+      if (dateDiff !== 0) return dateDiff;
+
+      // Then sort by creation time (newest first)
+      return (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0);
+    });
 
     setFilteredExpenses(filtered);
     setCurrentPage(1);
@@ -270,7 +274,7 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {paginatedExpenses.map((expense, index) => (
+                {paginatedExpenses.map((expense) => (
                   <tr
                     key={expense.id}
                     className={`transition-all duration-150 hover:bg-gray-50 ${
@@ -288,12 +292,17 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
                           <div className="text-sm font-medium text-gray-900">
                             {formatDate(expense.date.toDate())}
                           </div>
-                          <div className="text-xs text-gray-500">
-                            {expense.date.toDate().toLocaleTimeString("en-IN", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </div>
+                          {expense.createdAt && (
+                            <div className="text-xs text-gray-500">
+                              {/* Added at{" "} */}
+                              {expense.createdAt
+                                .toDate()
+                                .toLocaleTimeString("en-IN", {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>

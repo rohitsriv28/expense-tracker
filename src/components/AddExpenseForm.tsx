@@ -12,7 +12,6 @@ import {
   Car,
   Home,
   ShoppingBag,
-  Utensils,
   Gamepad2,
   Heart,
   MoreHorizontal,
@@ -88,6 +87,7 @@ export default function AddExpenseForm() {
         date: Timestamp.fromDate(new Date(date)),
         editCount: 0,
         category: selectedCategory,
+        createdAt: Timestamp.now(), // Add current timestamp
       };
 
       await addExpense(expenseData);
