@@ -12,17 +12,8 @@ import {
   TrendingUp,
   Clock,
   RefreshCw,
-  Download,
-  PlusCircle,
-  BarChart3,
-  Wallet,
-  Calendar,
-  ArrowUpRight,
-  Activity,
-  CreditCard,
-  Target,
-  Zap,
-  Eye,
+  Plus,
+  List,
 } from "lucide-react";
 import {
   getStartOfDay,
@@ -31,37 +22,6 @@ import {
   getStartOfYear,
 } from "../utils/dateUtils";
 import DatePicker from "../components/DatePicker";
-
-// // DatePicker Component
-// const DatePicker = ({
-//   label,
-//   value,
-//   onChange,
-//   max,
-// }: {
-//   label: string;
-//   value: Date;
-//   onChange: (date: Date) => void;
-//   max?: Date;
-// }) => {
-//   return (
-//     <div className="flex flex-col">
-//       <label className="text-sm font-medium text-gray-700 mb-1">{label}</label>
-//       <input
-//         type="date"
-//         value={toLocalISODateString(value)}
-//         onChange={(e) => {
-//           // Parse as local date
-//           const [year, month, day] = e.target.value.split("-").map(Number);
-//           const newDate = new Date(year, month - 1, day);
-//           onChange(newDate);
-//         }}
-//         max={max ? toLocalISODateString(max) : undefined}
-//         className="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-//       />
-//     </div>
-//   );
-// };
 
 export default function Dashboard() {
   const { user, logout } = useAuth();
@@ -77,6 +37,7 @@ export default function Dashboard() {
     start: new Date(),
     end: new Date(),
   });
+  const [activeTab, setActiveTab] = useState<"add" | "list">("add");
 
   // Refs for smooth scrolling
   const expenseFormRef = useRef<HTMLDivElement>(null);
@@ -135,12 +96,6 @@ export default function Dashboard() {
     setTimeout(() => setIsLoading(false), 1000);
   };
 
-  const scrollToSection = (ref: React.RefObject<HTMLDivElement | null>) => {
-    if (ref.current) {
-      ref.current.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
-
   const applyPreset = (preset: "today" | "week" | "month" | "year") => {
     const now = new Date();
     let start: Date;
@@ -169,22 +124,6 @@ export default function Dashboard() {
     });
   };
 
-  // Calculate stats
-  const totalAmount = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const avgExpense = expenses.length > 0 ? totalAmount / expenses.length : 0;
-  const thisMonthExpenses = expenses.filter((e) => {
-    const expenseDate = e.date.toDate();
-    const now = new Date();
-    return (
-      expenseDate.getMonth() === now.getMonth() &&
-      expenseDate.getFullYear() === now.getFullYear()
-    );
-  });
-  const thisMonthTotal = thisMonthExpenses.reduce(
-    (sum, e) => sum + e.amount,
-    0
-  );
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
       {/* Animated background elements */}
@@ -196,260 +135,141 @@ export default function Dashboard() {
 
       <Header onLogout={logout} onExport={handleExport} />
 
-      <div className="relative z-10 container mx-auto px-4 py-8 max-w-7xl">
-        {/* Welcome Section - Left aligned with refresh on right */}
-        <div className="mb-8">
-          <div className="flex items-start justify-between mb-6">
-            {/* Left side - Welcome Message */}
+      <div className="relative z-10 container mx-auto px-3 py-6 max-w-7xl">
+        {/* Welcome Section - Made more compact */}
+        <div className="mb-5">
+          <div className="flex items-start justify-between mb-4">
             <div className="flex-1">
-              <div className="flex items-center mb-4">
-                <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mr-4 shadow-lg">
-                  <Sparkles className="w-6 h-6 text-white" />
+              <div className="flex items-center mb-2">
+                <div className="w-8 h-8 md:w-10 md:h-10 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mr-3 shadow-lg">
+                  <Sparkles className="w-4 h-4 md:w-5 md:h-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-4xl lg:text-5xl font-bold bg-gradient-to-r from-white via-purple-200 to-purple-300 bg-clip-text text-transparent mb-2">
-                    Welcome back,
+                  <h1 className="text-xl md:text-2xl font-bold text-white mb-1">
+                    Welcome back, {user?.displayName?.split(" ")[0] || "User"}!
                   </h1>
-                  <h2 className="text-3xl lg:text-4xl font-light text-purple-100">
-                    {user?.displayName?.split(" ")[0] || "User"}!
-                  </h2>
+                  <div className="flex items-center text-purple-300 text-xs md:text-sm">
+                    <Clock className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+                    <span>Last synced: {lastSync.toLocaleTimeString()}</span>
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center text-purple-300">
-                <Clock className="w-4 h-4 mr-2" />
-                <span className="text-sm">
-                  Last synced: {lastSync.toLocaleTimeString()}
-                </span>
-              </div>
             </div>
 
-            {/* Right side - Refresh Button */}
-            <div className="flex-shrink-0">
-              <button
-                onClick={handleRefresh}
-                className="flex items-center px-6 py-3 bg-white/10 backdrop-blur-xl border border-white/20 text-white rounded-2xl hover:bg-white/20 transition-all duration-300 shadow-lg"
-                disabled={isLoading}
-              >
-                <RefreshCw
-                  className={`w-5 h-5 mr-2 ${isLoading ? "animate-spin" : ""}`}
-                />
-                {isLoading ? "Syncing..." : "Refresh"}
-              </button>
-            </div>
-          </div>
-
-          {/* Navigation Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 mb-8">
             <button
-              onClick={() => scrollToSection(expenseFormRef)}
-              className="group flex items-center justify-center px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-2xl hover:from-emerald-600 hover:to-teal-700 transition-all duration-300 shadow-lg hover:shadow-emerald-500/25 transform hover:-translate-y-1"
+              onClick={handleRefresh}
+              className="flex items-center px-3 py-1.5 md:px-4 md:py-2 bg-white/10 backdrop-blur-xl border border-white/20 text-white rounded-xl hover:bg-white/20 transition-all duration-300 shadow-lg text-sm md:text-base"
+              disabled={isLoading}
             >
-              <PlusCircle className="w-5 h-5 mr-2 group-hover:rotate-90 transition-transform duration-300" />
+              <RefreshCw
+                className={`w-3 h-3 md:w-4 md:h-4 mr-1 ${
+                  isLoading ? "animate-spin" : ""
+                }`}
+              />
+              {isLoading ? "Syncing..." : "Refresh"}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile tabs for Add/List view */}
+        <div className="md:hidden mb-4">
+          <div className="flex bg-white/10 backdrop-blur-xl border border-white/20 rounded-xl p-1">
+            <button
+              onClick={() => setActiveTab("add")}
+              className={`flex-1 flex items-center justify-center py-2 rounded-lg text-sm font-medium transition-all ${
+                activeTab === "add"
+                  ? "bg-purple-600 text-white shadow-md"
+                  : "text-purple-200 hover:text-white"
+              }`}
+            >
+              <Plus className="w-4 h-4 mr-1" />
               Add Expense
             </button>
-
             <button
-              onClick={() => scrollToSection(expenseListRef)}
-              className="group flex items-center justify-center px-6 py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-2xl hover:from-blue-600 hover:to-indigo-700 transition-all duration-300 shadow-lg hover:shadow-blue-500/25 transform hover:-translate-y-1"
+              onClick={() => setActiveTab("list")}
+              className={`flex-1 flex items-center justify-center py-2 rounded-lg text-sm font-medium transition-all ${
+                activeTab === "list"
+                  ? "bg-purple-600 text-white shadow-md"
+                  : "text-purple-200 hover:text-white"
+              }`}
             >
-              <Eye className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform duration-300" />
-              View Expenses
+              <List className="w-4 h-4 mr-1" />
+              View List
             </button>
+          </div>
+        </div>
+
+        {/* 1. PRIORITY: Add Expense Form at the top */}
+        <div
+          ref={expenseFormRef}
+          className={`mb-6 scroll-mt-20 ${
+            activeTab !== "add" ? "hidden md:block" : ""
+          }`}
+        >
+          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4 md:p-5 shadow-2xl">
+            <AddExpenseForm />
+          </div>
+        </div>
+
+        {/* 2. PRIORITY: Expense List immediately below */}
+        <div
+          ref={expenseListRef}
+          className={`mb-6 scroll-mt-20 ${
+            activeTab !== "list" ? "hidden md:block" : ""
+          }`}
+        >
+          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl shadow-2xl overflow-hidden">
+            <ExpenseList expenses={expenses} />
           </div>
         </div>
 
         {/* Loading State */}
         {isLoading ? (
-          <div className="space-y-8">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {[1, 2, 3].map((i) => (
                 <div
                   key={i}
-                  className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 animate-pulse"
+                  className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 md:p-8 animate-pulse"
                 >
                   <div className="flex items-center justify-between mb-6">
-                    <div className="w-16 h-16 bg-white/20 rounded-2xl"></div>
-                    <div className="w-20 h-6 bg-white/20 rounded-xl"></div>
+                    <div className="w-12 h-12 md:w-16 md:h-16 bg-white/20 rounded-2xl"></div>
+                    <div className="w-16 h-5 md:w-20 md:h-6 bg-white/20 rounded-xl"></div>
                   </div>
-                  <div className="w-32 h-10 bg-white/20 rounded-xl mb-3"></div>
-                  <div className="w-40 h-6 bg-white/20 rounded-xl"></div>
+                  <div className="w-24 h-7 md:w-32 md:h-10 bg-white/20 rounded-xl mb-3"></div>
+                  <div className="w-32 h-5 md:w-40 md:h-6 bg-white/20 rounded-xl"></div>
                 </div>
               ))}
             </div>
           </div>
         ) : (
           <>
-            {/* 1. Expense Form */}
-            <div ref={expenseFormRef} className="mb-8 scroll-mt-20">
-              <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 md:p-8 shadow-2xl">
-                <div className="flex items-center mb-6">
-                  <PlusCircle className="w-6 h-6 text-emerald-400 mr-3" />
-                  <h3 className="text-xl md:text-2xl font-bold text-white">
-                    Add New Expense
-                  </h3>
-                </div>
-                <AddExpenseForm />
-              </div>
-            </div>
-
-            {/* 2. Expense List */}
-            <div ref={expenseListRef} className="mb-8 scroll-mt-20">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center">
-                  <div className="w-12 h-12 bg-gradient-to-r from-pink-500 to-rose-500 rounded-2xl flex items-center justify-center mr-4">
-                    <CreditCard className="w-6 h-6 text-white" />
-                  </div>
-                  <h2 className="text-3xl font-bold text-white">
-                    Recent Transactions
-                  </h2>
-                </div>
-                <div className="text-purple-300 text-sm">
-                  {expenses.length}{" "}
-                  {expenses.length === 1 ? "transaction" : "transactions"}
-                </div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl overflow-hidden">
-                <ExpenseList expenses={expenses} />
-              </div>
-            </div>
-
             {/* 3. Spending Analytics */}
-            <div className="mb-8">
-              <div className="flex items-center mb-6">
-                <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center mr-4">
-                  <TrendingUp className="w-6 h-6 text-white" />
-                </div>
-                <h2 className="text-3xl font-bold text-white">
+            <div className="mb-6">
+              <div className="flex items-center mb-4">
+                <TrendingUp className="w-5 h-5 text-purple-300 mr-2" />
+                <h2 className="text-lg md:text-xl font-bold text-white">
                   Spending Analytics
                 </h2>
               </div>
-              <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl">
+              <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4 md:p-6 shadow-2xl">
                 <InsightsSummary expenses={expenses} />
               </div>
             </div>
 
-            {/* 4. Stats Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              {" "}
-              <div className="group bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 hover:bg-white/15 transition-all duration-300 hover:scale-105">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center">
-                    <Wallet className="w-6 h-6 text-white" />
-                  </div>
-                  <ArrowUpRight className="w-5 h-5 text-green-400" />
-                </div>
-                <div className="text-2xl font-bold text-white mb-1">
-                  Rs.{totalAmount.toLocaleString("en-IN")}
-                </div>
-                <div className="text-purple-300 text-sm">Total Expenses</div>
-              </div>
-              <div className="group bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 hover:bg-white/15 transition-all duration-300 hover:scale-105">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center">
-                    <BarChart3 className="w-6 h-6 text-white" />
-                  </div>
-                  <ArrowUpRight className="w-5 h-5 text-green-400" />
-                </div>
-                <div className="text-2xl font-bold text-white mb-1">
-                  Rs.{avgExpense.toFixed(0)}
-                </div>
-                <div className="text-purple-300 text-sm">Average Expense</div>
-              </div>
-              <div className="group bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 hover:bg-white/15 transition-all duration-300 hover:scale-105">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl flex items-center justify-center">
-                    <Calendar className="w-6 h-6 text-white" />
-                  </div>
-                  <ArrowUpRight className="w-5 h-5 text-green-400" />
-                </div>
-                <div className="text-2xl font-bold text-white mb-1">
-                  Rs.{thisMonthTotal.toLocaleString("en-IN")}
-                </div>
-                <div className="text-purple-300 text-sm">This Month</div>
-              </div>
-              <div className="group bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-6 hover:bg-white/15 transition-all duration-300 hover:scale-105">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-2xl flex items-center justify-center">
-                    <Activity className="w-6 h-6 text-white" />
-                  </div>
-                  <Zap className="w-5 h-5 text-yellow-400" />
-                </div>
-                <div className="text-2xl font-bold text-white mb-1">
-                  {expenses.length}
-                </div>
-                <div className="text-purple-300 text-sm">
-                  Total Transactions
-                </div>
-              </div>
-            </div>
-
-            {/* 5. Action Center */}
-            {expenses.length > 0 && (
-              <div className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl">
-                <div className="flex items-center mb-6">
-                  <div className="w-12 h-12 bg-gradient-to-r from-yellow-500 to-orange-500 rounded-2xl flex items-center justify-center mr-4">
-                    <Target className="w-6 h-6 text-white" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white">
-                    Action Center
-                  </h3>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  <button
-                    onClick={handleExport}
-                    className="group flex items-center justify-center px-8 py-6 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-indigo-500/25 transform hover:-translate-y-2"
-                  >
-                    <Download className="w-6 h-6 mr-3 group-hover:animate-bounce" />
-                    <div className="text-left">
-                      <div className="font-semibold">Export PDF</div>
-                      <div className="text-sm opacity-80">Download report</div>
-                    </div>
-                  </button>
-
-                  <div className="flex items-center justify-center px-8 py-6 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-2xl shadow-lg">
-                    <Wallet className="w-6 h-6 mr-3" />
-                    <div className="text-left">
-                      <div className="font-semibold">Total Spent</div>
-                      <div className="text-lg font-bold">
-                        Rs.{totalAmount.toLocaleString("en-IN")}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-center px-8 py-6 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-2xl shadow-lg">
-                    <BarChart3 className="w-6 h-6 mr-3" />
-                    <div className="text-left">
-                      <div className="font-semibold">Avg. Expense</div>
-                      <div className="text-lg font-bold">
-                        Rs.{avgExpense.toFixed(0)}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* Empty State */}
             {expenses.length === 0 && (
-              <div className="text-center py-16">
-                <div className="w-24 h-24 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Sparkles className="w-12 h-12 text-white" />
+              <div className="text-center py-8 md:py-12">
+                <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Sparkles className="w-6 h-6 md:w-8 md:h-8 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-4">
+                <h3 className="text-lg md:text-xl font-bold text-white mb-3">
                   No expenses yet
                 </h3>
-                <p className="text-purple-300 mb-8 max-w-md mx-auto">
+                <p className="text-purple-300 mb-6 max-w-md mx-auto text-xs md:text-sm">
                   Start tracking your expenses by adding your first transaction.
                   It's quick and easy!
                 </p>
-                <button
-                  onClick={() => scrollToSection(expenseFormRef)}
-                  className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-2xl hover:from-emerald-600 hover:to-teal-700 transition-all duration-300 shadow-lg hover:shadow-emerald-500/25 transform hover:-translate-y-1"
-                >
-                  <PlusCircle className="w-5 h-5 mr-2" />
-                  Add Your First Expense
-                </button>
               </div>
             )}
           </>
@@ -458,17 +278,19 @@ export default function Dashboard() {
 
       {/* Date Range Modal */}
       {isDateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg w-full max-w-md p-6">
-            <h3 className="text-xl font-bold mb-4">Select Date Range</h3>
-            <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+          <div className="bg-white rounded-lg w-full max-w-md p-4 md:p-6">
+            <h3 className="text-lg md:text-xl font-bold mb-4">
+              Select Date Range
+            </h3>
+            <div className="grid grid-cols-2 gap-3 md:gap-4 mb-4 md:mb-6">
               <button
                 onClick={() => applyPreset("today")}
                 className={`${
                   dateRange.preset === "today"
                     ? "bg-indigo-600 text-white"
                     : "bg-gray-100 hover:bg-gray-200"
-                } px-4 py-2 rounded-lg`}
+                } px-3 py-2 text-sm md:text-base rounded-lg`}
               >
                 Today
               </button>
@@ -478,7 +300,7 @@ export default function Dashboard() {
                   dateRange.preset === "week"
                     ? "bg-indigo-600 text-white"
                     : "bg-gray-100 hover:bg-gray-200"
-                } px-4 py-2 rounded-lg`}
+                } px-3 py-2 text-sm md:text-base rounded-lg`}
               >
                 This Week
               </button>
@@ -488,7 +310,7 @@ export default function Dashboard() {
                   dateRange.preset === "month"
                     ? "bg-indigo-600 text-white"
                     : "bg-gray-100 hover:bg-gray-200"
-                } px-4 py-2 rounded-lg`}
+                } px-3 py-2 text-sm md:text-base rounded-lg`}
               >
                 This Month
               </button>
@@ -498,12 +320,12 @@ export default function Dashboard() {
                   dateRange.preset === "year"
                     ? "bg-indigo-600 text-white"
                     : "bg-gray-100 hover:bg-gray-200"
-                } px-4 py-2 rounded-lg`}
+                } px-3 py-2 text-sm md:text-base rounded-lg`}
               >
                 This Year
               </button>
             </div>
-            <div className="space-y-4 mb-6">
+            <div className="space-y-3 md:space-y-4 mb-4 md:mb-6">
               <DatePicker
                 label="Start Date"
                 value={dateRange.start}
@@ -519,16 +341,16 @@ export default function Dashboard() {
                 max={new Date()}
               />
             </div>
-            <div className="flex justify-end space-x-3">
+            <div className="flex justify-end space-x-2 md:space-x-3">
               <button
                 onClick={() => setIsDateModalOpen(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100"
+                className="px-3 py-2 text-sm md:text-base border border-gray-300 rounded-lg hover:bg-gray-100"
               >
                 Cancel
               </button>
               <button
                 onClick={confirmExport}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                className="px-3 py-2 text-sm md:text-base bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
               >
                 Generate Report
               </button>

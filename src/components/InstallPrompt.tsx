@@ -30,6 +30,24 @@ export default function InstallPrompt() {
     "ios" | "android" | "desktop" | "unknown"
   >("unknown");
   const [showIOSInstructions, setShowIOSInstructions] = useState(false);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
+
+  // Safe localStorage access
+  const safeLocalStorageGet = (key: string): string | null => {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  };
+
+  const safeLocalStorageSet = (key: string, value: string): void => {
+    try {
+      localStorage.setItem(key, value);
+    } catch {
+      // Silently fail if localStorage is not available
+    }
+  };
 
   useEffect(() => {
     // Check if app is already installed (running in standalone mode)
@@ -60,59 +78,89 @@ export default function InstallPrompt() {
     checkStandalone();
     detectPlatform();
 
+    // Track user interaction
+    const handleUserInteraction = () => {
+      setHasUserInteracted(true);
+      document.removeEventListener("click", handleUserInteraction);
+      document.removeEventListener("touchstart", handleUserInteraction);
+      document.removeEventListener("keydown", handleUserInteraction);
+    };
+
+    document.addEventListener("click", handleUserInteraction);
+    document.addEventListener("touchstart", handleUserInteraction);
+    document.addEventListener("keydown", handleUserInteraction);
+
     // Listen for beforeinstallprompt event (Android/Chrome/Edge)
     const handleBeforeInstallPrompt = (e: Event) => {
+      console.log("beforeinstallprompt event fired");
       e.preventDefault();
       const event = e as BeforeInstallPromptEvent;
       setDeferredPrompt(event);
 
-      // Show prompt after a delay to avoid being intrusive
-      setTimeout(() => {
-        if (!isStandalone) {
-          setIsVisible(true);
-        }
-      }, 3000);
-    };
+      // Check if prompt was recently dismissed
+      const dismissedTime = safeLocalStorageGet("install-prompt-dismissed");
+      const shouldSkip =
+        dismissedTime &&
+        Date.now() - parseInt(dismissedTime) < 24 * 60 * 60 * 1000;
 
-    // For iOS devices, show manual instructions after some interaction
-    const handleIOSCheck = () => {
-      if (platform === "ios" && !isStandalone) {
-        // Check if user has been on the site for a while (indicating engagement)
+      if (!shouldSkip && !isStandalone && hasUserInteracted) {
+        // Show prompt after a delay to avoid being intrusive
         setTimeout(() => {
-          const hasShownBefore = localStorage.getItem(
-            "ios-install-prompt-shown"
-          );
-          if (!hasShownBefore) {
-            setIsVisible(true);
-            localStorage.setItem("ios-install-prompt-shown", "true");
-          }
-        }, 5000);
+          setIsVisible(true);
+        }, 2000);
       }
     };
 
     window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
 
-    // For iOS, we need to rely on time-based or interaction-based triggers
-    if (platform === "ios") {
-      handleIOSCheck();
-    }
-
     // Listen for successful installation
-    window.addEventListener("appinstalled", () => {
+    const handleAppInstalled = () => {
+      console.log("App was installed");
       setIsVisible(false);
       setDeferredPrompt(null);
-    });
+    };
+
+    window.addEventListener("appinstalled", handleAppInstalled);
 
     return () => {
       window.removeEventListener(
         "beforeinstallprompt",
         handleBeforeInstallPrompt
       );
+      window.removeEventListener("appinstalled", handleAppInstalled);
+      document.removeEventListener("click", handleUserInteraction);
+      document.removeEventListener("touchstart", handleUserInteraction);
+      document.removeEventListener("keydown", handleUserInteraction);
     };
-  }, [platform, isStandalone]);
+  }, [hasUserInteracted, isStandalone]);
+
+  // Handle iOS-specific logic
+  useEffect(() => {
+    if (platform === "ios" && !isStandalone && hasUserInteracted) {
+      const hasShownBefore = safeLocalStorageGet("ios-install-prompt-shown");
+      const dismissedTime = safeLocalStorageGet("install-prompt-dismissed");
+
+      const shouldSkip =
+        dismissedTime &&
+        Date.now() - parseInt(dismissedTime) < 24 * 60 * 60 * 1000;
+
+      if (!hasShownBefore && !shouldSkip) {
+        // Show iOS prompt after user has interacted and some time has passed
+        const timer = setTimeout(() => {
+          setIsVisible(true);
+          safeLocalStorageSet("ios-install-prompt-shown", "true");
+        }, 5000);
+
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [platform, isStandalone, hasUserInteracted]);
 
   const handleInstall = async () => {
-    if (!deferredPrompt && platform !== "ios") return;
+    if (!deferredPrompt && platform !== "ios") {
+      console.log("No deferred prompt available");
+      return;
+    }
 
     if (platform === "ios") {
       setShowIOSInstructions(true);
@@ -122,13 +170,13 @@ export default function InstallPrompt() {
     setIsInstalling(true);
     try {
       if (deferredPrompt) {
+        console.log("Prompting user to install");
         await deferredPrompt.prompt();
         const { outcome } = await deferredPrompt.userChoice;
 
         if (outcome === "accepted") {
-          setIsVisible(false);
-          // Track successful installation
           console.log("PWA installation accepted");
+          setIsVisible(false);
         } else {
           console.log("PWA installation dismissed");
         }
@@ -146,26 +194,31 @@ export default function InstallPrompt() {
     setShowIOSInstructions(false);
     setDeferredPrompt(null);
 
-    // Don't show again for a while
-    localStorage.setItem("install-prompt-dismissed", Date.now().toString());
+    // Don't show again for 24 hours
+    safeLocalStorageSet("install-prompt-dismissed", Date.now().toString());
   };
 
   const handleLaterDismiss = () => {
     setIsVisible(false);
-    // Show again after some time
+
+    // Show again after 10 minutes if conditions are met
     setTimeout(() => {
-      const dismissedTime = localStorage.getItem("install-prompt-dismissed");
+      const dismissedTime = safeLocalStorageGet("install-prompt-dismissed");
       if (
         !dismissedTime ||
         Date.now() - parseInt(dismissedTime) > 24 * 60 * 60 * 1000
       ) {
-        setIsVisible(true);
+        if (deferredPrompt || platform === "ios") {
+          setIsVisible(true);
+        }
       }
-    }, 10 * 60 * 1000); // Show again in 10 minutes
+    }, 10 * 60 * 1000);
   };
 
-  // Don't show if already installed
-  if (isStandalone || !isVisible) return null;
+  // Don't show if already installed or not ready
+  if (isStandalone || !isVisible || !hasUserInteracted) {
+    return null;
+  }
 
   // iOS Instructions Modal
   if (showIOSInstructions) {
@@ -236,7 +289,11 @@ export default function InstallPrompt() {
     );
   }
 
-  // Main Install Prompt
+  // Main Install Prompt - only show if we have a deferred prompt (Android) or iOS
+  if (!deferredPrompt && platform !== "ios") {
+    return null;
+  }
+
   return (
     <div className="fixed bottom-4 right-4 left-4 md:left-auto md:max-w-sm z-50 animate-slide-up">
       <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden backdrop-blur-sm">
