@@ -1,9 +1,49 @@
 @import "tailwindcss";
 
+@theme {
+  /* -- PREMIUM RED-CHARCOAL THEME -- */
+
+  /* BRAND: Crimson Red */
+  /* Light: #B11226, Dark: #D61F3A, Tint: #FDE8EC */
+  --color-red-600: #b11226;
+  --color-red-500: #d61f3a;
+  --color-red-50: #fde8ec;
+
+  /* NEUTRALS: Charcoal & Slate */
+
+  /* Light Theme Surfaces */
+  --color-slate-50: #f8f9fb; /* Off-white BG */
+  --color-slate-100: #f1f3f5; /* Slight variation for panels if needed */
+  --color-white: #ffffff; /* Pure white cards */
+
+  /* Light Theme Text */
+  --color-slate-900: #1f2933; /* Deep Charcoal Primary Text */
+  --color-slate-600: #475569; /* Maintenance of mid-tones */
+
+  /* Dark Theme Surfaces */
+  --color-slate-950: #0f141a; /* Slate-Charcoal BG */
+  --color-slate-900: #0f141a; /* Mapping main dark bg to this */
+  --color-slate-800: #161c24; /* Elevated Dark Panels */
+
+  /* Text & Dividers */
+  --color-gray-200: #e5e7eb; /* Light Gray Text (Dark Mode) */
+  --color-gray-300: #d1d5db;
+  --color-gray-700: #374151; /* Dark Borders */
+  --color-slate-200: #e5e7eb; /* Light Borders */
+
+  /* Overrides to ensure consistency */
+  --color-indigo-600: #b11226; /* Map legacy Indigo to Red just in case */
+  --color-purple-600: #b11226; /* Map legacy Purple to Red */
+}
+
 body {
   font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-tap-highlight-color: transparent;
+  /* Use the exact palette colors */
+  @apply bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-gray-200 transition-colors duration-300;
 }
+
+@variant dark (&:where(.dark, .dark *));
 
 @media (display-mode: standalone) {
   body {

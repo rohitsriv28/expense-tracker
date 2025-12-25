@@ -1,7 +1,7 @@
 {
   "name": "CashFlow - Smart Expense Tracker",
   "short_name": "CashFlow",
-  "description": "Track your expenses effortlessly with smart analytics and beautiful reports",
+  "description": "Premium Offline-first Personal Finance PWA. Track expenses, analytics, and reports seamlessly.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

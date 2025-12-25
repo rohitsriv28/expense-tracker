@@ -20,15 +20,15 @@ function NetworkStatusToast({ isOnline, onDismiss }: NetworkStatusToastProps) {
   return (
     <div
       className={`fixed top-4 right-4 z-50 animate-slide-in-right transform transition-all duration-300 ${
-        isOnline ? "bg-green-500" : "bg-amber-500"
+        isOnline ? "bg-green-500" : "bg-red-600"
       } text-white px-4 py-3 rounded-xl shadow-2xl max-w-sm border-2 ${
-        isOnline ? "border-green-400" : "border-amber-400"
+        isOnline ? "border-green-400" : "border-red-500"
       }`}
     >
       <div className="flex items-center">
         <div
           className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 ${
-            isOnline ? "bg-green-400" : "bg-amber-400"
+            isOnline ? "bg-green-400" : "bg-red-500"
           }`}
         >
           {isOnline ? (
@@ -55,7 +55,7 @@ function NetworkStatusToast({ isOnline, onDismiss }: NetworkStatusToastProps) {
 // Persistent Offline Banner
 function OfflineBanner() {
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-white p-3 z-40 shadow-2xl border-t-2 border-amber-400">
+    <div className="fixed bottom-0 left-0 right-0 bg-slate-900 text-white p-3 z-40 shadow-2xl border-t-2 border-red-600">
       <div className="container mx-auto flex items-center justify-center">
         <div className="flex items-center space-x-2">
           <div className="relative">

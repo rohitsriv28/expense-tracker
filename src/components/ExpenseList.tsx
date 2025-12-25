@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { Expense } from "../services/firebase";
 import { updateExpense } from "../services/expenseService";
 import {
@@ -58,7 +58,7 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
     filterExpenses();
   }, [expenses, currentFilter]);
 
-  const filterExpenses = () => {
+  const filterExpenses = useCallback(() => {
     const now = new Date();
     let startDate: Date;
 
@@ -95,7 +95,7 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
 
     setFilteredExpenses(filtered);
     setCurrentPage(1);
-  };
+  }, [currentFilter, expenses]);
 
   const startEdit = (expense: Expense) => {
     if (expense.editCount >= 2) return;
@@ -137,14 +137,14 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
 
   if (expenses.length === 0) {
     return (
-      <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8 text-center">
-        <div className="bg-purple-500/20 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-          <ReceiptIndianRupee className="w-8 h-8 text-purple-300" />
+      <div className="bg-white border text-center border-gray-200 dark:bg-white/10 dark:backdrop-blur-xl dark:border-white/20 rounded-2xl p-8 shadow-lg dark:shadow-none transition-colors duration-300">
+        <div className="bg-red-500/20 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+          <ReceiptIndianRupee className="w-8 h-8 text-red-300" />
         </div>
-        <h3 className="text-lg font-semibold text-white mb-2">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
           No expenses yet
         </h3>
-        <p className="text-purple-300">
+        <p className="text-gray-500 dark:text-red-300">
           Add your first expense to get started!
         </p>
       </div>
@@ -154,7 +154,7 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
   return (
     <div className="space-y-4">
       {/* Header with Summary */}
-      <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4 md:p-6">
+      <div className="bg-white border border-gray-200 dark:bg-white/10 dark:backdrop-blur-xl dark:border-white/20 rounded-2xl p-4 md:p-6 shadow-lg dark:shadow-none transition-colors duration-300">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
           {/* Title and Summary */}
           <div className="space-y-1">
@@ -163,17 +163,17 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
                 <ReceiptIndianRupee className="w-5 h-5 md:w-6 md:h-6 text-indigo-300" />
               </div>
               <div>
-                <h2 className="text-xl md:text-2xl font-bold text-white">
+                <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
                   {getFilterLabel(currentFilter)} Expenses
                 </h2>
                 <div className="flex items-center gap-4 mt-1">
-                  <span className="text-sm text-purple-300 flex items-center gap-1">
+                  <span className="text-sm text-gray-500 dark:text-red-300 flex items-center gap-1">
                     <Clock className="w-3 h-3 md:w-4 md:h-4" />
                     {filteredExpenses.length}{" "}
                     {filteredExpenses.length === 1 ? "expense" : "expenses"}
                   </span>
                   {filteredExpenses.length > 0 && (
-                    <span className="text-sm text-purple-300 flex items-center gap-1">
+                    <span className="text-sm text-gray-500 dark:text-red-300 flex items-center gap-1">
                       <TrendingUp className="w-3 h-3 md:w-4 md:h-4" />
                       Total: ₹{totalAmount.toFixed(2)}
                     </span>
@@ -187,7 +187,7 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
           <div className="flex flex-col md:flex-row items-start md:items-center gap-3 w-full md:w-auto">
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className="md:hidden flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium"
+              className="md:hidden flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium"
             >
               <Filter className="w-4 h-4" />
               Filter
@@ -198,7 +198,7 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
                 showFilters ? "flex" : "hidden"
               } md:flex flex-col md:flex-row items-center gap-2 w-full md:w-auto`}
             >
-              <div className="bg-white/10 p-1 rounded-xl border border-white/20 w-full md:w-auto">
+              <div className="bg-gray-100 dark:bg-white/10 p-1 rounded-xl border border-gray-200 dark:border-white/20 w-full md:w-auto">
                 {(["daily", "weekly", "monthly"] as const).map((filter) => (
                   <button
                     key={filter}
@@ -208,8 +208,8 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
                     }}
                     className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 w-full md:w-auto ${
                       currentFilter === filter
-                        ? "bg-indigo-600 text-white shadow-sm"
-                        : "text-purple-300 hover:text-white hover:bg-white/10"
+                        ? "bg-red-600 text-white shadow-sm"
+                        : "text-gray-500 hover:text-gray-900 hover:bg-gray-200 dark:text-red-300 dark:hover:text-white dark:hover:bg-white/10"
                     }`}
                   >
                     {getFilterLabel(filter)}
@@ -219,19 +219,19 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
 
               {/* Pagination Controls */}
               {totalPages > 1 && (
-                <div className="flex items-center gap-2 bg-white/10 p-1 rounded-xl border border-white/20 w-full md:w-auto justify-center">
+                <div className="flex items-center gap-2 bg-gray-100 dark:bg-white/10 p-1 rounded-xl border border-gray-200 dark:border-white/20 w-full md:w-auto justify-center">
                   <button
                     onClick={() => handlePageChange(currentPage - 1)}
                     disabled={currentPage === 1}
                     className={`p-2 rounded-lg transition-colors ${
                       currentPage === 1
-                        ? "text-gray-500 cursor-not-allowed"
-                        : "text-white hover:bg-white/10"
+                        ? "text-gray-400 cursor-not-allowed"
+                        : "text-gray-700 hover:bg-white dark:text-white dark:hover:bg-white/10"
                     }`}
                   >
                     <ChevronLeft size={16} />
                   </button>
-                  <span className="px-2 py-1 text-sm font-medium text-white min-w-[60px] text-center">
+                  <span className="px-2 py-1 text-sm font-medium text-gray-700 dark:text-white min-w-[60px] text-center">
                     {currentPage} of {totalPages}
                   </span>
                   <button
@@ -239,8 +239,8 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
                     disabled={currentPage === totalPages}
                     className={`p-2 rounded-lg transition-colors ${
                       currentPage === totalPages
-                        ? "text-gray-500 cursor-not-allowed"
-                        : "text-white hover:bg-white/10"
+                        ? "text-gray-400 cursor-not-allowed"
+                        : "text-gray-700 hover:bg-white dark:text-white dark:hover:bg-white/10"
                     }`}
                   >
                     <ChevronRight size={16} />
@@ -254,14 +254,14 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
 
       {/* Expenses List */}
       {filteredExpenses.length === 0 ? (
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8 text-center">
-          <div className="bg-purple-500/20 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-            <Calendar className="w-8 h-8 text-purple-300" />
+        <div className="bg-white border border-gray-200 dark:bg-white/10 dark:backdrop-blur-xl dark:border-white/20 rounded-2xl p-8 text-center">
+          <div className="bg-red-500/20 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+            <Calendar className="w-8 h-8 text-red-600 dark:text-red-300" />
           </div>
-          <h3 className="text-lg font-semibold text-white mb-2">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
             No expenses for {getFilterLabel(currentFilter).toLowerCase()}
           </h3>
-          <p className="text-purple-300">
+          <p className="text-gray-500 dark:text-red-300">
             Try selecting a different time period
           </p>
         </div>
@@ -270,46 +270,46 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
           {/* Desktop Table */}
           <div className="hidden md:block overflow-x-auto">
             <table className="min-w-full">
-              <thead className="bg-white/10 border-b border-white/20">
+              <thead className="bg-slate-100 border-b border-gray-200 dark:bg-white/10 dark:border-white/20">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">
                     Date
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">
                     Amount
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">
                     Description
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-white uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">
                     Edit Status
                   </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-white uppercase tracking-wider">
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/10">
+              <tbody className="divide-y divide-gray-200 dark:divide-white/10">
                 {paginatedExpenses.map((expense) => (
                   <tr
                     key={expense.id}
-                    className={`transition-all duration-150 hover:bg-white/5 ${
+                    className={`transition-all duration-150 hover:bg-slate-50 dark:hover:bg-white/5 ${
                       editingId === expense.id
-                        ? "bg-indigo-500/10 border-l-4 border-indigo-400"
+                        ? "bg-indigo-50 border-l-4 border-indigo-500 dark:bg-indigo-500/10 dark:border-indigo-400"
                         : ""
                     }`}
                   >
                     <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center gap-3">
-                        <div className="bg-white/10 rounded-lg p-2">
-                          <Calendar className="w-4 h-4 text-purple-300" />
+                        <div className="bg-red-50 dark:bg-white/10 rounded-lg p-2">
+                          <Calendar className="w-4 h-4 text-red-500 dark:text-red-300" />
                         </div>
                         <div>
-                          <div className="text-sm font-medium text-white">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
                             {formatDate(expense.date.toDate())}
                           </div>
                           {expense.createdAt && (
-                            <div className="text-xs text-purple-300">
+                            <div className="text-xs text-gray-500 dark:text-red-300">
                               {expense.createdAt
                                 .toDate()
                                 .toLocaleTimeString("en-IN", {
@@ -328,13 +328,13 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
                           type="number"
                           value={editAmount}
                           onChange={(e) => setEditAmount(e.target.value)}
-                          className="w-24 p-2 border border-white/20 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-semibold bg-white/5 text-white"
+                          className="w-24 p-2 border border-gray-200 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm font-semibold bg-white text-gray-900 dark:bg-white/5 dark:text-white"
                           required
                           min="0"
                           step="0.01"
                         />
                       ) : (
-                        <div className="text-lg font-bold text-white">
+                        <div className="text-lg font-bold text-gray-900 dark:text-white">
                           ₹{expense.amount.toFixed(2)}
                         </div>
                       )}
@@ -346,17 +346,17 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
                           <textarea
                             value={editRemarks}
                             onChange={(e) => setEditRemarks(e.target.value)}
-                            className="w-full p-3 border border-white/20 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm resize-none bg-white/5 text-white"
+                            className="w-full p-3 border border-gray-200 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm resize-none bg-white text-gray-900 dark:bg-white/5 dark:text-white"
                             rows={2}
                             placeholder="Enter description..."
                             required
                           />
-                          <div className="text-xs text-purple-300">
+                          <div className="text-xs text-gray-500 dark:text-purple-300">
                             {editRemarks.length}/200 characters
                           </div>
                         </div>
                       ) : (
-                        <div className="text-sm text-white max-w-xs">
+                        <div className="text-sm text-gray-600 dark:text-white max-w-xs">
                           {expense.remarks}
                         </div>
                       )}
@@ -384,7 +384,7 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
                         <div className="flex justify-end gap-2">
                           <button
                             onClick={cancelEdit}
-                            className="inline-flex items-center gap-2 px-3 py-2 text-white bg-white/10 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium"
+                            className="inline-flex items-center gap-2 px-3 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-white dark:bg-white/10 dark:hover:bg-white/20 rounded-lg transition-colors text-sm font-medium"
                             disabled={isLoading}
                           >
                             <X className="w-4 h-4" />
@@ -409,8 +409,8 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
                           disabled={expense.editCount >= 2}
                           className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                             expense.editCount >= 2
-                              ? "bg-white/5 text-gray-500 cursor-not-allowed border border-white/10"
-                              : "bg-indigo-600 text-white hover:bg-indigo-700 border border-indigo-500"
+                              ? "bg-gray-100 text-gray-400 dark:bg-white/5 dark:text-gray-500 cursor-not-allowed border border-gray-200 dark:border-white/10"
+                              : "bg-red-600 text-white hover:bg-red-700 border border-red-500"
                           }`}
                         >
                           <Edit3 className="w-4 h-4" />
@@ -425,13 +425,13 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
           </div>
 
           {/* Mobile Card List */}
-          <div className="md:hidden divide-y divide-white/10">
+          <div className="md:hidden divide-y divide-gray-200 dark:divide-white/10">
             {paginatedExpenses.map((expense) => (
               <div
                 key={expense.id}
                 className={`p-4 transition-all duration-150 ${
                   editingId === expense.id
-                    ? "bg-indigo-500/10 border-l-4 border-indigo-400"
+                    ? "bg-indigo-50 border-l-4 border-indigo-500 dark:bg-indigo-500/10 dark:border-indigo-400"
                     : ""
                 }`}
               >
@@ -439,25 +439,25 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
                   <div className="space-y-4">
                     <div className="flex justify-between items-start">
                       <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-purple-300" />
-                        <span className="text-sm text-white">
+                        <Calendar className="w-4 h-4 text-gray-500 dark:text-purple-300" />
+                        <span className="text-sm text-gray-900 dark:text-white">
                           {formatDate(expense.date.toDate())}
                         </span>
                       </div>
-                      <div className="text-lg font-bold text-white">
+                      <div className="text-lg font-bold text-gray-900 dark:text-white">
                         ₹{expense.amount.toFixed(2)}
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <label className="block text-sm font-semibold text-white">
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-white">
                         Amount
                       </label>
                       <input
                         type="number"
                         value={editAmount}
                         onChange={(e) => setEditAmount(e.target.value)}
-                        className="w-full p-3 border border-white/20 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-semibold bg-white/5 text-white"
+                        className="w-full p-3 border border-gray-200 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm font-semibold bg-white text-gray-900 dark:bg-white/5 dark:text-white"
                         required
                         min="0"
                         step="0.01"
@@ -465,18 +465,18 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
                     </div>
 
                     <div className="space-y-2">
-                      <label className="block text-sm font-semibold text-white">
+                      <label className="block text-sm font-semibold text-gray-700 dark:text-white">
                         Description
                       </label>
                       <textarea
                         value={editRemarks}
                         onChange={(e) => setEditRemarks(e.target.value)}
-                        className="w-full p-3 border border-white/20 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm resize-none bg-white/5 text-white"
+                        className="w-full p-3 border border-gray-200 dark:border-white/20 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm resize-none bg-white text-gray-900 dark:bg-white/5 dark:text-white"
                         rows={2}
                         placeholder="Enter description..."
                         required
                       />
-                      <div className="text-xs text-purple-300">
+                      <div className="text-xs text-gray-500 dark:text-purple-300">
                         {editRemarks.length}/200 characters
                       </div>
                     </div>
@@ -484,7 +484,7 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
                     <div className="flex justify-end gap-2 pt-2">
                       <button
                         onClick={cancelEdit}
-                        className="px-4 py-2 text-white bg-white/10 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium"
+                        className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-white dark:bg-white/10 dark:hover:bg-white/20 rounded-lg transition-colors text-sm font-medium"
                         disabled={isLoading}
                       >
                         Cancel
@@ -503,16 +503,16 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-2">
                         <Calendar className="w-4 h-4 text-purple-300" />
-                        <span className="text-sm text-white">
+                        <span className="text-sm text-gray-600 dark:text-white">
                           {formatDate(expense.date.toDate())}
                         </span>
                       </div>
-                      <div className="text-lg font-bold text-white">
+                      <div className="text-lg font-bold text-gray-900 dark:text-white">
                         ₹{expense.amount.toFixed(2)}
                       </div>
                     </div>
 
-                    <div className="text-sm text-white mb-3">
+                    <div className="text-sm text-gray-600 dark:text-white mb-3">
                       {expense.remarks}
                     </div>
 
@@ -540,7 +540,7 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
                         className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
                           expense.editCount >= 2
                             ? "bg-white/5 text-gray-500 cursor-not-allowed"
-                            : "bg-indigo-600 text-white hover:bg-indigo-700"
+                            : "bg-red-600 text-white hover:bg-red-700"
                         }`}
                       >
                         Edit
@@ -562,13 +562,13 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
             disabled={currentPage === 1}
             className={`p-2 rounded-lg transition-colors ${
               currentPage === 1
-                ? "text-gray-500 cursor-not-allowed"
-                : "text-white bg-white/10"
+                ? "text-gray-400 cursor-not-allowed"
+                : "text-gray-700 bg-white shadow-sm border border-gray-200 hover:bg-gray-50 dark:text-white dark:bg-white/10 dark:border-none dark:hover:bg-white/20"
             }`}
           >
             <ChevronLeft size={20} />
           </button>
-          <span className="text-sm font-medium text-white">
+          <span className="text-sm font-medium text-gray-600 dark:text-white">
             Page {currentPage} of {totalPages}
           </span>
           <button
@@ -576,8 +576,8 @@ export default function ExpenseList({ expenses }: ExpenseListProps) {
             disabled={currentPage === totalPages}
             className={`p-2 rounded-lg transition-colors ${
               currentPage === totalPages
-                ? "text-gray-500 cursor-not-allowed"
-                : "text-white bg-white/10"
+                ? "text-gray-400 cursor-not-allowed"
+                : "text-gray-700 bg-white shadow-sm border border-gray-200 hover:bg-gray-50 dark:text-white dark:bg-white/10 dark:border-none dark:hover:bg-white/20"
             }`}
           >
             <ChevronRight size={20} />

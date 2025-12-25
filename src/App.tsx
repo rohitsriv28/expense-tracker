@@ -5,22 +5,28 @@ import InstallPrompt from "./components/InstallPrompt";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 import useOfflineStatus from "./hooks/useOfflineStatus";
 import ErrorFallback from "./components/ErrorFallback";
 import NetworkStatusManager from "./components/NetworkStatusManager";
 import NotFoundPage from "./components/NotFoundPage";
 
+import { ThemeProvider } from "./context/ThemeContext";
+
 function App() {
   const isOffline = useOfflineStatus();
   const [showNetworkToast, setShowNetworkToast] = useState(false);
-  const [lastOnlineStatus, setLastOnlineStatus] = useState(navigator.onLine);
+  // Track previous offline status to detect changes
+  // Initialize with current status to prevent toast on load
+  const [wasOffline, setWasOffline] = useState(isOffline);
 
   // Handle network status changes
   useEffect(() => {
-    // Only show toast when status actually changes
-    if (lastOnlineStatus !== null && isOffline !== lastOnlineStatus) {
+    // Only show toast when status actually changes from previous state
+    if (isOffline !== wasOffline) {
       setShowNetworkToast(true);
-      setLastOnlineStatus(isOffline);
+      setWasOffline(isOffline);
 
       // Auto-dismiss toast after 3 seconds
       const timer = setTimeout(() => {
@@ -28,15 +34,12 @@ function App() {
       }, 3000);
 
       return () => clearTimeout(timer);
-    } else if (lastOnlineStatus === null) {
-      // Initialize on first load
-      setLastOnlineStatus(isOffline);
     }
-  }, [isOffline, lastOnlineStatus]);
+  }, [isOffline, wasOffline]);
 
   // Service Worker registration with enhanced error handling
   useEffect(() => {
-    if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
+    if ("serviceWorker" in navigator && import.meta.env.PROD) {
       window.addEventListener("load", async () => {
         try {
           const registration = await navigator.serviceWorker.register(
@@ -46,7 +49,9 @@ function App() {
             }
           );
 
-          console.log("SW registered successfully:", registration);
+          if (import.meta.env.DEV) {
+            console.log("SW registered successfully:", registration);
+          }
 
           // Handle service worker updates
           registration.addEventListener("updatefound", () => {
@@ -57,8 +62,10 @@ function App() {
                   newWorker.state === "installed" &&
                   navigator.serviceWorker.controller
                 ) {
-                  // New update available
-                  console.log("New app version available");
+                  // New update available - silent update for now
+                  if (import.meta.env.DEV) {
+                    console.log("New app version available");
+                  }
                 }
               });
             }
@@ -67,24 +74,6 @@ function App() {
           console.warn("SW registration failed:", error);
         }
       });
-    }
-  }, []);
-
-  // Performance monitoring
-  useEffect(() => {
-    // Report Web Vitals if available
-    if (typeof window !== "undefined" && "performance" in window) {
-      const observer = new PerformanceObserver((list) => {
-        for (const entry of list.getEntries()) {
-          console.log(`${entry.name}`);
-        }
-      });
-
-      try {
-        observer.observe({ entryTypes: ["measure", "navigation"] });
-      } catch (error) {
-        console.warn("Performance observer not supported:", error);
-      }
     }
   }, []);
 
@@ -101,32 +90,36 @@ function App() {
         // logErrorToService(error, errorInfo);
       }}
     >
-      <div className="min-h-screen bg-gray-100 relative">
-        <BrowserRouter>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </BrowserRouter>
+      <ThemeProvider>
+        <div className="min-h-screen bg-gray-100 dark:bg-slate-900 relative transition-colors duration-300">
+          <BrowserRouter>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/terms" element={<TermsOfService />} />
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </BrowserRouter>
 
-        {/* Network Status Manager */}
-        <NetworkStatusManager
-          isOffline={isOffline}
-          showToast={showNetworkToast}
-          onDismissToast={() => setShowNetworkToast(false)}
-        />
+          {/* Network Status Manager */}
+          <NetworkStatusManager
+            isOffline={isOffline}
+            showToast={showNetworkToast}
+            onDismissToast={() => setShowNetworkToast(false)}
+          />
 
-        {/* PWA Install Prompt */}
-        <InstallPrompt />
-      </div>
+          {/* PWA Install Prompt */}
+          <InstallPrompt />
+        </div>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

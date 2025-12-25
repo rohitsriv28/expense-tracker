@@ -58,33 +58,33 @@ export default function InsightsSummary({ expenses }: InsightsSummaryProps) {
       amount: dailyTotal,
       count: dailyExpenses.length,
       icon: Calendar,
-      gradient: "from-blue-600 via-blue-500 to-cyan-500",
-      bgGradient: "from-blue-50/80 via-blue-50/60 to-cyan-50/80",
-      textColor: "text-blue-700",
-      accentColor: "bg-blue-500",
-      shadowColor: "shadow-blue-200/50",
+      color: "bg-red-500",
+      bgColor: "bg-red-50 dark:bg-red-500/10",
+      textColor: "text-red-700 dark:text-red-400",
+      accentColor: "bg-red-500",
+      shadowColor: "shadow-red-200/50",
     },
     {
       title: "This Week",
       amount: weeklyTotal,
       count: weeklyExpenses.length,
       icon: TrendingUp,
-      gradient: "from-emerald-600 via-green-500 to-teal-500",
-      bgGradient: "from-emerald-50/80 via-green-50/60 to-teal-50/80",
-      textColor: "text-emerald-700",
-      accentColor: "bg-emerald-500",
-      shadowColor: "shadow-emerald-200/50",
+      color: "bg-red-600",
+      bgColor: "bg-red-50 dark:bg-red-600/10",
+      textColor: "text-red-800 dark:text-red-300",
+      accentColor: "bg-red-600",
+      shadowColor: "shadow-red-200/50",
     },
     {
       title: "This Month",
       amount: monthlyTotal,
       count: monthlyExpenses.length,
       icon: BarChart3,
-      gradient: "from-purple-600 via-violet-500 to-fuchsia-500",
-      bgGradient: "from-purple-50/80 via-violet-50/60 to-fuchsia-50/80",
-      textColor: "text-purple-700",
-      accentColor: "bg-purple-500",
-      shadowColor: "shadow-purple-200/50",
+      color: "bg-slate-800",
+      bgColor: "bg-slate-100 dark:bg-slate-800/50",
+      textColor: "text-slate-700 dark:text-slate-300",
+      accentColor: "bg-slate-700",
+      shadowColor: "shadow-slate-200/50",
     },
   ];
 
@@ -102,16 +102,16 @@ export default function InsightsSummary({ expenses }: InsightsSummaryProps) {
         >
           <div className="flex items-center">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl blur-lg opacity-20"></div>
-              <div className="relative bg-white/80 backdrop-blur-sm border border-white/40 rounded-xl p-3 shadow-lg">
-                <BadgeIndianRupee className="w-6 h-6 md:w-7 md:h-7 text-blue-600" />
+              <div className="absolute inset-0 bg-red-500/20 rounded-xl blur-lg"></div>
+              <div className="relative bg-white dark:bg-white/80 backdrop-blur-sm border border-gray-200 dark:border-white/40 rounded-xl p-3 shadow-lg">
+                <BadgeIndianRupee className="w-6 h-6 md:w-7 md:h-7 text-red-600" />
               </div>
             </div>
             <div className="ml-4">
-              <h2 className="text-xl md:text-2xl font-bold text-gray-800 leading-tight">
+              <h2 className="text-xl md:text-2xl font-bold text-gray-800 dark:text-white leading-tight">
                 Spending Overview
               </h2>
-              <p className="text-sm text-gray-500 font-medium">
+              <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
                 Track your financial journey
               </p>
             </div>
@@ -143,29 +143,18 @@ export default function InsightsSummary({ expenses }: InsightsSummaryProps) {
               return (
                 <div
                   key={index}
-                  className={`group relative overflow-hidden bg-gradient-to-br ${card.bgGradient} rounded-2xl md:rounded-3xl shadow-xl md:shadow-2xl ${card.shadowColor} border border-white/30 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl cursor-pointer backdrop-blur-sm`}
+                  className={`group relative overflow-hidden bg-white dark:bg-transparent rounded-2xl md:rounded-3xl shadow-xl md:shadow-2xl ${card.shadowColor} border border-gray-100 dark:border-white/30 transition-all duration-500 hover:scale-[1.02] hover:shadow-2xl cursor-pointer backdrop-blur-sm`}
                   onClick={() => toggleCardExpansion(index)}
                 >
-                  {/* Animated background patterns */}
-                  <div className="absolute inset-0 opacity-[0.03]">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-white rounded-full transform translate-x-16 -translate-y-16"></div>
-                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-white rounded-full transform -translate-x-12 translate-y-12"></div>
-                  </div>
-
-                  {/* Subtle animated gradient overlay */}
                   <div
-                    className={`absolute inset-0 bg-gradient-to-br ${card.gradient} opacity-[0.02] transition-opacity duration-500 group-hover:opacity-[0.06]`}
+                    className={`absolute inset-0 ${card.bgColor} transition-colors duration-300`}
                   ></div>
 
                   <div className="relative p-5 md:p-7">
                     <div className="flex items-center justify-between mb-4 md:mb-6">
                       <div
-                        className={`relative w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br ${card.gradient} rounded-2xl flex items-center justify-center shadow-xl transform transition-transform duration-300 group-hover:scale-110`}
+                        className={`relative w-12 h-12 md:w-14 md:h-14 ${card.color} rounded-2xl flex items-center justify-center shadow-xl transform transition-transform duration-300 group-hover:scale-110`}
                       >
-                        {/* Glow effect */}
-                        <div
-                          className={`absolute inset-0 bg-gradient-to-br ${card.gradient} rounded-2xl blur-md opacity-40 scale-110`}
-                        ></div>
                         <IconComponent className="relative w-5 h-5 md:w-7 md:h-7 text-white drop-shadow-sm" />
                       </div>
                       <div className="flex items-center">
@@ -241,11 +230,7 @@ export default function InsightsSummary({ expenses }: InsightsSummaryProps) {
 
       {/* Quick Stats Section */}
       {expenses.length > 0 && (
-        <div className="relative bg-white/80 backdrop-blur-sm rounded-2xl md:rounded-3xl shadow-xl border border-white/40 overflow-hidden">
-          {/* Background decoration */}
-          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-blue-500/5 to-purple-500/5 rounded-full transform translate-x-32 -translate-y-32"></div>
-          <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-emerald-500/5 to-cyan-500/5 rounded-full transform -translate-x-24 translate-y-24"></div>
-
+        <div className="relative bg-white dark:bg-white/5 backdrop-blur-sm rounded-2xl md:rounded-3xl shadow-xl border border-gray-200 dark:border-white/10 overflow-hidden transition-colors duration-300">
           <div className="relative">
             {/* Header with dropdown toggle */}
             <div
@@ -257,16 +242,15 @@ export default function InsightsSummary({ expenses }: InsightsSummaryProps) {
             >
               <div className="flex items-center">
                 <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-r from-gray-400 to-gray-600 rounded-xl blur-md opacity-20"></div>
-                  <div className="relative bg-gradient-to-r from-gray-500 to-gray-700 rounded-xl p-2.5 shadow-lg">
+                  <div className="relative bg-gray-600 rounded-xl p-2.5 shadow-lg">
                     <BarChart3 className="w-5 h-5 text-white" />
                   </div>
                 </div>
                 <div className="ml-4">
-                  <h3 className="font-bold text-gray-800 text-lg md:text-xl">
+                  <h3 className="font-bold text-gray-800 dark:text-white text-lg md:text-xl">
                     Quick Stats
                   </h3>
-                  <p className="text-sm text-gray-500 font-medium">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
                     Your expense insights
                   </p>
                 </div>
@@ -296,12 +280,12 @@ export default function InsightsSummary({ expenses }: InsightsSummaryProps) {
                     {
                       label: "Expenses",
                       value: expenses.length,
-                      color: "from-blue-500 to-cyan-500",
+                      color: "bg-slate-500",
                     },
                     {
-                      label: "All Time",
+                      label: "Total",
                       value: `₹${calculateTotal(expenses).toFixed(0)}`,
-                      color: "from-emerald-500 to-teal-500",
+                      color: "bg-red-500",
                     },
                     {
                       label: "Average",
@@ -312,7 +296,7 @@ export default function InsightsSummary({ expenses }: InsightsSummaryProps) {
                             ).toFixed(0)
                           : "0"
                       }`,
-                      color: "from-purple-500 to-violet-500",
+                      color: "bg-red-600",
                     },
                     {
                       label: "Highest",
@@ -323,26 +307,22 @@ export default function InsightsSummary({ expenses }: InsightsSummaryProps) {
                             )
                           : "0"
                       }`,
-                      color: "from-pink-500 to-rose-500",
+                      color: "bg-slate-800",
                     },
                   ].map((stat, index) => (
                     <div
                       key={index}
-                      className="group relative bg-gradient-to-br from-gray-50/80 to-white/80 backdrop-blur-sm rounded-xl md:rounded-2xl p-4 md:p-5 border border-white/50 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
+                      className="group relative bg-slate-100 dark:bg-white/5 backdrop-blur-sm rounded-xl md:rounded-2xl p-4 md:p-5 border border-gray-200 dark:border-white/10 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02]"
                     >
                       {/* Subtle glow effect on hover */}
-                      <div
-                        className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-0 group-hover:opacity-5 rounded-xl md:rounded-2xl transition-opacity duration-300`}
-                      ></div>
-
                       <div className="relative text-center">
                         <div
-                          className={`w-3 h-3 bg-gradient-to-r ${stat.color} rounded-full mx-auto mb-3 shadow-sm`}
+                          className={`w-3 h-3 ${stat.color} rounded-full mx-auto mb-3 shadow-sm`}
                         ></div>
-                        <p className="text-xl md:text-3xl font-black text-gray-900 mb-2 tracking-tight">
+                        <p className="text-xl md:text-3xl font-black text-gray-900 dark:text-white mb-2 tracking-tight">
                           {stat.value}
                         </p>
-                        <p className="text-xs md:text-sm text-gray-600 font-semibold">
+                        <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 font-semibold">
                           {stat.label}
                         </p>
                       </div>

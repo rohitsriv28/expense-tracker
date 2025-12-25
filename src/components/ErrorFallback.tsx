@@ -68,18 +68,17 @@ ${error.stack}
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-pink-50 to-rose-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-slate-100 flex items-center justify-center px-4">
       <div className="text-center max-w-2xl">
         {/* Error Icon */}
         <div className="relative mb-8">
-          <div className="w-24 h-24 bg-gradient-to-br from-red-500 to-pink-600 rounded-3xl flex items-center justify-center shadow-2xl mx-auto">
+          <div className="w-24 h-24 bg-red-600 rounded-3xl flex items-center justify-center shadow-2xl mx-auto">
             <AlertTriangle className="w-12 h-12 text-white" />
           </div>
-          <div className="absolute -inset-2 bg-gradient-to-r from-red-500 to-pink-600 rounded-3xl blur opacity-20 animate-pulse"></div>
         </div>
 
         {/* Error Message */}
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent mb-4">
+        <h1 className="text-4xl font-bold text-red-600 mb-4">
           Oops! Something went wrong
         </h1>
 
@@ -121,7 +120,7 @@ ${error.stack}
         <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
           <button
             onClick={resetErrorBoundary}
-            className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-2xl hover:from-red-700 hover:to-pink-700 transition-all duration-200 font-semibold shadow-xl hover:shadow-2xl transform hover:-translate-y-1"
+            className="inline-flex items-center px-8 py-4 bg-red-600 text-white rounded-2xl hover:bg-red-700 transition-all duration-200 font-semibold shadow-xl hover:shadow-2xl transform hover:-translate-y-1"
           >
             <RefreshCw className="w-5 h-5 mr-2" />
             Try Again
@@ -137,7 +136,7 @@ ${error.stack}
 
           <button
             onClick={reportIssue}
-            className="inline-flex items-center px-8 py-4 bg-blue-100 text-blue-700 rounded-2xl hover:bg-blue-200 transition-all duration-200 font-semibold border border-blue-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+            className="inline-flex items-center px-8 py-4 bg-slate-200 text-slate-800 rounded-2xl hover:bg-slate-300 transition-all duration-200 font-semibold border border-slate-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
           >
             <ExternalLink className="w-5 h-5 mr-2" />
             Report Issue
@@ -163,7 +162,7 @@ ${error.stack}
             Need help? Contact us at{" "}
             <a
               href="mailto:support@cashflow.app"
-              className="text-blue-600 hover:text-blue-700 underline"
+              className="text-red-600 hover:text-red-700 underline"
             >
               support@cashflow.app
             </a>

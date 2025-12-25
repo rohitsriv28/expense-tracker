@@ -9,6 +9,8 @@ import {
   doc,
   orderBy,
   deleteDoc,
+  where,
+  type QueryConstraint,
 } from "firebase/firestore";
 
 export const addExpense = async (expense: Omit<Expense, "userId" | "id">) => {
@@ -42,13 +44,64 @@ export const deleteExpense = async (id: string) => {
   await deleteDoc(expenseRef);
 };
 
+export interface ExpenseFilters {
+  startDate?: Date;
+  endDate?: Date;
+  category?: string;
+  sortBy?: "date" | "amount";
+  sortDirection?: "asc" | "desc";
+}
+
 export const getExpenses = (
   userId: string,
-  callback: (expenses: Expense[]) => void
+  callback: (expenses: Expense[]) => void,
+  filters?: ExpenseFilters
 ) => {
-  // Query the nested collection with ordering
   const userExpensesRef = collection(db, "expenses", userId, "userExpenses");
-  const q = query(userExpensesRef, orderBy("date", "desc"));
+  let q = query(userExpensesRef, orderBy("date", "desc"));
+
+  // Apply filters if provided
+  if (filters) {
+    const constraints: QueryConstraint[] = [];
+
+    // Category filter
+    if (filters.category && filters.category !== "all") {
+      constraints.push(where("category", "==", filters.category));
+    }
+
+    // Date filters
+    // Note: Firestore requires a composite index for inequalities on different fields
+    // or sorting on different fields.
+    // If filter params are simple, client-side filtering might be okay for small datasets
+    // but for "Server-Side" request, we push this to query.
+    // However, mixing 'where' (category) and 'orderBy' (date) requires index.
+
+    // Ideally we want to let Firestore handle this.
+    // Be aware: 'where' on Date + 'orderBy' on Date works fine.
+    // 'where' on Category + 'orderBy' on Date needs Index.
+
+    // Let's implement full server-side logic and let user create index if needed.
+
+    if (filters.startDate) {
+      constraints.push(where("date", ">=", filters.startDate));
+    }
+
+    if (filters.endDate) {
+      // Set end of day for end date to include the whole day
+      const endOfDay = new Date(filters.endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      constraints.push(where("date", "<=", endOfDay));
+    }
+
+    // Apply sorting
+    // Default is date desc. If we filter by category, we might need category index?
+    // Actually, simple queries don't needed it. Composite might.
+
+    // Re-construct query with constraints
+    // Note: If we use 'where' on category, we can still orderBy date if index exists.
+
+    q = query(userExpensesRef, ...constraints, orderBy("date", "desc"));
+  }
 
   return onSnapshot(
     q,
@@ -64,40 +117,12 @@ export const getExpenses = (
     },
     (error) => {
       console.error("Error fetching expenses:", error);
-      // Optionally call callback with empty array or handle error
-      callback([]);
-    }
-  );
-};
-
-// Enhanced export with date filtering
-export const getExpensesByDateRange = (
-  userId: string,
-  startDate: Date,
-  endDate: Date,
-  callback: (expenses: Expense[]) => void
-) => {
-  const userExpensesRef = collection(db, "expenses", userId, "userExpenses");
-  const q = query(
-    userExpensesRef,
-    orderBy("date", "desc")
-    // Note: For date range filtering, you might want to add where clauses
-    // but this requires composite indexes in Firestore
-  );
-
-  return onSnapshot(
-    q,
-    (snapshot) => {
-      const expenses = snapshot.docs
-        .map((doc) => ({ id: doc.id, ...doc.data() } as Expense))
-        .filter((expense) => {
-          const expenseDate = expense.date.toDate();
-          return expenseDate >= startDate && expenseDate <= endDate;
-        });
-      callback(expenses);
-    },
-    (error) => {
-      console.error("Error fetching expenses by date range:", error);
+      // If error is 'failed-precondition' (missing index), notify developer/user path
+      if (error.code === "failed-precondition") {
+        console.error("Missing Firestore Index. Creating link:", error.message);
+        // In a real app we might expose this to UI, here we log it.
+        // Fallback to empty or previous data?
+      }
       callback([]);
     }
   );

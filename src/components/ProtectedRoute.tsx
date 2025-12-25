@@ -12,7 +12,7 @@ interface ProtectedRouteProps {
 // Loading skeleton component
 function LoadingSkeleton() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-slate-100">
       <div className="animate-pulse">
         {/* Header skeleton */}
         <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
@@ -112,14 +112,13 @@ function LoadingScreen() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-slate-100 flex items-center justify-center px-4">
       <div className="text-center max-w-md">
         {/* Loading animation */}
         <div className="relative mb-8">
-          <div className="w-20 h-20 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-2xl mx-auto">
+          <div className="w-20 h-20 bg-red-600 rounded-2xl flex items-center justify-center shadow-2xl mx-auto">
             <Shield className="w-10 h-10 text-white" />
           </div>
-          <div className="absolute -inset-2 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl blur opacity-20 animate-pulse"></div>
         </div>
 
         {/* Loading text */}
@@ -132,7 +131,7 @@ function LoadingScreen() {
 
         {/* Animated loader */}
         <div className="flex items-center justify-center mb-6">
-          <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+          <Loader2 className="w-8 h-8 text-red-600 animate-spin" />
         </div>
 
         {/* Connection status */}
@@ -150,9 +149,8 @@ function LoadingScreen() {
           )}
         </div>
 
-        {/* Progress bar */}
         <div className="mt-6 w-full bg-gray-200 rounded-full h-2">
-          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 h-2 rounded-full animate-pulse w-2/3"></div>
+          <div className="bg-red-600 h-2 rounded-full animate-pulse w-2/3"></div>
         </div>
       </div>
     </div>

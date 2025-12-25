@@ -1,14 +1,12 @@
 import { useState, useEffect } from "react";
 import {
-  Download,
   X,
   Smartphone,
   Apple,
   Chrome,
-  Shield,
-  Zap,
-  Wifi,
-  Star,
+  Share,
+  PlusSquare,
+  Download,
 } from "lucide-react";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -52,11 +50,14 @@ export default function InstallPrompt() {
   useEffect(() => {
     // Check if app is already installed (running in standalone mode)
     const checkStandalone = () => {
+      interface NavigatorStandalone extends Navigator {
+        standalone?: boolean;
+      }
       const isStandaloneMode =
         window.matchMedia("(display-mode: standalone)").matches ||
-        (window.navigator as any).standalone ||
+        (window.navigator as NavigatorStandalone).standalone ||
         document.referrer.includes("android-app://");
-      setIsStandalone(isStandaloneMode);
+      setIsStandalone(!!isStandaloneMode);
     };
 
     // Detect platform
@@ -65,9 +66,7 @@ export default function InstallPrompt() {
       const isIOS = /ipad|iphone|ipod/.test(userAgent);
       const isAndroid = /android/.test(userAgent);
       const isMobile =
-        /mobile|tablet|android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/.test(
-          userAgent
-        );
+        /mobile|tablet|android|webos|iphone|ipad|opera mini/.test(userAgent);
 
       if (isIOS) setPlatform("ios");
       else if (isAndroid) setPlatform("android");
@@ -220,68 +219,75 @@ export default function InstallPrompt() {
     return null;
   }
 
-  // iOS Instructions Modal
+  // iOS Instructions Modal - Native iOS Sheet Style
   if (showIOSInstructions) {
     return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full animate-scale-up">
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-6 rounded-t-3xl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mr-3">
-                  <Apple className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-white font-bold text-lg">
-                    Install on iOS
-                  </h3>
-                  <p className="text-blue-100 text-sm">Add to Home Screen</p>
-                </div>
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-50 flex items-end md:items-center justify-center animate-fade-in">
+        <div className="bg-[#F2F2F2] dark:bg-[#1C1C1E] w-full max-w-sm md:rounded-2xl rounded-t-2xl shadow-2xl overflow-hidden animate-slide-up">
+          {/* iOS Header */}
+          <div className="p-4 flex items-center justify-between border-b border-gray-300 dark:border-gray-700 bg-white dark:bg-[#2C2C2E]">
+            <div className="flex items-center">
+              <div className="w-12 h-12 bg-red-600 rounded-[10px] flex items-center justify-center mr-3 shadow-md">
+                <Apple className="w-7 h-7 text-white" />
               </div>
-              <button
-                onClick={handleDismiss}
-                className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center hover:bg-white/30 transition-colors"
-              >
-                <X className="w-4 h-4 text-white" />
-              </button>
+              <div>
+                <h3 className="text-black dark:text-white font-semibold text-[17px] leading-tight">
+                  Install CashFlow
+                </h3>
+                <p className="text-gray-500 dark:text-gray-400 text-[13px]">
+                  App Store
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleDismiss}
+              className="w-7 h-7 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* iOS Instructions */}
+          <div className="p-6 space-y-6">
+            <div className="flex items-start">
+              <div className="flex-shrink-0 mr-4 mt-1">
+                <Share className="w-7 h-7 text-[#007AFF]" />
+              </div>
+              <div>
+                <p className="text-[15px] font-medium text-black dark:text-white leading-snug">
+                  1. Tap the <span className="text-[#007AFF]">Share</span>{" "}
+                  button
+                </p>
+                <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">
+                  At the bottom of your screen
+                </p>
+              </div>
+            </div>
+            <div className="w-full h-[1px] bg-gray-300 dark:bg-gray-700/50"></div>
+
+            <div className="flex items-start">
+              <div className="flex-shrink-0 mr-4 mt-1">
+                <PlusSquare className="w-7 h-7 text-gray-800 dark:text-gray-200" />
+              </div>
+              <div>
+                <p className="text-[15px] font-medium text-black dark:text-white leading-snug">
+                  2. Select{" "}
+                  <span className="font-bold">Add to Home Screen</span>
+                </p>
+                <p className="text-[13px] text-gray-500 dark:text-gray-400 mt-1">
+                  Scroll down to find this option
+                </p>
+              </div>
             </div>
           </div>
 
-          <div className="p-6">
-            <div className="space-y-4">
-              <div className="flex items-center p-3 bg-blue-50 rounded-xl">
-                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
-                  <span className="text-blue-600 font-bold text-sm">1</span>
-                </div>
-                <p className="text-sm text-blue-800">
-                  Tap the <strong>Share</strong> button in Safari
-                </p>
-              </div>
-
-              <div className="flex items-center p-3 bg-green-50 rounded-xl">
-                <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
-                  <span className="text-green-600 font-bold text-sm">2</span>
-                </div>
-                <p className="text-sm text-green-800">
-                  Scroll and tap <strong>"Add to Home Screen"</strong>
-                </p>
-              </div>
-
-              <div className="flex items-center p-3 bg-purple-50 rounded-xl">
-                <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
-                  <span className="text-purple-600 font-bold text-sm">3</span>
-                </div>
-                <p className="text-sm text-purple-800">
-                  Tap <strong>"Add"</strong> to install
-                </p>
-              </div>
-            </div>
-
+          {/* iOS Action */}
+          <div className="p-4 bg-gray-100 dark:bg-[#121212] flex justify-center pb-8 md:pb-4">
             <button
               onClick={handleDismiss}
-              className="w-full mt-6 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all"
+              className="text-[#007AFF] text-[17px] font-semibold"
             >
-              Got it!
+              Close
             </button>
           </div>
         </div>
@@ -295,102 +301,66 @@ export default function InstallPrompt() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 left-4 md:left-auto md:max-w-sm z-50 animate-slide-up">
-      <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden backdrop-blur-sm">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 p-6 relative overflow-hidden">
-          {/* Background decoration */}
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-400/20 to-pink-400/20" />
-          <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full" />
-          <div className="absolute -bottom-2 -left-2 w-16 h-16 bg-white/5 rounded-full" />
-
-          <div className="relative flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center mr-4 shadow-lg">
-                {platform === "ios" ? (
-                  <Apple className="w-6 h-6 text-white" />
-                ) : platform === "android" ? (
-                  <Smartphone className="w-6 h-6 text-white" />
-                ) : (
-                  <Chrome className="w-6 h-6 text-white" />
-                )}
-              </div>
-              <div>
-                <h3 className="text-white font-bold text-xl tracking-tight">
-                  Install CashFlow
-                </h3>
-                <p className="text-indigo-100 text-sm font-medium">
-                  Get the full app experience
-                </p>
-              </div>
+    <div
+      className={`fixed z-50 animate-slide-up ${
+        platform === "desktop"
+          ? "bottom-4 right-4 max-w-sm"
+          : "bottom-0 left-0 right-0 rounded-t-3xl"
+      }`}
+    >
+      <div
+        className={`bg-white dark:bg-slate-900 shadow-[0_-5px_20px_rgba(0,0,0,0.15)] dark:shadow-[0_-5px_20px_rgba(0,0,0,0.4)] border border-gray-200 dark:border-white/10 overflow-hidden backdrop-blur-md transition-colors duration-300 ${
+          platform === "desktop" ? "rounded-3xl" : "rounded-t-3xl"
+        }`}
+      >
+        {/* Header - Native Feel */}
+        <div className="p-5 flex items-center justify-between border-b border-gray-100 dark:border-white/5">
+          <div className="flex items-center">
+            <div className="w-12 h-12 bg-red-600 rounded-2xl flex items-center justify-center mr-4 shadow-lg">
+              {platform === "ios" ? (
+                <Apple className="w-6 h-6 text-white" />
+              ) : platform === "android" ? (
+                <Smartphone className="w-6 h-6 text-white" />
+              ) : (
+                <Chrome className="w-6 h-6 text-white" />
+              )}
             </div>
-            <button
-              onClick={handleDismiss}
-              className="w-8 h-8 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center hover:bg-white/30 transition-all group"
-            >
-              <X className="w-4 h-4 text-white group-hover:rotate-90 transition-transform" />
-            </button>
+            <div>
+              <h3 className="text-gray-900 dark:text-white font-bold text-lg leading-tight">
+                Install CashFlow
+              </h3>
+              <p className="text-red-600 dark:text-red-400 text-sm font-medium">
+                {platform === "ios" ? "App Store" : "Google Play Store"}
+              </p>
+            </div>
           </div>
+          <button
+            onClick={handleDismiss}
+            className="w-8 h-8 bg-gray-100 dark:bg-white/10 rounded-full flex items-center justify-center hover:bg-gray-200 dark:hover:bg-white/20 transition-all"
+          >
+            <X className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+          </button>
         </div>
 
         {/* Content */}
-        <div className="p-6">
-          {/* Benefits */}
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            <div className="text-center">
-              <div className="w-10 h-10 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-2">
-                <Wifi className="w-5 h-5 text-green-600" />
-              </div>
-              <p className="text-xs text-gray-600 font-medium">Works Offline</p>
-            </div>
-            <div className="text-center">
-              <div className="w-10 h-10 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-2">
-                <Zap className="w-5 h-5 text-blue-600" />
-              </div>
-              <p className="text-xs text-gray-600 font-medium">
-                Lightning Fast
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="w-10 h-10 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-2">
-                <Shield className="w-5 h-5 text-purple-600" />
-              </div>
-              <p className="text-xs text-gray-600 font-medium">
-                Secure & Private
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl p-4 mb-6">
-            <div className="flex items-center justify-center mb-2">
-              {[...Array(5)].map((_, i) => (
-                <Star
-                  key={i}
-                  className="w-4 h-4 text-yellow-400 fill-current"
-                />
-              ))}
-              <span className="ml-2 text-sm font-semibold text-gray-700">
-                5.0
-              </span>
-            </div>
-            <p className="text-xs text-center text-gray-600 leading-relaxed">
-              "Best expense tracker I've ever used! The offline feature is a
-              game-changer."
-            </p>
-          </div>
+        <div className="p-6 pt-4">
+          <p className="text-gray-600 dark:text-gray-300 text-sm mb-6 leading-relaxed">
+            Install the app for the best experience. Access your expenses
+            offline, get fast performance, and track your spending securely.
+          </p>
 
           {/* Action Buttons */}
-          <div className="flex space-x-3">
+          <div className="grid grid-cols-2 gap-3">
             <button
               onClick={handleLaterDismiss}
-              className="flex-1 px-4 py-3 text-gray-600 bg-gray-100 rounded-2xl hover:bg-gray-200 transition-all font-semibold text-sm hover:scale-105 active:scale-95"
+              className="px-4 py-3.5 text-gray-700 bg-gray-100 hover:bg-gray-200 dark:bg-white/5 dark:text-gray-300 dark:hover:bg-white/10 rounded-xl transition-all font-semibold text-sm"
             >
-              Maybe Later
+              Not Now
             </button>
             <button
               onClick={handleInstall}
               disabled={isInstalling}
-              className="flex-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 font-semibold text-sm flex items-center justify-center disabled:opacity-50 hover:scale-105 active:scale-95 shadow-lg"
+              className="px-4 py-3.5 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all duration-200 font-semibold text-sm flex items-center justify-center shadow-lg shadow-red-500/20"
             >
               {isInstalling ? (
                 <>
@@ -400,19 +370,15 @@ export default function InstallPrompt() {
               ) : (
                 <>
                   <Download className="w-4 h-4 mr-2" />
-                  Install Now
+                  Install App
                 </>
               )}
             </button>
           </div>
 
-          {/* Platform-specific note */}
-          <p className="text-xs text-center text-gray-500 mt-4">
-            {platform === "ios" && "For iPhone/iPad users"}
-            {platform === "android" && "For Android users"}
-            {platform === "desktop" && "For desktop users"}
-            {platform === "unknown" && "Works on all devices"}
-          </p>
+          <div className="mt-4 flex justify-center">
+            <div className="h-1 w-32 bg-gray-300 dark:bg-gray-700 rounded-full opacity-50"></div>
+          </div>
         </div>
       </div>
     </div>

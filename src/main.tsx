@@ -3,6 +3,16 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.tsx";
 
+declare global {
+  interface Window {
+    __CASHFLOW_DEBUG__: {
+      version: string;
+      buildTime: string;
+      environment: string;
+    };
+  }
+}
+
 // Performance monitoring
 const startTime = performance.now();
 
@@ -44,18 +54,16 @@ const initPerformanceObserver = () => {
     try {
       const observer = new PerformanceObserver((list) => {
         for (const entry of list.getEntries()) {
-          // Log performance metrics
-          if (entry.entryType === "navigation") {
-            console.log(
-              // `Page load time: ${entry.loadEventEnd - entry.loadEventStart}ms`
-            );
+          // Log performance metrics only in development if needed
+          if (entry.entryType === "navigation" && import.meta.env.DEV) {
+            // console.log(`Page load time: ${entry.loadEventEnd - entry.loadEventStart}ms`);
           }
         }
       });
 
       observer.observe({ entryTypes: ["navigation", "paint"] });
-    } catch (error) {
-      console.warn("Performance observer initialization failed:", error);
+    } catch {
+      // Silently fail
     }
   }
 };
@@ -100,7 +108,8 @@ if (import.meta.env.DEV) {
   console.log("📊 Performance metrics enabled");
 
   // Add global app info for debugging
-  (window as any).__CASHFLOW_DEBUG__ = {
+
+  window.__CASHFLOW_DEBUG__ = {
     version: "1.0.0",
     buildTime: new Date().toISOString(),
     environment: import.meta.env.MODE,

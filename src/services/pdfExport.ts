@@ -7,31 +7,21 @@ interface Expense {
   category?: string;
 }
 
-interface CompanyInfo {
-  name: string;
-  address: string;
-  phone?: string;
-  email?: string;
-  logo?: Uint8Array;
-}
-
 interface DateRange {
   start: Date;
   end: Date;
 }
 
 /**
- * Generates a basic professional PDF expense report.
+ * Generates a premium professional PDF expense report.
  * @param expenses Array of expense objects.
- * @param companyInfo Optional company information for header.
- * @param reportTitle Optional report title.
  * @param dateRange Optional date range to filter expenses.
  * @returns PDF bytes as Uint8Array.
  */
 export const generateExpensePDF = async (
   expenses: Expense[],
-  companyInfo?: CompanyInfo,
-  reportTitle = "Expense Report",
+  _unused1?: unknown,
+  _unused2?: unknown,
   dateRange?: DateRange
 ): Promise<Uint8Array> => {
   // Filter expenses by date range if provided
@@ -51,25 +41,24 @@ export const generateExpensePDF = async (
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
-  // Professional color palette - Red, Black, Grey
+  // Professional Red/Black Palette
   const colors = {
-    primary: rgb(0.8, 0.1, 0.1), // Professional red
-    accent: rgb(0.6, 0.05, 0.05), // Darker red
-    black: rgb(0, 0, 0),
-    darkGrey: rgb(0.3, 0.3, 0.3),
-    mediumGrey: rgb(0.5, 0.5, 0.5),
-    lightGrey: rgb(0.8, 0.8, 0.8),
-    veryLightGrey: rgb(0.95, 0.95, 0.95),
-    white: rgb(1, 1, 1),
+    primary: rgb(0.694, 0.07, 0.149), // #B11226 (Premium Crimson Red)
+    secondary: rgb(0.839, 0.121, 0.227), // #D61F3A (Dark Mode Red)
+    accent: rgb(0.97, 0.97, 0.97), // Very light grey for backgrounds
+    headerText: rgb(1, 1, 1), // White
+    text: rgb(0, 0, 0), // Black
+    subtext: rgb(0.3, 0.3, 0.3), // Dark Grey
+    border: rgb(0.8, 0.8, 0.8), // Light Grey
   };
 
   // Margins
-  const margin = { top: 60, bottom: 60, left: 60, right: 60 };
+  const margin = { top: 50, bottom: 50, left: 50, right: 50 };
   const contentWidth = width - margin.left - margin.right;
   let cursorY = height - margin.top;
 
   // Helper function to draw horizontal lines
-  const drawLine = (y: number, thickness = 0.5, color = colors.mediumGrey) => {
+  const drawLine = (y: number, thickness = 0.5, color = colors.border) => {
     page.drawLine({
       start: { x: margin.left, y },
       end: { x: width - margin.right, y },
@@ -79,401 +68,362 @@ export const generateExpensePDF = async (
   };
 
   // --- Header Section ---
-  // CashFlow brand header with red accent
+  // Gradient-like background for header
   page.drawRectangle({
-    x: margin.left - 10,
-    y: cursorY - 35,
-    width: contentWidth + 20,
-    height: 35,
-    color: colors.black,
-  });
-
-  // Red accent stripe
-  page.drawRectangle({
-    x: margin.left - 10,
-    y: cursorY - 5,
-    width: contentWidth + 20,
-    height: 3,
+    x: 0,
+    y: cursorY - 60,
+    width: width,
+    height: 110,
     color: colors.primary,
   });
 
   page.drawText("CashFlow", {
-    x: margin.left + 10,
-    y: cursorY - 25,
-    size: 22,
+    x: margin.left,
+    y: cursorY - 15,
+    size: 26,
     font: boldFont,
-    color: colors.white,
+    color: colors.headerText,
   });
 
-  page.drawText("Financial Reporting System", {
-    x: margin.left + 140,
-    y: cursorY - 20,
+  page.drawText("Financial Summary & Analysis", {
+    x: margin.left,
+    y: cursorY - 35,
     size: 10,
     font: regularFont,
-    color: colors.lightGrey,
+    color: rgb(0.9, 0.9, 0.9), // Slightly transparent white
   });
 
-  cursorY -= 50;
+  // Report details in header (Right side)
+  const reportDate = new Date().toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 
-  if (companyInfo) {
-    page.drawText(companyInfo.name.toUpperCase(), {
+  page.drawText("GENERATED ON", {
+    x: width - margin.right - 120,
+    y: cursorY - 10,
+    size: 8,
+    font: boldFont,
+    color: rgb(0.9, 0.9, 0.9),
+  });
+  page.drawText(reportDate, {
+    x: width - margin.right - 120,
+    y: cursorY - 25,
+    size: 10,
+    font: regularFont,
+    color: colors.headerText,
+  });
+
+  if (dateRange) {
+    const rangeText = `${dateRange.start.toLocaleDateString("en-IN", {
+      month: "short",
+      day: "numeric",
+    })} - ${dateRange.end.toLocaleDateString("en-IN", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })}`;
+
+    page.drawText("PERIOD", {
+      x: width - margin.right - 120,
+      y: cursorY - 40,
+      size: 8,
+      font: boldFont,
+      color: rgb(0.9, 0.9, 0.9),
+    });
+    page.drawText(rangeText, {
+      x: width - margin.right - 120,
+      y: cursorY - 53,
+      size: 10,
+      font: regularFont,
+      color: colors.headerText,
+    });
+  }
+
+  cursorY -= 100;
+
+  // --- Executive Summary Cards ---
+  const totalAmount = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const avgTransaction =
+    filteredExpenses.length > 0 ? totalAmount / filteredExpenses.length : 0;
+
+  // Draw 3 Summary Cards
+  const cardWidth = (contentWidth - 20) / 3;
+  const cardHeight = 60;
+
+  const drawSummaryCard = (
+    title: string,
+    value: string,
+    x: number,
+    y: number
+  ) => {
+    // Card Background/Border
+    page.drawRectangle({
+      x,
+      y,
+      width: cardWidth,
+      height: cardHeight,
+      color: colors.accent,
+      borderColor: colors.border,
+      borderWidth: 1,
+    });
+
+    page.drawText(title.toUpperCase(), {
+      x: x + 12,
+      y: y + cardHeight - 18,
+      size: 8,
+      font: boldFont,
+      color: colors.subtext,
+    });
+
+    page.drawText(value, {
+      x: x + 12,
+      y: y + 15,
+      size: 16,
+      font: boldFont,
+      color: colors.primary,
+    });
+  };
+
+  drawSummaryCard(
+    "Total Spend",
+    `Rs. ${totalAmount.toLocaleString("en-IN")}`,
+    margin.left,
+    cursorY - cardHeight
+  );
+  drawSummaryCard(
+    "Transactions",
+    filteredExpenses.length.toString(),
+    margin.left + cardWidth + 10,
+    cursorY - cardHeight
+  );
+  drawSummaryCard(
+    "Average / Txn",
+    `Rs. ${avgTransaction.toLocaleString("en-IN", {
+      maximumFractionDigits: 0,
+    })}`,
+    margin.left + (cardWidth + 10) * 2,
+    cursorY - cardHeight
+  );
+
+  cursorY -= cardHeight + 40;
+
+  // --- Category Breakdown Section ---
+  if (filteredExpenses.length > 0) {
+    page.drawText("Category Breakdown", {
       x: margin.left,
       y: cursorY,
       size: 14,
       font: boldFont,
-      color: colors.black,
-    });
-    cursorY -= 18;
-
-    page.drawText(companyInfo.address, {
-      x: margin.left,
-      y: cursorY,
-      size: 10,
-      font: regularFont,
-      color: colors.darkGrey,
+      color: colors.text,
     });
     cursorY -= 15;
+    drawLine(cursorY);
+    cursorY -= 20;
 
-    if (companyInfo.phone || companyInfo.email) {
-      const contact = [companyInfo.phone, companyInfo.email]
-        .filter(Boolean)
-        .join(" | ");
-      page.drawText(contact, {
+    // Calculate totals by category
+    const categoryTotals: Record<string, number> = {};
+    filteredExpenses.forEach((exp) => {
+      const cat = exp.category || "Uncategorized";
+      categoryTotals[cat] = (categoryTotals[cat] || 0) + exp.amount;
+    });
+
+    // Sort by amount desc
+    const sortedCategories = Object.entries(categoryTotals).sort(
+      ([, a], [, b]) => b - a
+    );
+
+    // Draw Category List (No bars as per request)
+    // Draw Category List (No bars as per request)
+    sortedCategories.slice(0, 5).forEach(([cat, amount]) => {
+      const y = cursorY;
+
+      // Category Name
+      page.drawText(cat, {
         x: margin.left,
-        y: cursorY,
+        y,
         size: 10,
         font: regularFont,
-        color: colors.darkGrey,
-      });
-      cursorY -= 15;
-    }
-  }
-
-  // Draw line under header
-  drawLine(cursorY, 1, colors.primary);
-  cursorY -= 30;
-
-  // --- Title and Date ---
-  page.drawText(reportTitle.toUpperCase(), {
-    x: margin.left,
-    y: cursorY,
-    size: 18,
-    font: boldFont,
-    color: colors.primary,
-  });
-
-  // If dateRange is provided, show the date range in the report
-  let dateRangeStr = "";
-  if (dateRange) {
-    const startStr = dateRange.start.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-    const endStr = dateRange.end.toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    });
-    dateRangeStr = ` (${startStr} - ${endStr})`;
-  }
-
-  const dateStr = new Date().toLocaleDateString("en-IN", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
-  page.drawText(`Report Date: ${dateStr}${dateRangeStr}`, {
-    x: width - margin.right - 250, // Adjusted for longer text
-    y: cursorY,
-    size: 10,
-    font: regularFont,
-    color: colors.darkGrey,
-    maxWidth: 250,
-  });
-  cursorY -= 40;
-
-  // --- Summary Section ---
-  const total = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
-  const transactionCount = filteredExpenses.length;
-
-  // Summary header with red background
-  page.drawRectangle({
-    x: margin.left - 5,
-    y: cursorY - 20,
-    width: contentWidth + 10,
-    height: 20,
-    color: colors.primary,
-  });
-
-  page.drawText("SUMMARY", {
-    x: margin.left,
-    y: cursorY - 12,
-    size: 12,
-    font: boldFont,
-    color: colors.white,
-  });
-  cursorY -= 35;
-
-  // Summary details
-  const summaryItems = [
-    {
-      label: "Total Expenses:",
-      value: `Rs. ${total.toLocaleString("en-IN", {
-        minimumFractionDigits: 2,
-      })}`,
-    },
-    { label: "Number of Transactions:", value: `${transactionCount}` },
-  ];
-
-  summaryItems.forEach((item) => {
-    page.drawText(item.label, {
-      x: margin.left + 20,
-      y: cursorY,
-      size: 10,
-      font: regularFont,
-      color: colors.black,
-    });
-    page.drawText(item.value, {
-      x: margin.left + 200,
-      y: cursorY,
-      size: 10,
-      font: boldFont,
-      color: colors.black,
-    });
-    cursorY -= 18;
-  });
-
-  cursorY -= 20;
-  drawLine(cursorY, 1, colors.primary);
-  cursorY -= 30;
-
-  // --- Transaction Table ---
-  // Table header with black background
-  page.drawRectangle({
-    x: margin.left - 5,
-    y: cursorY - 25,
-    width: contentWidth + 10,
-    height: 25,
-    color: colors.black,
-  });
-
-  page.drawText("TRANSACTION DETAILS", {
-    x: margin.left,
-    y: cursorY - 8,
-    size: 12,
-    font: boldFont,
-    color: colors.white,
-  });
-  cursorY -= 40;
-
-  // Table headers with grey background
-  page.drawRectangle({
-    x: margin.left - 5,
-    y: cursorY - 18,
-    width: contentWidth + 10,
-    height: 18,
-    color: colors.mediumGrey,
-  });
-
-  const columnPositions = {
-    date: margin.left,
-    description: margin.left + 80,
-    amount: width - margin.right - 100,
-  };
-
-  page.drawText("Date", {
-    x: columnPositions.date,
-    y: cursorY - 8,
-    size: 10,
-    font: boldFont,
-    color: colors.white,
-  });
-  page.drawText("Description", {
-    x: columnPositions.description,
-    y: cursorY - 8,
-    size: 10,
-    font: boldFont,
-    color: colors.white,
-  });
-  page.drawText("Amount", {
-    x: columnPositions.amount,
-    y: cursorY - 8,
-    size: 10,
-    font: boldFont,
-    color: colors.white,
-  });
-
-  cursorY -= 25;
-  drawLine(cursorY, 0.5, colors.lightGrey);
-  cursorY -= 20;
-
-  // Transaction rows
-  const rowHeight = 20;
-  let rowIndex = 0;
-  for (const expense of filteredExpenses) {
-    // Check if we need a new page
-    if (cursorY < margin.bottom + 100) {
-      page = pdfDoc.addPage(PageSizes.A4);
-      cursorY = height - margin.top;
-
-      // Redraw table headers on new page with grey background
-      page.drawRectangle({
-        x: margin.left - 5,
-        y: cursorY - 18,
-        width: contentWidth + 10,
-        height: 18,
-        color: colors.mediumGrey,
+        color: colors.text,
       });
 
-      page.drawText("Date", {
-        x: columnPositions.date,
-        y: cursorY - 8,
+      // Amount
+      page.drawText(`Rs. ${amount.toLocaleString("en-IN")}`, {
+        x: width - margin.right - 80,
+        y,
         size: 10,
         font: boldFont,
-        color: colors.white,
+        color: colors.text,
       });
-      page.drawText("Description", {
-        x: columnPositions.description,
-        y: cursorY - 8,
-        size: 10,
-        font: boldFont,
-        color: colors.white,
-      });
-      page.drawText("Amount", {
-        x: columnPositions.amount,
-        y: cursorY - 8,
-        size: 10,
-        font: boldFont,
-        color: colors.white,
-      });
-      cursorY -= 25;
-      drawLine(cursorY, 0.5, colors.lightGrey);
+
       cursorY -= 20;
-      rowIndex = 0; // Reset row index for alternating colors
-    }
-
-    // Alternating row background
-    if (rowIndex % 2 === 1) {
-      page.drawRectangle({
-        x: margin.left - 5,
-        y: cursorY - rowHeight + 5,
-        width: contentWidth + 10,
-        height: rowHeight,
-        color: colors.veryLightGrey,
-      });
-    }
-
-    // Format date
-    const expenseDate = expense.date.toDate().toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-      year: "2-digit",
     });
 
-    // Truncate description if too long
-    let description = expense.remarks;
-    if (description.length > 45) {
-      description = description.slice(0, 42) + "...";
-    }
-
-    // Draw transaction data
-    page.drawText(expenseDate, {
-      x: columnPositions.date,
-      y: cursorY,
-      size: 9,
-      font: regularFont,
-      color: colors.black,
-    });
-
-    page.drawText(description, {
-      x: columnPositions.description,
-      y: cursorY,
-      size: 9,
-      font: regularFont,
-      color: colors.black,
-    });
-
-    page.drawText(
-      `Rs. ${expense.amount.toLocaleString("en-IN", {
-        minimumFractionDigits: 2,
-      })}`,
-      {
-        x: columnPositions.amount,
+    if (sortedCategories.length > 5) {
+      cursorY -= 5;
+      page.drawText(`+ ${sortedCategories.length - 5} other categories...`, {
+        x: margin.left,
         y: cursorY,
         size: 9,
         font: regularFont,
-        color: colors.black,
-      }
-    );
+        color: colors.subtext,
+      });
+      cursorY -= 20;
+    }
 
-    cursorY -= rowHeight;
+    cursorY -= 20;
   }
 
-  // --- Total Section ---
-  cursorY -= 20;
-  drawLine(cursorY, 1);
-  cursorY -= 25;
-
-  page.drawText("TOTAL:", {
-    x: columnPositions.amount - 50,
+  // --- Transactions List ---
+  page.drawText("Transaction Details", {
+    x: margin.left,
     y: cursorY,
-    size: 12,
+    size: 14,
     font: boldFont,
-    color: colors.black,
+    color: colors.text,
+  });
+  cursorY -= 15;
+
+  // Table Headers
+  const tableTop = cursorY;
+  page.drawRectangle({
+    x: margin.left,
+    y: tableTop - 20,
+    width: contentWidth,
+    height: 24,
+    color: colors.accent,
   });
 
-  page.drawText(
-    `Rs. ${total.toLocaleString("en-IN", { minimumFractionDigits: 2 })}`,
-    {
-      x: columnPositions.amount,
-      y: cursorY,
-      size: 12,
-      font: boldFont,
-      color: colors.black,
-    }
-  );
+  const colX = {
+    date: margin.left + 10,
+    category: margin.left + 100,
+    desc: margin.left + 220,
+    amount: width - margin.right - 20,
+  };
 
-  // Double line under total
-  cursorY -= 10;
-  drawLine(cursorY, 1);
-  cursorY -= 3;
-  drawLine(cursorY, 1);
+  const drawTableHeaders = (y: number) => {
+    page.drawText("DATE", {
+      x: colX.date,
+      y: y - 14,
+      size: 9,
+      font: boldFont,
+      color: colors.primary,
+    });
+    page.drawText("CATEGORY", {
+      x: colX.category,
+      y: y - 14,
+      size: 9,
+      font: boldFont,
+      color: colors.primary,
+    });
+    page.drawText("DESCRIPTION", {
+      x: colX.desc,
+      y: y - 14,
+      size: 9,
+      font: boldFont,
+      color: colors.primary,
+    });
+    const amtWidth = boldFont.widthOfTextAtSize("AMOUNT", 9);
+    page.drawText("AMOUNT", {
+      x: colX.amount - amtWidth,
+      y: y - 14,
+      size: 9,
+      font: boldFont,
+      color: colors.primary,
+    });
+  };
+
+  drawTableHeaders(tableTop);
+  cursorY -= 40;
+
+  // Rows
+  for (const exp of filteredExpenses) {
+    if (cursorY < margin.bottom + 40) {
+      page = pdfDoc.addPage(PageSizes.A4);
+      cursorY = height - margin.top;
+      // Re-draw header on new page
+      page.drawRectangle({
+        x: margin.left,
+        y: cursorY - 20,
+        width: contentWidth,
+        height: 24,
+        color: colors.accent,
+      });
+      drawTableHeaders(cursorY);
+      cursorY -= 40;
+    }
+
+    const dateStr = exp.date.toDate().toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+    });
+
+    page.drawText(dateStr, {
+      x: colX.date,
+      y: cursorY,
+      size: 9,
+      font: regularFont,
+      color: colors.text,
+    });
+
+    // Category Badge
+    const cat = exp.category || "General";
+    // Shorten if needed
+    const displayCat = cat.length > 15 ? cat.substring(0, 12) + "..." : cat;
+
+    page.drawText(displayCat, {
+      x: colX.category,
+      y: cursorY,
+      size: 9,
+      font: regularFont,
+      color: colors.text,
+    });
+
+    // Description
+    const desc =
+      exp.remarks.length > 35
+        ? exp.remarks.substring(0, 32) + "..."
+        : exp.remarks;
+    page.drawText(desc, {
+      x: colX.desc,
+      y: cursorY,
+      size: 9,
+      font: regularFont,
+      color: colors.subtext,
+    });
+
+    // Amount
+    const amtStr = `Rs. ${exp.amount.toLocaleString("en-IN")}`;
+    const amtWidth = regularFont.widthOfTextAtSize(amtStr, 9);
+    page.drawText(amtStr, {
+      x: colX.amount - amtWidth,
+      y: cursorY,
+      size: 9,
+      font: boldFont,
+      color: colors.text,
+    });
+
+    // Separator line
+    drawLine(cursorY - 8, 0.5, rgb(0.95, 0.95, 0.95));
+    cursorY -= 24;
+  }
 
   // --- Footer ---
   const pages = pdfDoc.getPages();
   pages.forEach((pg, idx) => {
-    const footerY = margin.bottom - 30;
+    const footerY = margin.bottom - 20;
 
-    // Generation timestamp
-    const now = new Date();
-    const timestamp = `Generated on ${now.toLocaleDateString(
-      "en-IN"
-    )} at ${now.toLocaleTimeString("en-IN")}`;
-    pg.drawText(timestamp, {
-      x: margin.left,
+    // Page number centered
+    const pageNum = `${idx + 1} / ${pages.length}`;
+    const pWidth = regularFont.widthOfTextAtSize(pageNum, 8);
+
+    pg.drawText(pageNum, {
+      x: (width - pWidth) / 2,
       y: footerY,
       size: 8,
       font: regularFont,
-      color: colors.darkGrey,
-    });
-
-    // Page number
-    pg.drawText(`Page ${idx + 1} of ${pages.length}`, {
-      x: width - margin.right - 80,
-      y: footerY,
-      size: 8,
-      font: regularFont,
-      color: colors.darkGrey,
-    });
-
-    // Confidential notice
-    pg.drawText("CONFIDENTIAL", {
-      x: margin.left,
-      y: footerY - 12,
-      size: 8,
-      font: boldFont,
-      color: colors.accent,
+      color: colors.subtext,
     });
   });
 

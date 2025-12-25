@@ -35,24 +35,18 @@ export default function NotFoundPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-slate-100 flex items-center justify-center px-4">
       <div className="text-center max-w-2xl">
         {/* 404 Animation */}
-        <div className="relative mb-8">
-          <div className="text-8xl font-bold text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text mb-4">
-            404
-          </div>
-          <div className="absolute inset-0 text-8xl font-bold text-indigo-200 animate-pulse -z-10">
-            404
-          </div>
+        <div className="relative mb-8 pt-8">
+          <div className="text-8xl font-bold text-red-600 mb-4">404</div>
         </div>
 
         {/* Error Icon */}
         <div className="relative mb-8">
-          <div className="w-24 h-24 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-3xl flex items-center justify-center shadow-2xl mx-auto transform rotate-12 hover:rotate-0 transition-transform duration-500">
+          <div className="w-24 h-24 bg-red-600 rounded-3xl flex items-center justify-center shadow-2xl mx-auto transform rotate-12 hover:rotate-0 transition-transform duration-500">
             <Compass className="w-12 h-12 text-white" />
           </div>
-          <div className="absolute -inset-2 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-3xl blur opacity-20 animate-pulse"></div>
         </div>
 
         {/* Error Message */}
@@ -68,14 +62,14 @@ export default function NotFoundPage() {
         {/* Suggested Actions */}
         <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-8 mb-8 border border-white/20 shadow-xl">
           <h3 className="text-lg font-semibold text-gray-800 mb-6 flex items-center justify-center">
-            <Search className="w-5 h-5 mr-2 text-indigo-600" />
+            <Search className="w-5 h-5 mr-2 text-red-600" />
             What would you like to do?
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <button
               onClick={handleGoHome}
-              className="flex flex-col items-center p-6 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-2xl hover:from-indigo-600 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 group"
+              className="flex flex-col items-center p-6 bg-red-600 text-white rounded-2xl hover:bg-red-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 group"
             >
               <Home className="w-8 h-8 mb-3 group-hover:scale-110 transition-transform" />
               <span className="font-semibold">Go Home</span>
@@ -96,7 +90,7 @@ export default function NotFoundPage() {
             <button
               onClick={handleSearch}
               disabled={isSearching}
-              className="flex flex-col items-center p-6 bg-gradient-to-br from-green-500 to-emerald-600 text-white rounded-2xl hover:from-green-600 hover:to-emerald-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none group"
+              className="flex flex-col items-center p-6 bg-slate-800 text-white rounded-2xl hover:bg-slate-900 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none group"
             >
               {isSearching ? (
                 <RefreshCw className="w-8 h-8 mb-3 animate-spin" />
@@ -114,7 +108,7 @@ export default function NotFoundPage() {
         </div>
 
         {/* Popular Links */}
-        <div className="bg-gray-50 rounded-2xl p-6 border border-gray-200">
+        <div className="bg-slate-100 rounded-2xl p-6 border border-gray-200">
           <h4 className="font-semibold text-gray-800 mb-4">Popular Pages</h4>
           <div className="flex flex-wrap justify-center gap-3">
             <button
