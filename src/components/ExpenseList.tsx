@@ -1,14 +1,7 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import type { Expense } from "../services/firebase";
 import { updateExpense } from "../services/expenseService";
-import {
-  formatDate,
-  getStartOfDay,
-  getStartOfWeek,
-  getStartOfMonth,
-  getEndOfPeriod,
-  getFilterLabel,
-} from "../utils/dateUtils";
+import { formatDate } from "../utils/dateUtils";
 import {
   Edit3,
   Save,
