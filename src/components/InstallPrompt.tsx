@@ -302,16 +302,14 @@ export default function InstallPrompt() {
 
   return (
     <div
-      className={`fixed z-50 animate-slide-up ${
-        platform === "desktop"
+      className={`fixed z-50 animate-slide-up ${platform === "desktop"
           ? "bottom-4 right-4 max-w-sm"
           : "bottom-0 left-0 right-0 rounded-t-3xl"
-      }`}
+        }`}
     >
       <div
-        className={`bg-white dark:bg-slate-900 shadow-[0_-5px_20px_rgba(0,0,0,0.15)] dark:shadow-[0_-5px_20px_rgba(0,0,0,0.4)] border border-gray-200 dark:border-white/10 overflow-hidden backdrop-blur-md transition-colors duration-300 ${
-          platform === "desktop" ? "rounded-3xl" : "rounded-t-3xl"
-        }`}
+        className={`bg-white dark:bg-slate-900 shadow-[0_-5px_20px_rgba(0,0,0,0.15)] dark:shadow-[0_-5px_20px_rgba(0,0,0,0.4)] border border-gray-200 dark:border-white/10 overflow-hidden backdrop-blur-md transition-colors duration-300 ${platform === "desktop" ? "rounded-3xl" : "rounded-t-3xl"
+          }`}
       >
         {/* Header - Native Feel */}
         <div className="p-5 flex items-center justify-between border-b border-gray-100 dark:border-white/5">

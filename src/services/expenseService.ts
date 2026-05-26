@@ -10,7 +10,10 @@ import {
   orderBy,
   deleteDoc,
   where,
+  limit,
+  startAfter,
   type QueryConstraint,
+  type QueryDocumentSnapshot,
 } from "firebase/firestore";
 
 export const addExpense = async (expense: Omit<Expense, "userId" | "id">) => {
@@ -52,10 +55,19 @@ export interface ExpenseFilters {
   sortDirection?: "asc" | "desc";
 }
 
+/**
+ * Note on Firestore Indexes:
+ * The following composite indexes are required in the Firebase console for collection "userExpenses":
+ * - Fields: category ASC, date DESC
+ * - Fields: date DESC
+ */
 export const getExpenses = (
   userId: string,
-  callback: (expenses: Expense[]) => void,
-  filters?: ExpenseFilters
+  callback: (expenses: Expense[], lastDoc: QueryDocumentSnapshot | null, hasMore: boolean) => void,
+  filters?: ExpenseFilters,
+  onError?: (error: string) => void,
+  limitCount: number = 10,
+  startAfterDoc: QueryDocumentSnapshot | null = null
 ) => {
   const userExpensesRef = collection(db, "expenses", userId, "userExpenses");
   let q = query(userExpensesRef, orderBy("date", "desc"));
@@ -103,26 +115,83 @@ export const getExpenses = (
     q = query(userExpensesRef, ...constraints, orderBy("date", "desc"));
   }
 
+  // Apply pagination
+  if (startAfterDoc) {
+    q = query(q, startAfter(startAfterDoc), limit(limitCount));
+  } else {
+    q = query(q, limit(limitCount));
+  }
+
   return onSnapshot(
     q,
     (snapshot) => {
       const expenses = snapshot.docs.map(
         (doc) =>
-          ({
-            id: doc.id,
-            ...doc.data(),
-          } as Expense)
+        ({
+          id: doc.id,
+          ...doc.data(),
+        } as Expense)
       );
-      callback(expenses);
+
+      const lastDoc = snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null;
+      const hasMore = snapshot.docs.length === limitCount;
+
+      callback(expenses, lastDoc, hasMore);
     },
-    (error) => {
+    (error: any) => {
       console.error("Error fetching expenses:", error);
       // If error is 'failed-precondition' (missing index), notify developer/user path
       if (error.code === "failed-precondition") {
         console.error("Missing Firestore Index. Creating link:", error.message);
-        // In a real app we might expose this to UI, here we log it.
-        // Fallback to empty or previous data?
+        if (onError) {
+          onError("A database index is required for this filter combination. Please remove the category filter or contact support.");
+        }
+      } else if (onError) {
+        onError(error.message);
       }
+      callback([], null, false);
+    }
+  );
+};
+
+export const getAllExpenses = (
+  userId: string,
+  callback: (expenses: Expense[]) => void,
+  filters?: ExpenseFilters
+) => {
+  const userExpensesRef = collection(db, "expenses", userId, "userExpenses");
+  let q = query(userExpensesRef, orderBy("date", "desc"));
+
+  if (filters) {
+    const constraints: QueryConstraint[] = [];
+    if (filters.category && filters.category !== "all") {
+      constraints.push(where("category", "==", filters.category));
+    }
+    if (filters.startDate) {
+      constraints.push(where("date", ">=", filters.startDate));
+    }
+    if (filters.endDate) {
+      const endOfDay = new Date(filters.endDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      constraints.push(where("date", "<=", endOfDay));
+    }
+    q = query(userExpensesRef, ...constraints, orderBy("date", "desc"));
+  }
+
+  return onSnapshot(
+    q,
+    (snapshot) => {
+      const expenses = snapshot.docs.map(
+        (doc) =>
+        ({
+          id: doc.id,
+          ...doc.data(),
+        } as Expense)
+      );
+      callback(expenses);
+    },
+    (error: any) => {
+      console.error("Error fetching all expenses:", error);
       callback([]);
     }
   );

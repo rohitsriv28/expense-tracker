@@ -51,11 +51,10 @@ export default function FilterBar({
       <div className="flex items-center gap-2">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`flex items-center px-4 py-2 rounded-xl border transition-all ${
-            isOpen || activeFilters.length > 0
-              ? "bg-red-600 text-white border-red-500 shadow-lg"
-              : "bg-white text-gray-700 border-gray-200 hover:bg-slate-100 dark:bg-white/10 dark:text-white dark:border-white/20 dark:hover:bg-white/20"
-          }`}
+          className={`flex items-center px-4 py-2 rounded-xl border transition-all ${isOpen || activeFilters.length > 0
+            ? "bg-red-600 text-white border-red-500 shadow-lg"
+            : "bg-white text-gray-700 border-gray-200 hover:bg-slate-100 dark:bg-white/10 dark:text-white dark:border-white/20 dark:hover:bg-white/20"
+            }`}
         >
           <Filter className="w-4 h-4 mr-2" />
           Filters

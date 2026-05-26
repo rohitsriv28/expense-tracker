@@ -37,7 +37,11 @@
 }
 
 body {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    sans-serif;
   -webkit-tap-highlight-color: transparent;
   /* Use the exact palette colors */
   @apply bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-gray-200 transition-colors duration-300;

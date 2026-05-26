@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../services/authService";
 import { Shield, Wallet } from "lucide-react";
+import cashflowDark from "../assets/cashflow-dark.png";
+import cashflowLight from "../assets/cashflow-light.png";
 
 export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
@@ -32,7 +34,7 @@ export default function Login() {
         <div className="relative z-10 mt-20">
           <div className="mb-12">
             <img
-              src="/cashflow-dark.png"
+              src={cashflowDark}
               alt="CashFlow Logo"
               className="h-16 w-auto mb-8"
             />
@@ -79,12 +81,12 @@ export default function Login() {
           {/* Mobile Logo */}
           <div className="lg:hidden text-center mb-8">
             <img
-              src="/cashflow-light.png"
+              src={cashflowLight}
               alt="CashFlow"
               className="h-12 mx-auto dark:hidden"
             />
             <img
-              src="/cashflow-dark.png"
+              src={cashflowDark}
               alt="CashFlow"
               className="h-12 mx-auto hidden dark:block"
             />

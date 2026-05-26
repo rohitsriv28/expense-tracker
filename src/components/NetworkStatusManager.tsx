@@ -19,17 +19,14 @@ function NetworkStatusToast({ isOnline, onDismiss }: NetworkStatusToastProps) {
 
   return (
     <div
-      className={`fixed top-4 right-4 z-50 animate-slide-in-right transform transition-all duration-300 ${
-        isOnline ? "bg-green-500" : "bg-red-600"
-      } text-white px-4 py-3 rounded-xl shadow-2xl max-w-sm border-2 ${
-        isOnline ? "border-green-400" : "border-red-500"
-      }`}
+      className={`fixed top-4 right-4 z-50 animate-slide-in-right transform transition-all duration-300 ${isOnline ? "bg-green-500" : "bg-red-600"
+        } text-white px-4 py-3 rounded-xl shadow-2xl max-w-sm border-2 ${isOnline ? "border-green-400" : "border-red-500"
+        }`}
     >
       <div className="flex items-center">
         <div
-          className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 ${
-            isOnline ? "bg-green-400" : "bg-red-500"
-          }`}
+          className={`w-8 h-8 rounded-lg flex items-center justify-center mr-3 ${isOnline ? "bg-green-400" : "bg-red-500"
+            }`}
         >
           {isOnline ? (
             <CheckCircle className="w-5 h-5 text-white" />

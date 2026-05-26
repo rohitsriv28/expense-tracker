@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { useAuth } from "../services/authService";
 import type { Expense } from "../services/firebase";
 import Header from "../components/Header";
-import { getExpenses } from "../services/expenseService";
+import { getExpenses, getAllExpenses } from "../services/expenseService";
 import AddExpenseForm from "../components/AddExpenseForm";
 import InsightsSummary from "../components/InsightsSummary";
 import ExpenseList from "../components/ExpenseList";
@@ -19,6 +19,8 @@ import {
   List,
   FileText,
   Calendar,
+  AlertCircle,
+  X,
 } from "lucide-react";
 import {
   getStartOfDay,
@@ -32,6 +34,7 @@ import {
   initializeDefaultCategories,
 } from "../services/categoryService";
 import type { Category } from "../services/categoryService";
+import type { QueryDocumentSnapshot } from "firebase/firestore";
 import Footer from "../components/Footer";
 
 export default function Dashboard() {
@@ -58,6 +61,19 @@ export default function Dashboard() {
     category?: string;
   }>({});
 
+  // Pagination State
+  const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageHistory, setPageHistory] = useState<(QueryDocumentSnapshot | null)[]>([]);
+  const [queryCursor, setQueryCursor] = useState<QueryDocumentSnapshot | null>(null);
+
+  // Unpaginated state for charts
+  const [allExpenses, setAllExpenses] = useState<Expense[]>([]);
+
+  // Error State
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
   // Refs for smooth scrolling
   const expenseFormRef = useRef<HTMLDivElement>(null);
   const expenseListRef = useRef<HTMLDivElement>(null);
@@ -78,15 +94,23 @@ export default function Dashboard() {
     // Initialize defaults
     initializeDefaultCategories(user.uid);
 
-    // Fetch expenses with filters
+    // Reset error on new query
+    setErrorMsg(null);
+
+    // Fetch expenses with filters and pagination
     const unsubscribeExpenses = getExpenses(
       user.uid,
-      (newExpenses) => {
+      (newExpenses, newLastDoc, newHasMore) => {
         setExpenses(newExpenses);
+        setLastDoc(newLastDoc);
+        setHasMore(newHasMore);
         setIsLoading(false);
         setLastSync(new Date());
       },
-      filters
+      filters,
+      (err) => setErrorMsg(err),
+      10,
+      queryCursor
     ); // Pass filters here
 
     // Fetch categories
@@ -94,11 +118,21 @@ export default function Dashboard() {
       setCategories(newCategories);
     });
 
+    // Fetch all expenses for charts
+    const unsubscribeAllExpenses = getAllExpenses(
+      user.uid,
+      (newAllExpenses) => {
+        setAllExpenses(newAllExpenses);
+      },
+      filters
+    );
+
     return () => {
       unsubscribeExpenses();
       unsubscribeCategories();
+      unsubscribeAllExpenses();
     };
-  }, [user, filters]); // Re-run when filters change
+  }, [user, filters, queryCursor]); // Re-run when filters or queryCursor changes
 
   const handleExport = async () => {
     setIsDateModalOpen(true);
@@ -110,10 +144,34 @@ export default function Dashboard() {
     category?: string;
   }) => {
     setFilters(newFilters);
+    setCurrentPage(1);
+    setPageHistory([]);
+    setQueryCursor(null);
   };
 
   const handleClearFilters = () => {
     setFilters({});
+    setCurrentPage(1);
+    setPageHistory([]);
+    setQueryCursor(null);
+  };
+
+  const handleNextPage = () => {
+    if (hasMore) {
+      setPageHistory((prev) => [...prev, queryCursor]);
+      setQueryCursor(lastDoc);
+      setCurrentPage((prev) => prev + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      const newHistory = [...pageHistory];
+      const prevCursor = newHistory.pop() || null;
+      setPageHistory(newHistory);
+      setQueryCursor(prevCursor);
+      setCurrentPage((prev) => prev - 1);
+    }
   };
 
   const confirmExport = async () => {
@@ -239,9 +297,8 @@ export default function Dashboard() {
               disabled={isLoading}
             >
               <RefreshCw
-                className={`w-3 h-3 md:w-4 md:h-4 mr-1 ${
-                  isLoading ? "animate-spin" : ""
-                }`}
+                className={`w-3 h-3 md:w-4 md:h-4 mr-1 ${isLoading ? "animate-spin" : ""
+                  }`}
               />
               {isLoading ? "Syncing..." : "Refresh"}
             </button>
@@ -253,22 +310,20 @@ export default function Dashboard() {
           <div className="flex bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-xl p-1">
             <button
               onClick={() => setActiveTab("add")}
-              className={`flex-1 flex items-center justify-center py-2 rounded-lg text-sm font-medium transition-all ${
-                activeTab === "add"
-                  ? "bg-red-600 text-white shadow-md shadow-red-500/20"
-                  : "text-gray-500 dark:text-red-200 hover:text-gray-900 dark:hover:text-white"
-              }`}
+              className={`flex-1 flex items-center justify-center py-2 rounded-lg text-sm font-medium transition-all ${activeTab === "add"
+                ? "bg-red-600 text-white shadow-md shadow-red-500/20"
+                : "text-gray-500 dark:text-red-200 hover:text-gray-900 dark:hover:text-white"
+                }`}
             >
               <Plus className="w-4 h-4 mr-1" />
               Add Expense
             </button>
             <button
               onClick={() => setActiveTab("list")}
-              className={`flex-1 flex items-center justify-center py-2 rounded-lg text-sm font-medium transition-all ${
-                activeTab === "list"
-                  ? "bg-red-600 text-white shadow-md shadow-red-500/20"
-                  : "text-gray-500 dark:text-red-200 hover:text-gray-900 dark:hover:text-white"
-              }`}
+              className={`flex-1 flex items-center justify-center py-2 rounded-lg text-sm font-medium transition-all ${activeTab === "list"
+                ? "bg-red-600 text-white shadow-md shadow-red-500/20"
+                : "text-gray-500 dark:text-red-200 hover:text-gray-900 dark:hover:text-white"
+                }`}
             >
               <List className="w-4 h-4 mr-1" />
               View List
@@ -279,9 +334,8 @@ export default function Dashboard() {
         {/* 1. PRIORITY: Add Expense Form at the top */}
         <div
           ref={expenseFormRef}
-          className={`mb-6 scroll-mt-20 ${
-            activeTab !== "add" ? "hidden md:block" : ""
-          }`}
+          className={`mb-6 scroll-mt-20 ${activeTab !== "add" ? "hidden md:block" : ""
+            }`}
         >
           <div className="bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-2xl p-4 md:p-5 shadow-xl dark:shadow-2xl transition-colors duration-300">
             <AddExpenseForm />
@@ -298,17 +352,40 @@ export default function Dashboard() {
         {/* 2. PRIORITY: Expense List immediately below */}
         <div
           ref={expenseListRef}
-          className={`mb-6 scroll-mt-20 ${
-            activeTab !== "list" ? "hidden md:block" : ""
-          }`}
+          className={`mb-6 scroll-mt-20 ${activeTab !== "list" ? "hidden md:block" : ""
+            }`}
         >
+          {/* Error Toast */}
+          {errorMsg && (
+            <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-start gap-3 relative">
+              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-red-800 dark:text-red-200">Error</h3>
+                <p className="text-sm text-red-600 dark:text-red-300 mt-1">{errorMsg}</p>
+              </div>
+              <button
+                onClick={() => setErrorMsg(null)}
+                className="p-1 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
           {/* Charts Section */}
-          {!isLoading && expenses.length > 0 && (
-            <SpendingCharts expenses={expenses} categories={categories} />
+          {!isLoading && allExpenses.length > 0 && (
+            <SpendingCharts expenses={allExpenses} categories={categories} />
           )}
 
           <div className="bg-white border text-center border-gray-200 dark:bg-white/10 dark:backdrop-blur-xl dark:border-white/20 rounded-2xl shadow-xl dark:shadow-2xl overflow-hidden transition-colors duration-300">
-            <ExpenseList expenses={expenses} />
+            <ExpenseList
+              expenses={expenses}
+              hasMore={hasMore}
+              onNextPage={handleNextPage}
+              onPrevPage={handlePrevPage}
+              currentPage={currentPage}
+              isFirstPage={currentPage === 1}
+            />
           </div>
         </div>
 
@@ -342,7 +419,7 @@ export default function Dashboard() {
                 </h2>
               </div>
               <div className="bg-white border border-gray-200 dark:bg-white/10 dark:backdrop-blur-xl dark:border-white/20 rounded-2xl p-4 md:p-6 shadow-2xl dark:shadow-2xl transition-colors duration-300">
-                <InsightsSummary expenses={expenses} />
+                <InsightsSummary expenses={allExpenses} />
               </div>
             </div>
 
@@ -399,18 +476,16 @@ export default function Dashboard() {
                   <button
                     key={p.id}
                     onClick={() => applyPreset(p.id as any)}
-                    className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 ${
-                      isSelected
-                        ? "bg-red-600 border-red-600 text-white shadow-lg scale-[1.02]"
-                        : "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
-                    }`}
+                    className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 ${isSelected
+                      ? "bg-red-600 border-red-600 text-white shadow-lg scale-[1.02]"
+                      : "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
+                      }`}
                   >
                     <Icon
-                      className={`w-5 h-5 mb-2 ${
-                        isSelected
-                          ? "text-white"
-                          : "text-red-500 dark:text-red-400"
-                      }`}
+                      className={`w-5 h-5 mb-2 ${isSelected
+                        ? "text-white"
+                        : "text-red-500 dark:text-red-400"
+                        }`}
                     />
                     <span className="text-xs font-semibold">{p.label}</span>
                   </button>

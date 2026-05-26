@@ -12,47 +12,51 @@ CashFlow is a premium, feature-rich expense tracking application built with mode
 
 ## Key Features
 
-* **Modern and responsive UI**
+- **Modern and responsive UI**
   Built with a mobile-first approach using Tailwind CSS v4, featuring glassmorphism, smooth transitions, and a premium aesthetic.
 
-* **Secure authentication**
+- **Secure authentication**
   Google Sign-In integration via Firebase Authentication for secure and convenient access.
 
-* **Interactive dashboard**
+- **Interactive dashboard**
   Real-time overview of spending, expense trends, and category breakdowns using Recharts.
 
-* **Expense management**
+- **Expense management**
   Full CRUD support for tracking expenses.
+  - Custom expense categories
+  - Date range filters (Today, Week, Month, Custom)
+  - Sorting and search capabilities
 
-  * Custom expense categories
-  * Date range filters (Today, Week, Month, Custom)
-  * Sorting and search capabilities
-
-* **Visual analytics**
+- **Visual analytics**
   Charts and graphs to clearly visualize spending habits.
 
-* **PDF reports**
+- **PDF reports**
   Generate and download detailed expense reports using `pdf-lib`.
 
-* **Dark mode**
+- **Dark mode**
   System-aware dark mode for comfortable viewing in any environment.
 
-* **PWA and offline support**
+- **PWA and offline support**
   Progressive Web App functionality allows offline usage and installation on devices.
 
-* **Real-time data sync**
+- **Real-time data sync**
   Seamless synchronization across devices using Firestore.
+
+## Roadmap / Coming Soon 🚀
+
+- **Debt & Borrow Tracker**: Keep a running ledger of who owes you and what you owe, integrated naturally with your expense dashboard.
+- **Group Expenses & Splitting**: Share bills with friends, track group spending, and settle up easily using a shared data layer.
 
 ## Technology Stack
 
-* **Frontend framework:** React 19
-* **Build tool:** Vite
-* **Language:** TypeScript
-* **Styling:** Tailwind CSS v4
-* **Backend-as-a-Service:** Firebase (Authentication, Firestore, Hosting)
-* **Icons:** Lucide React
-* **Charts:** Recharts
-* **Routing:** React Router v7
+- **Frontend framework:** React 19
+- **Build tool:** Vite
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS v4
+- **Backend-as-a-Service:** Firebase (Authentication, Firestore, Hosting)
+- **Icons:** Lucide React
+- **Charts:** Recharts
+- **Routing:** React Router v7
 
 ## Getting Started
 
@@ -60,9 +64,9 @@ Follow these steps to set up the project locally.
 
 ### Prerequisites
 
-* Node.js v18 or higher
-* npm or yarn
-* A Firebase project
+- Node.js v18 or higher
+- npm or yarn
+- A Firebase project
 
 ### Installation
 
@@ -81,10 +85,10 @@ npm install
 
 3. Configure Firebase
 
-* Create a project in the Firebase Console
-* Enable Google Authentication
-* Enable Firestore Database
-* Create a `.env.local` file in the project root and add:
+- Create a project in the Firebase Console
+- Enable Google Authentication
+- Enable Firestore Database
+- Create a `.env.local` file in the project root and add:
 
 ```env
 VITE_FIREBASE_API_KEY=your_api_key
@@ -106,10 +110,10 @@ npm run dev
 
 ## Scripts
 
-* `npm run dev` – Starts the development server
-* `npm run build` – Type-checks and builds the app for production
-* `npm run lint` – Runs ESLint for code quality checks
-* `npm run preview` – Previews the production build locally
+- `npm run dev` – Starts the development server
+- `npm run build` – Type-checks and builds the app for production
+- `npm run lint` – Runs ESLint for code quality checks
+- `npm run preview` – Previews the production build locally
 
 ## Project Structure
 

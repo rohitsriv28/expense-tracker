@@ -50,6 +50,7 @@ export default function CategoryManager({
   const [newCatIcon, setNewCatIcon] = useState("MoreHorizontal");
   const [isAdding, setIsAdding] = useState(false);
   const [error, setError] = useState("");
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -97,10 +98,10 @@ export default function CategoryManager({
   };
 
   const handleDelete = async (catId: string) => {
-    if (!user || !confirm("Are you sure you want to delete this category?"))
-      return;
+    if (!user) return;
     try {
       await deleteCategory(user.uid, catId);
+      setPendingDeleteId(null);
     } catch (err) {
       console.error("Error deleting category:", err);
     }
@@ -162,11 +163,10 @@ export default function CategoryManager({
                         key={color}
                         type="button"
                         onClick={() => setNewCatColor(color)}
-                        className={`w-6 h-6 rounded-full transition-transform hover:scale-110 ${color} ${
-                          newCatColor === color
-                            ? "ring-2 ring-offset-2 ring-red-600 scale-110"
-                            : ""
-                        }`}
+                        className={`w-6 h-6 rounded-full transition-transform hover:scale-110 ${color} ${newCatColor === color
+                          ? "ring-2 ring-offset-2 ring-red-600 scale-110"
+                          : ""
+                          }`}
                       />
                     ))}
                   </div>
@@ -183,11 +183,10 @@ export default function CategoryManager({
                       key={name}
                       type="button"
                       onClick={() => setNewCatIcon(name)}
-                      className={`p-2 rounded-lg transition-colors flex items-center justify-center ${
-                        newCatIcon === name
-                          ? "bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 ring-1 ring-red-300 dark:ring-red-700"
-                          : "hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400"
-                      }`}
+                      className={`p-2 rounded-lg transition-colors flex items-center justify-center ${newCatIcon === name
+                        ? "bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 ring-1 ring-red-300 dark:ring-red-700"
+                        : "hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400"
+                        }`}
                       title={name}
                     >
                       <Icon className="w-5 h-5" />
@@ -251,14 +250,31 @@ export default function CategoryManager({
                       </div>
                     </div>
 
-                    {cat.type === "custom" && (
+                    {cat.type === "custom" && pendingDeleteId !== cat.id && (
                       <button
-                        onClick={() => handleDelete(cat.id)}
+                        onClick={() => setPendingDeleteId(cat.id)}
                         className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
                         title="Delete category"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
+                    )}
+
+                    {pendingDeleteId === cat.id && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setPendingDeleteId(null)}
+                          className="px-2 py-1 text-xs font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 dark:text-gray-300 dark:bg-white/10 dark:hover:bg-white/20 rounded-md transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick={() => handleDelete(cat.id)}
+                          className="px-2 py-1 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors"
+                        >
+                          Delete
+                        </button>
+                      </div>
                     )}
                   </div>
                 ))}

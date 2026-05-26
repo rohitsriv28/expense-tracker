@@ -166,11 +166,10 @@ export default function AddExpenseForm() {
                     key={index}
                     type="button"
                     onClick={() => handleCategorySelect(category.label)}
-                    className={`p-2 md:p-3 rounded-lg md:rounded-xl transition-all duration-200 flex flex-col items-center space-y-1 group ${
-                      isSelected
+                    className={`p-2 md:p-3 rounded-lg md:rounded-xl transition-all duration-200 flex flex-col items-center space-y-1 group ${isSelected
                         ? `${category.color} text-white shadow-lg scale-105`
                         : "bg-white border border-gray-200 text-gray-600 hover:bg-slate-50 hover:border-gray-300 dark:bg-white/10 dark:text-white dark:hover:bg-white/20 dark:border-white/20"
-                    }`}
+                      }`}
                   >
                     <IconComponent className="w-4 h-4 md:w-5 md:h-5" />
                     <span className="text-xs font-medium truncate hidden md:block">
@@ -205,11 +204,10 @@ export default function AddExpenseForm() {
                     setDate(e.target.value);
                     setErrors({ ...errors, date: "" });
                   }}
-                  className={`w-full pl-10 pr-4 py-2 md:py-3 border rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all bg-white text-gray-900 border-gray-200 dark:bg-white/5 dark:text-white dark:placeholder-red-300 ${
-                    errors.date
+                  className={`w-full pl-10 pr-4 py-2 md:py-3 border rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all bg-white text-gray-900 border-gray-200 dark:bg-white/5 dark:text-white dark:placeholder-red-300 ${errors.date
                       ? "border-red-300 bg-red-50 dark:bg-red-500/20"
                       : "border-gray-200 dark:border-white/20"
-                  }`}
+                    }`}
                   required
                 />
               </div>
@@ -236,11 +234,10 @@ export default function AddExpenseForm() {
                     setErrors({ ...errors, amount: "" });
                   }}
                   placeholder="0.00"
-                  className={`w-full pl-10 pr-4 py-2 md:py-3 border rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-lg font-semibold bg-white text-gray-900 border-gray-200 dark:bg-white/5 dark:text-white dark:placeholder-red-300 ${
-                    errors.amount
+                  className={`w-full pl-10 pr-4 py-2 md:py-3 border rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-lg font-semibold bg-white text-gray-900 border-gray-200 dark:bg-white/5 dark:text-white dark:placeholder-red-300 ${errors.amount
                       ? "border-red-300 bg-red-50 dark:bg-red-500/20"
                       : "border-gray-200 dark:border-white/20"
-                  }`}
+                    }`}
                   required
                 />
               </div>
@@ -282,11 +279,10 @@ export default function AddExpenseForm() {
                     setErrors({ ...errors, remarks: "" });
                   }}
                   placeholder="What did you spend on?"
-                  className={`w-full pl-10 pr-4 py-2 md:py-3 border rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all bg-white text-gray-900 border-gray-200 dark:bg-white/5 dark:text-white dark:placeholder-red-300 ${
-                    errors.remarks
+                  className={`w-full pl-10 pr-4 py-2 md:py-3 border rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all bg-white text-gray-900 border-gray-200 dark:bg-white/5 dark:text-white dark:placeholder-red-300 ${errors.remarks
                       ? "border-red-300 bg-red-50 dark:bg-red-500/20"
                       : "border-gray-200 dark:border-white/20"
-                  }`}
+                    }`}
                   required
                 />
               </div>

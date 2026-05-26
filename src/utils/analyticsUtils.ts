@@ -28,31 +28,69 @@ export const aggregateCategoryData = (
     categoryMap.set(categoryName, currentTotal + expense.amount);
   });
 
-  // Map back to chart data format, with colors
-  const data: CategoryData[] = Array.from(categoryMap.entries()).map(
-    ([name, value]) => {
-      const category = categories.find((c) => c.label === name);
-      // Fallback color for unmapped/uncategorized (gray)
-      // We need to resolve Tailwind classes to Hex for Recharts if we want precise control,
-      // but Recharts assumes hex usually. However, we can use Cell mapping in Recharts.
-      // For now, let's just pass the Tailwind class name if we implement a resolver,
-      // OR we can rely on a fixed palette.
-      // Actually, Recharts needs Hex. Let's create a simple mapping or use a default palette.
+  const allColors = Object.keys(TAILWIND_COLORS).filter(
+    (c) => !c.includes("gray") && !c.includes("slate")
+  );
 
-      // Let's assume we will pass the color class string and handle it in the component
-      // or use a helper to get HSL/Hex.
-      // For simplicity, let's return the tailwind class string as 'color'
-      // and we will strip the 'bg-' prefix to maybe map to a hex map or just use a standard palette.
+  const usedColors = new Set<string>();
+
+  // Map back to chart data format
+  let data: CategoryData[] = Array.from(categoryMap.entries()).map(
+    ([name, value]) => {
+      const category = categories.find((c) => c.label.toLowerCase() === name.toLowerCase());
+      let colorClass = category?.color || "";
+
+      if (colorClass && !(colorClass in TAILWIND_COLORS)) {
+        console.warn(`Color class ${colorClass} not found in TAILWIND_COLORS. Falling back to bg-gray-500.`);
+        colorClass = "bg-gray-500";
+      }
 
       return {
         name,
         value,
-        color: category?.color || "bg-gray-400",
+        color: colorClass,
       };
     }
   );
 
-  return data.sort((a, b) => b.value - a.value);
+  // Sort by value descending so largest slices get distinct colors first
+  data = data.sort((a, b) => b.value - a.value);
+
+  // First pass: reserve explicitly assigned colors, ensure uniqueness
+  data.forEach((item) => {
+    if (item.color && !usedColors.has(item.color)) {
+      usedColors.add(item.color);
+    } else {
+      item.color = ""; // If duplicate or missing, we rewrite to ensure distinct coloring
+    }
+  });
+
+  // Second pass: fill distinct colors for all undefined/duplicate colors
+  let colorIndex = 0;
+  data.forEach((item) => {
+    if (!item.color) {
+      while (
+        colorIndex < allColors.length &&
+        usedColors.has(allColors[colorIndex])
+      ) {
+        colorIndex++;
+      }
+
+      if (colorIndex < allColors.length) {
+        item.color = allColors[colorIndex];
+        usedColors.add(item.color);
+      } else {
+        // Fallback deterministic assignments if palette is exhausted
+        let hash = 0;
+        for (let i = 0; i < item.name.length; i++) {
+          hash = item.name.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        item.color = allColors[Math.abs(hash) % allColors.length];
+      }
+    }
+  });
+
+  return data;
 };
 
 export const aggregateChartData = (
@@ -120,9 +158,9 @@ export const aggregateChartData = (
         range === "7d"
           ? date.toLocaleDateString("en-US", { weekday: "short" })
           : date.toLocaleDateString("en-US", {
-              day: "numeric",
-              month: "short",
-            });
+            day: "numeric",
+            month: "short",
+          });
       return { date: label, fullDate: key, amount };
     });
   } else {
@@ -177,25 +215,25 @@ export const aggregateDailyData = (expenses: Expense[]): ChartDataPoint[] => {
   return aggregateChartData(expenses, "7d");
 };
 
-// Helper: Tailwind to Hex map (simplified for major colors)
+// Helper: Tailwind to Hex map
 export const TAILWIND_COLORS: Record<string, string> = {
-  "bg-red-500": "#ef4444",
-  "bg-orange-500": "#f97316",
-  "bg-amber-500": "#f59e0b",
-  "bg-yellow-500": "#eab308",
-  "bg-lime-500": "#84cc16",
-  "bg-green-500": "#22c55e",
-  "bg-emerald-500": "#10b981",
-  "bg-teal-500": "#14b8a6",
-  "bg-cyan-500": "#06b6d4",
-  "bg-sky-500": "#0ea5e9",
-  "bg-blue-500": "#3b82f6",
-  "bg-indigo-500": "#6366f1",
-  "bg-violet-500": "#8b5cf6",
-  "bg-purple-500": "#a855f7",
-  "bg-fuchsia-500": "#d946ef",
-  "bg-pink-500": "#ec4899",
-  "bg-rose-500": "#f43f5e",
-  "bg-gray-500": "#6b7280",
-  "bg-gray-400": "#9ca3af",
+  "bg-slate-400": "#94a3b8", "bg-slate-500": "#64748b", "bg-slate-600": "#475569",
+  "bg-gray-400": "#9ca3af", "bg-gray-500": "#6b7280", "bg-gray-600": "#4b5563",
+  "bg-red-400": "#f87171", "bg-red-500": "#ef4444", "bg-red-600": "#dc2626",
+  "bg-orange-400": "#fb923c", "bg-orange-500": "#f97316", "bg-orange-600": "#ea580c",
+  "bg-amber-400": "#fbbf24", "bg-amber-500": "#f59e0b", "bg-amber-600": "#d97706",
+  "bg-yellow-400": "#facc15", "bg-yellow-500": "#eab308", "bg-yellow-600": "#ca8a04",
+  "bg-lime-400": "#a3e635", "bg-lime-500": "#84cc16", "bg-lime-600": "#65a30d",
+  "bg-green-400": "#4ade80", "bg-green-500": "#22c55e", "bg-green-600": "#16a34a",
+  "bg-emerald-400": "#34d399", "bg-emerald-500": "#10b981", "bg-emerald-600": "#059669",
+  "bg-teal-400": "#2dd4bf", "bg-teal-500": "#14b8a6", "bg-teal-600": "#0d9488",
+  "bg-cyan-400": "#22d3ee", "bg-cyan-500": "#06b6d4", "bg-cyan-600": "#0891b2",
+  "bg-sky-400": "#38bdf8", "bg-sky-500": "#0ea5e9", "bg-sky-600": "#0284c7",
+  "bg-blue-400": "#60a5fa", "bg-blue-500": "#3b82f6", "bg-blue-600": "#2563eb",
+  "bg-indigo-400": "#818cf8", "bg-indigo-500": "#6366f1", "bg-indigo-600": "#4f46e5",
+  "bg-violet-400": "#a78bfa", "bg-violet-500": "#8b5cf6", "bg-violet-600": "#7c3aed",
+  "bg-purple-400": "#c084fc", "bg-purple-500": "#a855f7", "bg-purple-600": "#9333ea",
+  "bg-fuchsia-400": "#e879f9", "bg-fuchsia-500": "#d946ef", "bg-fuchsia-600": "#c026d3",
+  "bg-pink-400": "#f472b6", "bg-pink-500": "#ec4899", "bg-pink-600": "#db2777",
+  "bg-rose-400": "#fb7185", "bg-rose-500": "#f43f5e", "bg-rose-600": "#e11d48",
 };

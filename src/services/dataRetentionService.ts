@@ -38,15 +38,20 @@ export const cleanupOldExpenses = async (userId: string): Promise<number> => {
     }
 
     // Batch delete (max 500 ops per batch)
-    const batch = writeBatch(db);
     let count = 0;
+    const CHUNK_SIZE = 500;
 
-    snapshot.docs.forEach((document) => {
-      batch.delete(doc(db, getExpensePath(userId, document.id)));
-      count++;
-    });
+    for (let i = 0; i < snapshot.docs.length; i += CHUNK_SIZE) {
+      const chunk = snapshot.docs.slice(i, i + CHUNK_SIZE);
+      const batch = writeBatch(db);
 
-    await batch.commit();
+      chunk.forEach((document) => {
+        batch.delete(doc(db, getExpensePath(userId, document.id)));
+        count++;
+      });
+
+      await batch.commit();
+    }
     console.log(
       `[DataRetention] Cleaned up ${count} expenses older than`,
       cutoffDate
