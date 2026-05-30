@@ -8,6 +8,23 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [2.2.0] - 2026-05-30
+
+A comprehensive upgrade introducing dynamic income tracking, automated budget allocation with dynamic expense depletion, an advanced dedicated reports and comparisons dashboard, and premium responsive design aesthetics.
+
+### Added
+- **Dynamic Income Tracking:** Added a dedicated module to log incomes with source descriptions, dates, and amounts. Displays a real-time Total Income card on the main dashboard.
+- **Automated Budget Allocation:** Introduced a weekly, monthly, and trip-based budget manager. Logged expenses falling within budget date ranges are automatically debited, displaying active depletion status bars and warning colors if limits are exceeded.
+- **Dedicated Financial Reports Panel:** Added a first-class Reports tab containing:
+  - *Overview:* Quick cards showcasing spending stats (total, avg, peak transaction) and a Day-of-Week spending bar chart.
+  - *Categories:* Spent breakdown list with dedicated color-assigned progress bars and category share Pie Charts.
+  - *Trends:* Real-time daily spending trend Area/Line graphs tracking the past 30 days.
+  - *Compare:* A period-over-period comparison engine (This Month vs Last Month / This Week vs Last Week) with absolute and percentage diff metrics, alongside Grouped Bar Charts.
+- **Premium Footer Redesign:** Upgraded to a fully responsive, glassmorphic layout featuring gradient-styled typography, bouncing micro-animated heart credit, quick link icons, and clean mobile wrapping.
+- **Firestore Security Configuration:** Added a `firestore.rules` template specifying strict user-based read/write access constraints across all collections (Expenses, Categories, Incomes, and Budgets).
+
+---
+
 ## [2.1.0] - 2026-05-26
 
 ### Added

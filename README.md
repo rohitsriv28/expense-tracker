@@ -19,19 +19,26 @@ CashFlow is a premium, feature-rich expense tracking application built with mode
   Google Sign-In integration via Firebase Authentication for secure and convenient access.
 
 - **Interactive dashboard**
-  Real-time overview of spending, expense trends, and category breakdowns using Recharts.
+  Real-time overview of spending, total incomes, wallet balance, active budget depletion, and charts using Recharts.
 
-- **Expense management**
-  Full CRUD support for tracking expenses.
-  - Custom expense categories
+- **Expense & Income management**
+  Full CRUD support for tracking expenses and logging incomes with designated sources.
+  - Custom expense categories and income source mapping
   - Date range filters (Today, Week, Month, Custom)
   - Sorting and search capabilities
 
-- **Visual analytics**
-  Charts and graphs to clearly visualize spending habits.
+- **Dynamic Budget Tracker**
+  Set targeted limits for weeks, months, or custom trips. Expenses logged within dates are dynamically debited, displaying active progress status bars.
 
-- **PDF reports**
-  Generate and download detailed expense reports using `pdf-lib`.
+- **Dedicated Financial Reports Section**
+  Deep-dive analytics dashboard with four sub-modules:
+  - *Overview:* Stats summaries and Day-of-Week spending charts.
+  - *Categories:* Spent breakdown list and category distribution Pie Chart.
+  - *Trends:* Real-time daily spending trend graphs (30 days).
+  - *Compare:* Period-over-period comparisons (e.g. Month vs Last Month) with delta values and grouped bar charts.
+
+- **Visual analytics & PDF reports**
+  Detailed spending charts and on-demand professional PDF reports powered by `pdf-lib`.
 
 - **Dark mode**
   System-aware dark mode for comfortable viewing in any environment.

@@ -21,6 +21,12 @@ import {
   Calendar,
   AlertCircle,
   X,
+  Wallet,
+  ArrowUpRight,
+  ArrowDownRight,
+  TrendingDown,
+  PiggyBank,
+  BarChart3,
 } from "lucide-react";
 import {
   getStartOfDay,
@@ -37,9 +43,21 @@ import type { Category } from "../services/categoryService";
 import type { QueryDocumentSnapshot } from "firebase/firestore";
 import Footer from "../components/Footer";
 
+// Income and Budget imports
+import { getIncomes } from "../services/incomeService";
+import type { Income } from "../services/incomeService";
+import { getBudgets } from "../services/budgetService";
+import type { Budget } from "../services/budgetService";
+import AddIncomeForm from "../components/AddIncomeForm";
+import IncomeList from "../components/IncomeList";
+import BudgetManager from "../components/BudgetManager";
+import ReportsSection from "../components/ReportsSection";
+
 export default function Dashboard() {
   const { user, logout } = useAuth();
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [incomes, setIncomes] = useState<Income[]>([]);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [lastSync, setLastSync] = useState<Date>(new Date());
@@ -52,7 +70,9 @@ export default function Dashboard() {
     start: new Date(),
     end: new Date(),
   });
-  const [activeTab, setActiveTab] = useState<"add" | "list">("add");
+  const [activeTab, setActiveTab] = useState<
+    "expense" | "income" | "budget" | "list" | "reports"
+  >("expense");
 
   // Filter State
   const [filters, setFilters] = useState<{
@@ -65,8 +85,12 @@ export default function Dashboard() {
   const [lastDoc, setLastDoc] = useState<QueryDocumentSnapshot | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageHistory, setPageHistory] = useState<(QueryDocumentSnapshot | null)[]>([]);
-  const [queryCursor, setQueryCursor] = useState<QueryDocumentSnapshot | null>(null);
+  const [pageHistory, setPageHistory] = useState<
+    (QueryDocumentSnapshot | null)[]
+  >([]);
+  const [queryCursor, setQueryCursor] = useState<QueryDocumentSnapshot | null>(
+    null,
+  );
 
   // Unpaginated state for charts
   const [allExpenses, setAllExpenses] = useState<Expense[]>([]);
@@ -110,7 +134,7 @@ export default function Dashboard() {
       filters,
       (err) => setErrorMsg(err),
       10,
-      queryCursor
+      queryCursor,
     ); // Pass filters here
 
     // Fetch categories
@@ -124,13 +148,25 @@ export default function Dashboard() {
       (newAllExpenses) => {
         setAllExpenses(newAllExpenses);
       },
-      filters
+      filters,
     );
+
+    // Fetch Incomes
+    const unsubscribeIncomes = getIncomes(user.uid, (newIncomes) => {
+      setIncomes(newIncomes);
+    });
+
+    // Fetch Budgets
+    const unsubscribeBudgets = getBudgets(user.uid, (newBudgets) => {
+      setBudgets(newBudgets);
+    });
 
     return () => {
       unsubscribeExpenses();
       unsubscribeCategories();
       unsubscribeAllExpenses();
+      unsubscribeIncomes();
+      unsubscribeBudgets();
     };
   }, [user, filters, queryCursor]); // Re-run when filters or queryCursor changes
 
@@ -189,7 +225,7 @@ export default function Dashboard() {
         {
           start: dateRange.start,
           end: dateRange.end,
-        }
+        },
       );
       const blob = new Blob([pdfBytes as unknown as BlobPart], {
         type: "application/pdf",
@@ -221,7 +257,7 @@ export default function Dashboard() {
       | "month"
       | "lastMonth"
       | "last3Months"
-      | "year"
+      | "year",
   ) => {
     const now = new Date();
     let start: Date;
@@ -266,6 +302,10 @@ export default function Dashboard() {
     });
   };
 
+  const totalIncome = incomes.reduce((sum, inc) => sum + inc.amount, 0);
+  const totalExpenses = allExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+  const walletBalance = totalIncome - totalExpenses;
+
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-900 transition-colors duration-300 flex flex-col">
       <Header onLogout={logout} onExport={handleExport} />
@@ -297,149 +337,236 @@ export default function Dashboard() {
               disabled={isLoading}
             >
               <RefreshCw
-                className={`w-3 h-3 md:w-4 md:h-4 mr-1 ${isLoading ? "animate-spin" : ""
-                  }`}
+                className={`w-3 h-3 md:w-4 md:h-4 mr-1 ${
+                  isLoading ? "animate-spin" : ""
+                }`}
               />
               {isLoading ? "Syncing..." : "Refresh"}
             </button>
           </div>
         </div>
 
-        {/* Mobile tabs for Add/List view */}
-        <div className="md:hidden mb-4">
-          <div className="flex bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-xl p-1">
-            <button
-              onClick={() => setActiveTab("add")}
-              className={`flex-1 flex items-center justify-center py-2 rounded-lg text-sm font-medium transition-all ${activeTab === "add"
-                ? "bg-red-600 text-white shadow-md shadow-red-500/20"
-                : "text-gray-500 dark:text-red-200 hover:text-gray-900 dark:hover:text-white"
-                }`}
-            >
-              <Plus className="w-4 h-4 mr-1" />
-              Add Expense
-            </button>
-            <button
-              onClick={() => setActiveTab("list")}
-              className={`flex-1 flex items-center justify-center py-2 rounded-lg text-sm font-medium transition-all ${activeTab === "list"
-                ? "bg-red-600 text-white shadow-md shadow-red-500/20"
-                : "text-gray-500 dark:text-red-200 hover:text-gray-900 dark:hover:text-white"
-                }`}
-            >
-              <List className="w-4 h-4 mr-1" />
-              View List
-            </button>
+        {/* 🌟 PREMIUM STATS CARDS */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          {/* Income Card */}
+          <div className="bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-2xl p-5 shadow-xl flex items-center justify-between transition-all hover:scale-[1.02]">
+            <div>
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
+                Total Income
+              </p>
+              <h3 className="text-2xl md:text-3xl font-extrabold text-green-600 dark:text-green-400 mt-1">
+                ₹{totalIncome.toFixed(2)}
+              </h3>
+            </div>
+            <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-2xl">
+              <ArrowUpRight className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
           </div>
-        </div>
 
-        {/* 1. PRIORITY: Add Expense Form at the top */}
-        <div
-          ref={expenseFormRef}
-          className={`mb-6 scroll-mt-20 ${activeTab !== "add" ? "hidden md:block" : ""
-            }`}
-        >
-          <div className="bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-2xl p-4 md:p-5 shadow-xl dark:shadow-2xl transition-colors duration-300">
-            <AddExpenseForm />
+          {/* Expense Card */}
+          <div className="bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-2xl p-5 shadow-xl flex items-center justify-between transition-all hover:scale-[1.02]">
+            <div>
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
+                Total Expenses
+              </p>
+              <h3 className="text-2xl md:text-3xl font-extrabold text-red-600 dark:text-red-400 mt-1">
+                ₹{totalExpenses.toFixed(2)}
+              </h3>
+            </div>
+            <div className="bg-red-100 dark:bg-red-900/30 p-3 rounded-2xl">
+              <ArrowDownRight className="w-6 h-6 text-red-600 dark:text-red-400" />
+            </div>
           </div>
-        </div>
 
-        {/* Filter Bar Integration */}
-        <FilterBar
-          categories={categories}
-          onFilterChange={handleFilterChange}
-          onClear={handleClearFilters}
-        />
-
-        {/* 2. PRIORITY: Expense List immediately below */}
-        <div
-          ref={expenseListRef}
-          className={`mb-6 scroll-mt-20 ${activeTab !== "list" ? "hidden md:block" : ""
-            }`}
-        >
-          {/* Error Toast */}
-          {errorMsg && (
-            <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-start gap-3 relative">
-              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <h3 className="text-sm font-semibold text-red-800 dark:text-red-200">Error</h3>
-                <p className="text-sm text-red-600 dark:text-red-300 mt-1">{errorMsg}</p>
-              </div>
-              <button
-                onClick={() => setErrorMsg(null)}
-                className="p-1 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition-colors"
+          {/* Wallet Balance Card */}
+          <div className="bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-2xl p-5 shadow-xl flex items-center justify-between transition-all hover:scale-[1.02]">
+            <div>
+              <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase">
+                Remaining Balance
+              </p>
+              <h3
+                className={`text-2xl md:text-3xl font-extrabold mt-1 ${walletBalance >= 0 ? "text-purple-600 dark:text-purple-400" : "text-red-500"}`}
               >
-                <X className="w-4 h-4" />
-              </button>
+                ₹{walletBalance.toFixed(2)}
+              </h3>
             </div>
-          )}
-
-          {/* Charts Section */}
-          {!isLoading && allExpenses.length > 0 && (
-            <SpendingCharts expenses={allExpenses} categories={categories} />
-          )}
-
-          <div className="bg-white border text-center border-gray-200 dark:bg-white/10 dark:backdrop-blur-xl dark:border-white/20 rounded-2xl shadow-xl dark:shadow-2xl overflow-hidden transition-colors duration-300">
-            <ExpenseList
-              expenses={expenses}
-              hasMore={hasMore}
-              onNextPage={handleNextPage}
-              onPrevPage={handlePrevPage}
-              currentPage={currentPage}
-              isFirstPage={currentPage === 1}
-            />
+            <div className="bg-purple-100 dark:bg-purple-900/30 p-3 rounded-2xl">
+              <Wallet className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            </div>
           </div>
         </div>
 
-        {/* Loading State */}
-        {isLoading ? (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="bg-white border border-gray-200 dark:bg-white/10 dark:backdrop-blur-xl dark:border-white/20 rounded-3xl p-6 md:p-8 animate-pulse shadow-xl"
+        {/* 🌟 TABS FOR ACTION PANELS */}
+        <div className="mb-6">
+          <div className="flex flex-wrap bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-2xl p-1.5 gap-1 shadow-md">
+            {[
+              {
+                id: "expense",
+                label: "Add Expense",
+                icon: Plus,
+                activeColor:
+                  "bg-red-600 text-white shadow-lg shadow-red-500/20",
+              },
+              {
+                id: "income",
+                label: "Add Income",
+                icon: ArrowUpRight,
+                activeColor:
+                  "bg-green-600 text-white shadow-lg shadow-green-500/20",
+              },
+              {
+                id: "budget",
+                label: "Set Budget",
+                icon: PiggyBank,
+                activeColor:
+                  "bg-purple-600 text-white shadow-lg shadow-purple-500/20",
+              },
+              {
+                id: "list",
+                label: "Expense List & History",
+                icon: List,
+                activeColor:
+                  "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20",
+              },
+              {
+                id: "reports",
+                label: "Financial Reports",
+                icon: BarChart3,
+                activeColor:
+                  "bg-amber-500 text-white shadow-lg shadow-amber-500/20",
+              },
+            ].map((tab) => {
+              const Icon = tab.icon;
+              const isSelected = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex-1 min-w-[120px] flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                    isSelected
+                      ? tab.activeColor
+                      : "text-gray-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-white"
+                  }`}
                 >
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="w-12 h-12 md:w-16 md:h-16 bg-gray-200 dark:bg-white/20 rounded-2xl"></div>
-                    <div className="w-16 h-5 md:w-20 md:h-6 bg-gray-200 dark:bg-white/20 rounded-xl"></div>
-                  </div>
-                  <div className="w-24 h-7 md:w-32 md:h-10 bg-gray-200 dark:bg-white/20 rounded-xl mb-3"></div>
-                  <div className="w-32 h-5 md:w-40 md:h-6 bg-gray-200 dark:bg-white/20 rounded-xl"></div>
-                </div>
-              ))}
-            </div>
+                  <Icon className="w-4 h-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
-        ) : (
-          <>
-            {/* 3. Spending Analytics Text (Kept as summary) */}
-            <div className="mb-6">
-              <div className="flex items-center mb-4">
-                <TrendingUp className="w-5 h-5 text-red-600 dark:text-red-400 mr-2" />
-                <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">
-                  Spending Summary
-                </h2>
-              </div>
-              <div className="bg-white border border-gray-200 dark:bg-white/10 dark:backdrop-blur-xl dark:border-white/20 rounded-2xl p-4 md:p-6 shadow-2xl dark:shadow-2xl transition-colors duration-300">
-                <InsightsSummary expenses={allExpenses} />
-              </div>
-            </div>
+        </div>
 
-            {/* Empty State */}
-            {expenses.length === 0 && (
-              <div className="text-center py-8 md:py-12">
-                <div className="w-16 h-16 md:w-20 md:h-20 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-red-500/20">
-                  <Sparkles className="w-6 h-6 md:w-8 md:h-8 text-white" />
-                </div>
-                <h3 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white mb-3">
-                  No expenses yet
-                </h3>
-                <p className="text-gray-500 dark:text-red-300 mb-6 max-w-md mx-auto text-xs md:text-sm">
-                  Start tracking your expenses by adding your first transaction.
-                  It's quick and easy!
-                </p>
+        {/* 🌟 ACTION PANELS RENDERING */}
+        <div className="transition-all duration-300">
+          {/* Add Expense Tab */}
+          {activeTab === "expense" && (
+            <div
+              ref={expenseFormRef}
+              className="bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-2xl p-4 md:p-5 shadow-xl transition-all"
+            >
+              <AddExpenseForm />
+            </div>
+          )}
+
+          {/* Add Income Tab */}
+          {activeTab === "income" && (
+            <div className="space-y-6">
+              <div className="bg-white dark:bg-white/10 backdrop-blur-xl border border-gray-200 dark:border-white/20 rounded-2xl p-4 md:p-5 shadow-xl transition-all">
+                <AddIncomeForm />
               </div>
-            )}
-          </>
-        )}
+              <IncomeList incomes={incomes} />
+            </div>
+          )}
+
+          {/* Set Budget Tab */}
+          {activeTab === "budget" && (
+            <BudgetManager budgets={budgets} expenses={allExpenses} />
+          )}
+
+          {/* Financial Reports Tab */}
+          {activeTab === "reports" && (
+            <ReportsSection expenses={allExpenses} categories={categories} />
+          )}
+
+          {/* Expense List Tab */}
+          {activeTab === "list" && (
+            <div ref={expenseListRef} className="space-y-6">
+              <FilterBar
+                categories={categories}
+                onFilterChange={handleFilterChange}
+                onClear={handleClearFilters}
+              />
+
+              {errorMsg && (
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-start gap-3 relative shadow-sm">
+                  <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-red-800 dark:text-red-200">
+                      Error
+                    </h3>
+                    <p className="text-sm text-red-600 dark:text-red-300 mt-1">
+                      {errorMsg}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setErrorMsg(null)}
+                    className="p-1 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-lg transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+
+              {/* Charts Section */}
+              {!isLoading && allExpenses.length > 0 && (
+                <SpendingCharts
+                  expenses={allExpenses}
+                  categories={categories}
+                />
+              )}
+
+              <div className="bg-white border text-center border-gray-200 dark:bg-white/10 dark:backdrop-blur-xl dark:border-white/20 rounded-2xl shadow-xl overflow-hidden">
+                <ExpenseList
+                  expenses={expenses}
+                  hasMore={hasMore}
+                  onNextPage={handleNextPage}
+                  onPrevPage={handlePrevPage}
+                  currentPage={currentPage}
+                  isFirstPage={currentPage === 1}
+                />
+              </div>
+
+              {/* 3. Spending Analytics Text (Kept as summary) */}
+              <div className="mb-6">
+                <div className="flex items-center mb-4">
+                  <TrendingUp className="w-5 h-5 text-red-600 dark:text-red-400 mr-2" />
+                  <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">
+                    Spending Summary
+                  </h2>
+                </div>
+                <div className="bg-white border border-gray-200 dark:bg-white/10 dark:backdrop-blur-xl dark:border-white/20 rounded-2xl p-4 md:p-6 shadow-2xl transition-colors duration-300">
+                  <InsightsSummary expenses={allExpenses} />
+                </div>
+              </div>
+
+              {/* Empty State */}
+              {expenses.length === 0 && (
+                <div className="text-center py-8 md:py-12">
+                  <div className="w-16 h-16 md:w-20 md:h-20 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-red-500/20">
+                    <Sparkles className="w-6 h-6 md:w-8 md:h-8 text-white" />
+                  </div>
+                  <h3 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white mb-3">
+                    No expenses yet
+                  </h3>
+                  <p className="text-gray-500 dark:text-red-300 mb-6 max-w-md mx-auto text-xs md:text-sm">
+                    Start tracking your expenses by adding your first
+                    transaction. It's quick and easy!
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Date Range Modal */}
@@ -476,16 +603,18 @@ export default function Dashboard() {
                   <button
                     key={p.id}
                     onClick={() => applyPreset(p.id as any)}
-                    className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 ${isSelected
-                      ? "bg-red-600 border-red-600 text-white shadow-lg scale-[1.02]"
-                      : "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
-                      }`}
+                    className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all duration-200 ${
+                      isSelected
+                        ? "bg-red-600 border-red-600 text-white shadow-lg scale-[1.02]"
+                        : "bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-slate-700 hover:border-gray-300 dark:hover:border-slate-600"
+                    }`}
                   >
                     <Icon
-                      className={`w-5 h-5 mb-2 ${isSelected
-                        ? "text-white"
-                        : "text-red-500 dark:text-red-400"
-                        }`}
+                      className={`w-5 h-5 mb-2 ${
+                        isSelected
+                          ? "text-white"
+                          : "text-red-500 dark:text-red-400"
+                      }`}
                     />
                     <span className="text-xs font-semibold">{p.label}</span>
                   </button>
