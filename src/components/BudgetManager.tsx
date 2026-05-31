@@ -4,7 +4,7 @@ import { addBudget, deleteBudget } from "../services/budgetService";
 import type { Expense } from "../services/firebase";
 import { Timestamp } from "firebase/firestore";
 import { useAuth } from "../services/authService";
-import { Plus, Calendar, DollarSign, Trash2, Award, PiggyBank } from "lucide-react";
+import { Plus, Calendar, Trash2, Award, PiggyBank } from "lucide-react";
 import { formatDate } from "../utils/dateUtils";
 
 interface BudgetManagerProps {

@@ -18,7 +18,6 @@ import type { Expense } from "../services/firebase";
 import type { Category } from "../services/categoryService";
 import {
   aggregateCategoryData,
-  aggregateChartData,
   TAILWIND_COLORS,
 } from "../utils/analyticsUtils";
 import {
@@ -28,13 +27,8 @@ import {
   TrendingUp,
   ArrowUpRight,
   ArrowDownRight,
-  TrendingDown,
-  ShoppingBag,
   Clock,
-  Sparkles,
-  Award,
 } from "lucide-react";
-import { formatDate } from "../utils/dateUtils";
 
 interface ReportsSectionProps {
   expenses: Expense[];

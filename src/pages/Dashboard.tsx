@@ -24,7 +24,6 @@ import {
   Wallet,
   ArrowUpRight,
   ArrowDownRight,
-  TrendingDown,
   PiggyBank,
   BarChart3,
 } from "lucide-react";
@@ -213,13 +212,13 @@ export default function Dashboard() {
   const confirmExport = async () => {
     setIsDateModalOpen(false);
     try {
-      if (expenses.length === 0) {
+      if (allExpenses.length === 0) {
         alert("No expenses to export");
         return;
       }
 
       const pdfBytes = await generateExpensePDF(
-        expenses,
+        allExpenses,
         undefined,
         "Expense Report",
         {

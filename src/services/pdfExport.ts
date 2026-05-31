@@ -27,9 +27,15 @@ export const generateExpensePDF = async (
   // Filter expenses by date range if provided
   let filteredExpenses = expenses;
   if (dateRange) {
+    const startOfRange = new Date(dateRange.start);
+    startOfRange.setHours(0, 0, 0, 0);
+
+    const endOfRange = new Date(dateRange.end);
+    endOfRange.setHours(23, 59, 59, 999);
+
     filteredExpenses = expenses.filter((expense) => {
       const expenseDate = expense.date.toDate();
-      return expenseDate >= dateRange.start && expenseDate <= dateRange.end;
+      return expenseDate >= startOfRange && expenseDate <= endOfRange;
     });
   }
 
