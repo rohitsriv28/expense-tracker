@@ -18,6 +18,7 @@ A major quality-of-life update focusing on UX improvements, pagination logic, UI
 - **Premium Install Prompts:** Redesigned the PWA installation prompts for Android, iOS, and Desktop. Features a sleek, dark-gray aesthetic, red branding, and highly accurate native-feel iOS Share Sheet instructions.
 
 ### Changed
+- **Codebase Modularization:** Completely restructured the project architecture from a flat `components` directory into a scalable, feature-based domain model (`features/expenses`, `features/budgeting`, `components/layout`, etc.), leveraging AST codemods to dynamically update and type-check all module imports.
 - **Date-Aware Pagination:** Overhauled Dashboard data fetching to rely on a single unified data stream. Implemented a custom client-side, date-group-aware pagination algorithm in the Expense List ensuring transactions from the same day are never split across pages.
 - **Optional Categories:** Expense logging no longer requires selecting a category. Uncategorized expenses seamlessly default to a generic "Uncategorized" display globally.
 

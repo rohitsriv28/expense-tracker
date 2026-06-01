@@ -1,5 +1,5 @@
 import { Navigate } from "react-router-dom";
-import { useAuth } from "../services/authService";
+import { useAuth } from "../../services/authService";
 import { Loader2, Shield, Wifi, WifiOff } from "lucide-react";
 import type { ReactElement } from "react";
 import { useState, useEffect } from "react";

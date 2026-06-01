@@ -12,14 +12,14 @@ import {
   Legend,
   CartesianGrid,
 } from "recharts";
-import type { Expense } from "../services/firebase";
-import type { Category } from "../services/categoryService";
+import type { Expense } from "../../services/firebase";
+import type { Category } from "../../services/categoryService";
 import {
   aggregateCategoryData,
   aggregateChartData,
   TAILWIND_COLORS,
   type TimeRange,
-} from "../utils/analyticsUtils";
+} from "../../utils/analyticsUtils";
 import { PieChart as PieIcon, BarChart3, Calendar } from "lucide-react";
 
 interface SpendingChartsProps {

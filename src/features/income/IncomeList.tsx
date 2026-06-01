@@ -1,11 +1,11 @@
 import { useMemo, useState } from "react";
 import { Trash2, TrendingUp } from "lucide-react";
-import type { Income, IncomeSource } from "../services/incomeService";
-import { deleteIncome } from "../services/incomeService";
-import { incomeDate } from "../utils/dataMappers";
-import { formatCurrency, formatShortDate } from "../utils/formatters";
-import { getIcon } from "../utils/iconMap";
-import { CHART_COLORS } from "../utils/chartColors";
+import type { Income, IncomeSource } from "../../services/incomeService";
+import { deleteIncome } from "../../services/incomeService";
+import { incomeDate } from "../../utils/dataMappers";
+import { formatCurrency, formatShortDate } from "../../utils/formatters";
+import { getIcon } from "../../utils/iconMap";
+import { CHART_COLORS } from "../../utils/chartColors";
 
 interface IncomeListProps {
   incomes: Income[];

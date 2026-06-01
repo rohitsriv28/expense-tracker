@@ -4,7 +4,7 @@ import type {
   Budget,
   GoalBudget,
   RecurringBudget,
-} from "../services/budgetService";
+} from "../../services/budgetService";
 import {
   addBudget,
   calculateBudgetSummary,
@@ -14,19 +14,19 @@ import {
   deleteBudget,
   isGoalBudget,
   isRecurringBudget,
-} from "../services/budgetService";
-import type { Expense } from "../services/firebase";
-import type { Category } from "../services/categoryService";
-import { useAuth } from "../services/authService";
-import DatePicker from "./DatePicker";
-import { categoryHex, findCategory } from "../utils/dataMappers";
-import { getIcon } from "../utils/iconMap";
+} from "../../services/budgetService";
+import type { Expense } from "../../services/firebase";
+import type { Category } from "../../services/categoryService";
+import { useAuth } from "../../services/authService";
+import DatePicker from "../../components/ui/DatePicker";
+import { categoryHex, findCategory } from "../../utils/dataMappers";
+import { getIcon } from "../../utils/iconMap";
 import {
   formatCurrency,
   formatPercent,
   formatShortDate,
-} from "../utils/formatters";
-import { toLocalISODateString } from "../utils/dateUtils";
+} from "../../utils/formatters";
+import { toLocalISODateString } from "../../utils/dateUtils";
 
 interface BudgetManagerProps {
   budgets: Budget[];

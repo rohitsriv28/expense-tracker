@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Filter, X, Search } from "lucide-react";
 import DatePicker from "./DatePicker";
-import type { Category } from "../services/categoryService";
+import type { Category } from "../../services/categoryService";
 
 interface FilterBarProps {
   categories: Category[];

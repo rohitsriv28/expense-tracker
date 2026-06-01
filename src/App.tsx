@@ -1,16 +1,16 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ErrorBoundary } from "react-error-boundary";
 import { useState, useEffect } from "react";
-import InstallPrompt from "./components/InstallPrompt";
-import ProtectedRoute from "./components/ProtectedRoute";
+import InstallPrompt from "./components/layout/InstallPrompt";
+import ProtectedRoute from "./components/layout/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import useOfflineStatus from "./hooks/useOfflineStatus";
-import ErrorFallback from "./components/ErrorFallback";
-import NetworkStatusManager from "./components/NetworkStatusManager";
-import NotFoundPage from "./components/NotFoundPage";
+import ErrorFallback from "./components/shared/ErrorFallback";
+import NetworkStatusManager from "./components/shared/NetworkStatusManager";
+import NotFoundPage from "./components/layout/NotFoundPage";
 
 import { ThemeProvider } from "./context/ThemeContext";
 

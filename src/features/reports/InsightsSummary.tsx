@@ -1,5 +1,5 @@
-import type { Expense } from "../services/firebase";
-import { getCurrentMonth, getWeekRange } from "../utils/dateUtils";
+import type { Expense } from "../../services/firebase";
+import { getCurrentMonth, getWeekRange } from "../../utils/dateUtils";
 import {
   Calendar,
   TrendingUp,

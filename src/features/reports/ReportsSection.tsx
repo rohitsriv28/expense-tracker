@@ -17,28 +17,28 @@ import {
   YAxis,
 } from "recharts";
 import { Download, FileText } from "lucide-react";
-import type { Expense } from "../services/firebase";
-import type { Income } from "../services/incomeService";
-import type { Budget } from "../services/budgetService";
+import type { Expense } from "../../services/firebase";
+import type { Income } from "../../services/incomeService";
+import type { Budget } from "../../services/budgetService";
 import {
   calculateBudgetSummary,
   convertLegacyBudget,
   isRecurringBudget,
   type BudgetPeriodSummary,
-} from "../services/budgetService";
-import type { Category } from "../services/categoryService";
-import DatePicker from "./DatePicker";
+} from "../../services/budgetService";
+import type { Category } from "../../services/categoryService";
+import DatePicker from "../../components/ui/DatePicker";
 import {
   expenseDate,
   incomeDate,
   resolveExpenseVisuals,
-} from "../utils/dataMappers";
+} from "../../utils/dataMappers";
 import {
   formatCurrency,
   formatPercent,
   formatShortDate,
-} from "../utils/formatters";
-import { CHART_COLORS } from "../utils/chartColors";
+} from "../../utils/formatters";
+import { CHART_COLORS } from "../../utils/chartColors";
 
 interface ReportsSectionProps {
   expenses: Expense[];
@@ -320,7 +320,7 @@ export default function ReportsSection({
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      const { generatePDFReport } = await import("../services/pdfExport");
+      const { generatePDFReport } = await import("../../services/pdfExport");
       await generatePDFReport({
         period: range,
         expenses: periodExpenses,

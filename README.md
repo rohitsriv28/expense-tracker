@@ -126,15 +126,20 @@ npm run dev
 
 ```
 src/
-├── components/       # Reusable UI components
+├── components/
+│   ├── layout/       # Application layout (Header, Footer, Nav)
+│   ├── shared/       # Cross-feature shared components
+│   └── ui/           # Generic reusable UI components (Buttons, Inputs)
+├── features/         # Feature-based domains (expenses, income, budgeting, reports)
 ├── context/          # React Context providers
 ├── hooks/            # Custom React hooks
-├── pages/            # Application pages
-├── services/         # Firebase and PDF logic
-├── utils/            # Helper utilities
+├── pages/            # Top-level page views
+├── services/         # Firebase, API, and export logic
+├── types/            # Global TypeScript definitions
+├── utils/            # Helper utilities and formatters
 ├── App.tsx           # Main application with routing
 ├── main.tsx          # Entry point
-└── firebase.ts       # Firebase configuration
+└── index.css         # Global styles
 ```
 
 ## Privacy and Terms

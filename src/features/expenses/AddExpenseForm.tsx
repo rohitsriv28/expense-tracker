@@ -1,21 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Timestamp } from "firebase/firestore";
 import { FileText, IndianRupee, Receipt, Trash2, X } from "lucide-react";
-import type { Expense } from "../services/firebase";
-import type { Category } from "../services/categoryService";
-import type { GoalBudget } from "../services/budgetService";
+import type { Expense } from "../../services/firebase";
+import type { Category } from "../../services/categoryService";
+import type { GoalBudget } from "../../services/budgetService";
 import {
   addExpense,
   deleteExpense,
   updateExpense,
-} from "../services/expenseService";
-import { useAuth } from "../services/authService";
-import DatePicker from "./DatePicker";
-import { cn } from "../utils/cn";
-import { categoryHex, expenseDate, findCategory } from "../utils/dataMappers";
-import { getIcon } from "../utils/iconMap";
-import { recordExpense, getSuggestedCategory } from "../utils/smartDefaults";
-import { formatCurrency } from "../utils/formatters";
+} from "../../services/expenseService";
+import { useAuth } from "../../services/authService";
+import DatePicker from "../../components/ui/DatePicker";
+import { cn } from "../../utils/cn";
+import { categoryHex, expenseDate, findCategory } from "../../utils/dataMappers";
+import { getIcon } from "../../utils/iconMap";
+import { recordExpense, getSuggestedCategory } from "../../utils/smartDefaults";
+import { formatCurrency } from "../../utils/formatters";
 
 interface AddExpenseFormProps {
   isOpen?: boolean;

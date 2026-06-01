@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { useAuth } from "../services/authService";
+import { useAuth } from "../../services/authService";
 import { LogOut, User, Menu, X } from "lucide-react";
-import lightLogo from "../assets/cashflow-light.png";
-import darkLogo from "../assets/cashflow-dark.png";
-import ThemeToggle from "./ThemeToggle";
+import lightLogo from "../../assets/cashflow-light.png";
+import darkLogo from "../../assets/cashflow-dark.png";
+import ThemeToggle from "../ui/ThemeToggle";
 
 interface HeaderProps {
   onLogout: () => void;

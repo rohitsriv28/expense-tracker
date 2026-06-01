@@ -5,14 +5,14 @@ import {
   ChevronRight,
   ReceiptIndianRupee,
 } from "lucide-react";
-import type { Expense } from "../services/firebase";
-import type { Category } from "../services/categoryService";
-import { deleteExpense } from "../services/expenseService";
-import { expenseDate, resolveExpenseVisuals } from "../utils/dataMappers";
-import { formatCurrency } from "../utils/formatters";
+import type { Expense } from "../../services/firebase";
+import type { Category } from "../../services/categoryService";
+import { deleteExpense } from "../../services/expenseService";
+import { expenseDate, resolveExpenseVisuals } from "../../utils/dataMappers";
+import { formatCurrency } from "../../utils/formatters";
 import GroupedTransactionList, {
   type GroupedTransaction,
-} from "./expenses/GroupedTransactionList";
+} from "./GroupedTransactionList";
 
 const PAGE_TARGET = 20; // target items per page (flexible to keep date groups intact)
 const ORPHAN_THRESHOLD = 5; // pull trailing groups into current page if ≤ this many items

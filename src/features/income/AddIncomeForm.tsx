@@ -5,11 +5,11 @@ import {
   addIncome,
   DEFAULT_INCOME_SOURCES,
   type IncomeSource,
-} from "../services/incomeService";
-import { useAuth } from "../services/authService";
-import DatePicker from "./DatePicker";
-import { cn } from "../utils/cn";
-import { getIcon } from "../utils/iconMap";
+} from "../../services/incomeService";
+import { useAuth } from "../../services/authService";
+import DatePicker from "../../components/ui/DatePicker";
+import { cn } from "../../utils/cn";
+import { getIcon } from "../../utils/iconMap";
 
 interface AddIncomeFormProps {
   isOpen?: boolean;

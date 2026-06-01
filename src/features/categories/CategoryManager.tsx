@@ -5,10 +5,10 @@ import {
   deleteCategory,
   getCategories,
   initializeDefaultCategories,
-} from "../services/categoryService";
-import type { Category } from "../services/categoryService";
-import { useAuth } from "../services/authService";
-import { ICON_MAP, getIcon } from "../utils/iconMap";
+} from "../../services/categoryService";
+import type { Category } from "../../services/categoryService";
+import { useAuth } from "../../services/authService";
+import { ICON_MAP, getIcon } from "../../utils/iconMap";
 
 interface CategoryManagerProps {
   isOpen: boolean;
