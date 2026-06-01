@@ -1,437 +1,336 @@
-import { PDFDocument, StandardFonts, rgb, PageSizes } from "pdf-lib";
-
-interface Expense {
-  date: { toDate(): Date };
-  remarks: string;
-  amount: number;
-  category?: string;
-}
+import { PDFDocument, PageSizes, StandardFonts, rgb, type PDFPage, type PDFFont, type RGB } from "pdf-lib";
+import type { Expense } from "./firebase";
+import type { Income } from "./incomeService";
+import type { BudgetPeriodSummary } from "./budgetService";
+import type { Category } from "./categoryService";
+import { expenseDate, resolveExpenseVisuals } from "../utils/dataMappers";
+import { formatCurrency } from "../utils/formatters";
 
 interface DateRange {
   start: Date;
   end: Date;
+  label?: string;
 }
 
-/**
- * Generates a premium professional PDF expense report.
- * @param expenses Array of expense objects.
- * @param dateRange Optional date range to filter expenses.
- * @returns PDF bytes as Uint8Array.
- */
+interface ReportData {
+  period: { label: string; start: Date; end: Date };
+  expenses: Expense[];
+  income: Income[];
+  budgets: BudgetPeriodSummary[];
+  categories: Category[];
+  userName: string;
+}
+
+interface PdfContext {
+  doc: PDFDocument;
+  font: PDFFont;
+  bold: PDFFont;
+  colors: {
+    primary: RGB;
+    income: RGB;
+    expense: RGB;
+    text: RGB;
+    textSecondary: RGB;
+    border: RGB;
+    bgAlt: RGB;
+    white: RGB;
+  };
+}
+
+const margin = 48;
+
+function pdfText(text: string): string {
+  return text.replace(/₹/g, "Rs. ").replace(/[^\x20-\x7E]/g, "-");
+}
+
+function colorFromHex(hex: string): RGB {
+  const normalized = hex.replace("#", "");
+  const r = parseInt(normalized.slice(0, 2), 16) / 255;
+  const g = parseInt(normalized.slice(2, 4), 16) / 255;
+  const b = parseInt(normalized.slice(4, 6), 16) / 255;
+  return rgb(Number.isFinite(r) ? r : 0.58, Number.isFinite(g) ? g : 0.64, Number.isFinite(b) ? b : 0.72);
+}
+
+function drawText(
+  page: PDFPage,
+  text: string,
+  x: number,
+  y: number,
+  size: number,
+  font: PDFFont,
+  color: RGB,
+) {
+  page.drawText(pdfText(text), { x, y, size, font, color });
+}
+
+function drawHeader(page: PDFPage, ctx: PdfContext, title: string, subtitle?: string) {
+  const { width, height } = page.getSize();
+  drawText(page, title, margin, height - margin, 18, ctx.bold, ctx.colors.text);
+  if (subtitle) drawText(page, subtitle, margin, height - margin - 18, 10, ctx.font, ctx.colors.textSecondary);
+  page.drawLine({
+    start: { x: margin, y: height - margin - 30 },
+    end: { x: width - margin, y: height - margin - 30 },
+    color: ctx.colors.border,
+    thickness: 1,
+  });
+}
+
+function drawMetricCard(
+  page: PDFPage,
+  ctx: PdfContext,
+  label: string,
+  value: string,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+) {
+  page.drawRectangle({ x, y, width, height, color: ctx.colors.bgAlt, borderColor: ctx.colors.border, borderWidth: 1 });
+  drawText(page, label.toUpperCase(), x + 12, y + height - 18, 8, ctx.bold, ctx.colors.textSecondary);
+  drawText(page, value, x + 12, y + 14, 15, ctx.bold, ctx.colors.text);
+}
+
+function categoryRows(expenses: Expense[], categories: Category[]) {
+  const map = new Map<string, { amount: number; count: number; color: string }>();
+  expenses.forEach((expense) => {
+    const name = expense.category || "Uncategorized";
+    const visuals = resolveExpenseVisuals(categories, name);
+    const current = map.get(name) ?? { amount: 0, count: 0, color: visuals.color };
+    map.set(name, { ...current, amount: current.amount + expense.amount, count: current.count + 1 });
+  });
+  return Array.from(map.entries())
+    .map(([name, value]) => ({ name, ...value }))
+    .sort((a, b) => b.amount - a.amount);
+}
+
+function addCoverPage(ctx: PdfContext, data: ReportData) {
+  const page = ctx.doc.addPage(PageSizes.A4);
+  const { width, height } = page.getSize();
+  page.drawRectangle({ x: 0, y: height - 150, width, height: 150, color: ctx.colors.primary });
+  drawText(page, "CashFlow", margin, height - 70, 28, ctx.bold, ctx.colors.white);
+  drawText(page, "Financial Report", margin, height - 96, 15, ctx.font, ctx.colors.white);
+  drawText(page, data.period.label, margin, height - 116, 11, ctx.font, ctx.colors.white);
+  drawText(page, `Generated for ${data.userName}`, width - 220, height - 76, 10, ctx.font, ctx.colors.white);
+  drawText(page, new Date().toLocaleDateString("en-IN"), width - 220, height - 94, 10, ctx.font, ctx.colors.white);
+
+  const totalIncome = data.income.reduce((sum, item) => sum + item.amount, 0);
+  const totalExpenses = data.expenses.reduce((sum, item) => sum + item.amount, 0);
+  const netSavings = totalIncome - totalExpenses;
+  const savingsRate = totalIncome > 0 ? `${Math.round((netSavings / totalIncome) * 100)}%` : "N/A";
+  const avgExpense = data.expenses.length > 0 ? totalExpenses / data.expenses.length : 0;
+  const metrics = [
+    ["Total Income", formatCurrency(totalIncome)],
+    ["Total Expenses", formatCurrency(totalExpenses)],
+    ["Net Savings", formatCurrency(netSavings)],
+    ["Savings Rate", savingsRate],
+    ["Transactions", String(data.expenses.length)],
+    ["Avg Expense", formatCurrency(avgExpense)],
+  ];
+
+  const cardWidth = (width - margin * 2 - 18) / 2;
+  const cardHeight = 64;
+  metrics.forEach(([label, value], index) => {
+    const col = index % 2;
+    const row = Math.floor(index / 2);
+    drawMetricCard(page, ctx, label, value, margin + col * (cardWidth + 18), height - 240 - row * 82, cardWidth, cardHeight);
+  });
+}
+
+function addCategoryPage(ctx: PdfContext, data: ReportData) {
+  const page = ctx.doc.addPage(PageSizes.A4);
+  const { width, height } = page.getSize();
+  drawHeader(page, ctx, "Spending by Category", data.period.label);
+  const rows = categoryRows(data.expenses, data.categories);
+  const total = rows.reduce((sum, row) => sum + row.amount, 0);
+  let y = height - 120;
+  const barMax = width - margin * 2 - 170;
+
+  rows.forEach((row) => {
+    const percentage = total > 0 ? row.amount / total : 0;
+    drawText(page, row.name.slice(0, 24), margin, y, 10, ctx.font, ctx.colors.text);
+    page.drawRectangle({ x: margin + 130, y: y - 2, width: barMax, height: 9, color: ctx.colors.bgAlt });
+    page.drawRectangle({ x: margin + 130, y: y - 2, width: barMax * percentage, height: 9, color: colorFromHex(row.color) });
+    drawText(page, `${formatCurrency(row.amount)}  ${Math.round(percentage * 100)}%`, width - 150, y, 9, ctx.font, ctx.colors.textSecondary);
+    y -= 24;
+  });
+
+  y -= 18;
+  drawText(page, "Category", margin, y, 9, ctx.bold, ctx.colors.textSecondary);
+  drawText(page, "Amount", margin + 190, y, 9, ctx.bold, ctx.colors.textSecondary);
+  drawText(page, "% of Total", margin + 300, y, 9, ctx.bold, ctx.colors.textSecondary);
+  drawText(page, "Transactions", margin + 400, y, 9, ctx.bold, ctx.colors.textSecondary);
+  y -= 18;
+
+  rows.forEach((row) => {
+    const percentage = total > 0 ? (row.amount / total) * 100 : 0;
+    drawText(page, row.name.slice(0, 28), margin, y, 9, ctx.font, ctx.colors.text);
+    drawText(page, formatCurrency(row.amount), margin + 190, y, 9, ctx.font, ctx.colors.text);
+    drawText(page, `${percentage.toFixed(1)}%`, margin + 300, y, 9, ctx.font, ctx.colors.text);
+    drawText(page, String(row.count), margin + 400, y, 9, ctx.font, ctx.colors.text);
+    y -= 16;
+  });
+}
+
+function addTransactionPages(ctx: PdfContext, data: ReportData) {
+  const sorted = [...data.expenses].sort((a, b) => expenseDate(b).getTime() - expenseDate(a).getTime());
+  let page = ctx.doc.addPage(PageSizes.A4);
+  let { width, height } = page.getSize();
+  let y = height - 110;
+  drawHeader(page, ctx, `Transactions - ${data.period.label}`);
+
+  const drawTableHeader = () => {
+    drawText(page, "Date", margin, y, 9, ctx.bold, ctx.colors.textSecondary);
+    drawText(page, "Category", margin + 80, y, 9, ctx.bold, ctx.colors.textSecondary);
+    drawText(page, "Description", margin + 190, y, 9, ctx.bold, ctx.colors.textSecondary);
+    drawText(page, "Amount", width - 110, y, 9, ctx.bold, ctx.colors.textSecondary);
+    y -= 18;
+  };
+
+  drawTableHeader();
+  sorted.forEach((expense, index) => {
+    if (y < 70) {
+      page = ctx.doc.addPage(PageSizes.A4);
+      width = page.getSize().width;
+      height = page.getSize().height;
+      y = height - 110;
+      drawHeader(page, ctx, `Transactions - ${data.period.label}`);
+      drawTableHeader();
+    }
+
+    if (index % 2 === 0) {
+      page.drawRectangle({ x: margin - 6, y: y - 5, width: width - margin * 2 + 12, height: 17, color: ctx.colors.bgAlt });
+    }
+
+    const visuals = resolveExpenseVisuals(data.categories, expense.category);
+    page.drawCircle({ x: margin + 86, y: y + 4, size: 3, color: colorFromHex(visuals.color) });
+    drawText(page, expenseDate(expense).toLocaleDateString("en-IN"), margin, y, 8, ctx.font, ctx.colors.text);
+    drawText(page, visuals.categoryName.slice(0, 18), margin + 96, y, 8, ctx.font, ctx.colors.text);
+    drawText(page, expense.remarks.slice(0, 36), margin + 190, y, 8, ctx.font, ctx.colors.textSecondary);
+    const amount = formatCurrency(expense.amount);
+    drawText(page, amount, width - 110, y, 8, ctx.font, ctx.colors.text);
+    y -= 17;
+  });
+}
+
+function addBudgetPage(ctx: PdfContext, data: ReportData) {
+  if (data.budgets.length === 0) return;
+  const page = ctx.doc.addPage(PageSizes.A4);
+  const { width, height } = page.getSize();
+  drawHeader(page, ctx, "Budget Performance", data.period.label);
+  let y = height - 120;
+  const barWidth = width - margin * 2 - 210;
+
+  data.budgets.forEach((summary) => {
+    drawText(page, summary.budget.name, margin, y, 10, ctx.bold, ctx.colors.text);
+    drawText(page, `${formatCurrency(summary.spent)} / ${formatCurrency(summary.budget.amount)}`, width - 150, y, 9, ctx.font, ctx.colors.textSecondary);
+    y -= 16;
+    page.drawRectangle({ x: margin, y, width: barWidth, height: 8, color: ctx.colors.bgAlt });
+    page.drawRectangle({
+      x: margin,
+      y,
+      width: Math.min(barWidth, barWidth * (summary.percentage / 100)),
+      height: 8,
+      color: summary.status === "safe" ? ctx.colors.income : summary.status === "warning" ? rgb(0.961, 0.62, 0.043) : ctx.colors.expense,
+    });
+    drawText(page, `${Math.round(summary.percentage)}%`, margin + barWidth + 12, y - 1, 8, ctx.font, ctx.colors.textSecondary);
+    y -= 28;
+  });
+}
+
+function addFooters(ctx: PdfContext) {
+  const pages = ctx.doc.getPages();
+  pages.forEach((page, index) => {
+    const { width } = page.getSize();
+    const text = `Page ${index + 1} of ${pages.length}`;
+    const textWidth = ctx.font.widthOfTextAtSize(text, 8);
+    drawText(page, text, (width - textWidth) / 2, 28, 8, ctx.font, ctx.colors.textSecondary);
+  });
+}
+
+export async function generatePDFReport(data: ReportData): Promise<void> {
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const ctx: PdfContext = {
+    doc,
+    font,
+    bold,
+    colors: {
+      primary: rgb(0.388, 0.4, 0.945),
+      income: rgb(0.133, 0.773, 0.369),
+      expense: rgb(0.957, 0.247, 0.369),
+      text: rgb(0.059, 0.09, 0.161),
+      textSecondary: rgb(0.278, 0.337, 0.459),
+      border: rgb(0.882, 0.914, 0.941),
+      bgAlt: rgb(0.973, 0.98, 0.992),
+      white: rgb(1, 1, 1),
+    },
+  };
+
+  addCoverPage(ctx, data);
+  addCategoryPage(ctx, data);
+  addTransactionPages(ctx, data);
+  addBudgetPage(ctx, data);
+  addFooters(ctx);
+
+  const pdfBytes = await doc.save();
+  const blob = new Blob([pdfBytes], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `cashflow-report-${data.period.label.toLowerCase().replace(/\s+/g, "-")}.pdf`;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 export const generateExpensePDF = async (
   expenses: Expense[],
   _unused1?: unknown,
   _unused2?: unknown,
-  dateRange?: DateRange
+  dateRange?: DateRange,
 ): Promise<Uint8Array> => {
-  // Filter expenses by date range if provided
-  let filteredExpenses = expenses;
-  if (dateRange) {
-    const startOfRange = new Date(dateRange.start);
-    startOfRange.setHours(0, 0, 0, 0);
+  const start = dateRange?.start ?? new Date(0);
+  const end = dateRange?.end ?? new Date();
+  const filteredExpenses = expenses.filter((expense) => {
+    const date = expenseDate(expense);
+    return date >= start && date <= end;
+  });
 
-    const endOfRange = new Date(dateRange.end);
-    endOfRange.setHours(23, 59, 59, 999);
-
-    filteredExpenses = expenses.filter((expense) => {
-      const expenseDate = expense.date.toDate();
-      return expenseDate >= startOfRange && expenseDate <= endOfRange;
-    });
-  }
-
-  const pdfDoc = await PDFDocument.create();
-  let page = pdfDoc.addPage(PageSizes.A4);
-  const { width, height } = page.getSize();
-
-  // Embed fonts
-  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-  const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-
-  // Professional Red/Black Palette
-  const colors = {
-    primary: rgb(0.694, 0.07, 0.149), // #B11226 (Premium Crimson Red)
-    secondary: rgb(0.839, 0.121, 0.227), // #D61F3A (Dark Mode Red)
-    accent: rgb(0.97, 0.97, 0.97), // Very light grey for backgrounds
-    headerText: rgb(1, 1, 1), // White
-    text: rgb(0, 0, 0), // Black
-    subtext: rgb(0.3, 0.3, 0.3), // Dark Grey
-    border: rgb(0.8, 0.8, 0.8), // Light Grey
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const ctx: PdfContext = {
+    doc,
+    font,
+    bold,
+    colors: {
+      primary: rgb(0.388, 0.4, 0.945),
+      income: rgb(0.133, 0.773, 0.369),
+      expense: rgb(0.957, 0.247, 0.369),
+      text: rgb(0.059, 0.09, 0.161),
+      textSecondary: rgb(0.278, 0.337, 0.459),
+      border: rgb(0.882, 0.914, 0.941),
+      bgAlt: rgb(0.973, 0.98, 0.992),
+      white: rgb(1, 1, 1),
+    },
   };
 
-  // Margins
-  const margin = { top: 50, bottom: 50, left: 50, right: 50 };
-  const contentWidth = width - margin.left - margin.right;
-  let cursorY = height - margin.top;
-
-  // Helper function to draw horizontal lines
-  const drawLine = (y: number, thickness = 0.5, color = colors.border) => {
-    page.drawLine({
-      start: { x: margin.left, y },
-      end: { x: width - margin.right, y },
-      color,
-      thickness,
-    });
-  };
-
-  // --- Header Section ---
-  // Gradient-like background for header
-  page.drawRectangle({
-    x: 0,
-    y: cursorY - 60,
-    width: width,
-    height: 110,
-    color: colors.primary,
+  addCoverPage(ctx, {
+    period: { start, end, label: dateRange?.label ?? "Expense Report" },
+    expenses: filteredExpenses,
+    income: [],
+    budgets: [],
+    categories: [],
+    userName: "CashFlow user",
   });
-
-  page.drawText("CashFlow", {
-    x: margin.left,
-    y: cursorY - 15,
-    size: 26,
-    font: boldFont,
-    color: colors.headerText,
+  addTransactionPages(ctx, {
+    period: { start, end, label: dateRange?.label ?? "Expense Report" },
+    expenses: filteredExpenses,
+    income: [],
+    budgets: [],
+    categories: [],
+    userName: "CashFlow user",
   });
-
-  page.drawText("Financial Summary & Analysis", {
-    x: margin.left,
-    y: cursorY - 35,
-    size: 10,
-    font: regularFont,
-    color: rgb(0.9, 0.9, 0.9), // Slightly transparent white
-  });
-
-  // Report details in header (Right side)
-  const reportDate = new Date().toLocaleDateString("en-IN", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-
-  page.drawText("GENERATED ON", {
-    x: width - margin.right - 120,
-    y: cursorY - 10,
-    size: 8,
-    font: boldFont,
-    color: rgb(0.9, 0.9, 0.9),
-  });
-  page.drawText(reportDate, {
-    x: width - margin.right - 120,
-    y: cursorY - 25,
-    size: 10,
-    font: regularFont,
-    color: colors.headerText,
-  });
-
-  if (dateRange) {
-    const rangeText = `${dateRange.start.toLocaleDateString("en-IN", {
-      month: "short",
-      day: "numeric",
-    })} - ${dateRange.end.toLocaleDateString("en-IN", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    })}`;
-
-    page.drawText("PERIOD", {
-      x: width - margin.right - 120,
-      y: cursorY - 40,
-      size: 8,
-      font: boldFont,
-      color: rgb(0.9, 0.9, 0.9),
-    });
-    page.drawText(rangeText, {
-      x: width - margin.right - 120,
-      y: cursorY - 53,
-      size: 10,
-      font: regularFont,
-      color: colors.headerText,
-    });
-  }
-
-  cursorY -= 100;
-
-  // --- Executive Summary Cards ---
-  const totalAmount = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
-  const avgTransaction =
-    filteredExpenses.length > 0 ? totalAmount / filteredExpenses.length : 0;
-
-  // Draw 3 Summary Cards
-  const cardWidth = (contentWidth - 20) / 3;
-  const cardHeight = 60;
-
-  const drawSummaryCard = (
-    title: string,
-    value: string,
-    x: number,
-    y: number
-  ) => {
-    // Card Background/Border
-    page.drawRectangle({
-      x,
-      y,
-      width: cardWidth,
-      height: cardHeight,
-      color: colors.accent,
-      borderColor: colors.border,
-      borderWidth: 1,
-    });
-
-    page.drawText(title.toUpperCase(), {
-      x: x + 12,
-      y: y + cardHeight - 18,
-      size: 8,
-      font: boldFont,
-      color: colors.subtext,
-    });
-
-    page.drawText(value, {
-      x: x + 12,
-      y: y + 15,
-      size: 16,
-      font: boldFont,
-      color: colors.primary,
-    });
-  };
-
-  drawSummaryCard(
-    "Total Spend",
-    `Rs. ${totalAmount.toLocaleString("en-IN")}`,
-    margin.left,
-    cursorY - cardHeight
-  );
-  drawSummaryCard(
-    "Transactions",
-    filteredExpenses.length.toString(),
-    margin.left + cardWidth + 10,
-    cursorY - cardHeight
-  );
-  drawSummaryCard(
-    "Average / Txn",
-    `Rs. ${avgTransaction.toLocaleString("en-IN", {
-      maximumFractionDigits: 0,
-    })}`,
-    margin.left + (cardWidth + 10) * 2,
-    cursorY - cardHeight
-  );
-
-  cursorY -= cardHeight + 40;
-
-  // --- Category Breakdown Section ---
-  if (filteredExpenses.length > 0) {
-    page.drawText("Category Breakdown", {
-      x: margin.left,
-      y: cursorY,
-      size: 14,
-      font: boldFont,
-      color: colors.text,
-    });
-    cursorY -= 15;
-    drawLine(cursorY);
-    cursorY -= 20;
-
-    // Calculate totals by category
-    const categoryTotals: Record<string, number> = {};
-    filteredExpenses.forEach((exp) => {
-      const cat = exp.category || "Uncategorized";
-      categoryTotals[cat] = (categoryTotals[cat] || 0) + exp.amount;
-    });
-
-    // Sort by amount desc
-    const sortedCategories = Object.entries(categoryTotals).sort(
-      ([, a], [, b]) => b - a
-    );
-
-    // Draw Category List (No bars as per request)
-    // Draw Category List (No bars as per request)
-    sortedCategories.slice(0, 5).forEach(([cat, amount]) => {
-      const y = cursorY;
-
-      // Category Name
-      page.drawText(cat, {
-        x: margin.left,
-        y,
-        size: 10,
-        font: regularFont,
-        color: colors.text,
-      });
-
-      // Amount
-      page.drawText(`Rs. ${amount.toLocaleString("en-IN")}`, {
-        x: width - margin.right - 80,
-        y,
-        size: 10,
-        font: boldFont,
-        color: colors.text,
-      });
-
-      cursorY -= 20;
-    });
-
-    if (sortedCategories.length > 5) {
-      cursorY -= 5;
-      page.drawText(`+ ${sortedCategories.length - 5} other categories...`, {
-        x: margin.left,
-        y: cursorY,
-        size: 9,
-        font: regularFont,
-        color: colors.subtext,
-      });
-      cursorY -= 20;
-    }
-
-    cursorY -= 20;
-  }
-
-  // --- Transactions List ---
-  page.drawText("Transaction Details", {
-    x: margin.left,
-    y: cursorY,
-    size: 14,
-    font: boldFont,
-    color: colors.text,
-  });
-  cursorY -= 15;
-
-  // Table Headers
-  const tableTop = cursorY;
-  page.drawRectangle({
-    x: margin.left,
-    y: tableTop - 20,
-    width: contentWidth,
-    height: 24,
-    color: colors.accent,
-  });
-
-  const colX = {
-    date: margin.left + 10,
-    category: margin.left + 100,
-    desc: margin.left + 220,
-    amount: width - margin.right - 20,
-  };
-
-  const drawTableHeaders = (y: number) => {
-    page.drawText("DATE", {
-      x: colX.date,
-      y: y - 14,
-      size: 9,
-      font: boldFont,
-      color: colors.primary,
-    });
-    page.drawText("CATEGORY", {
-      x: colX.category,
-      y: y - 14,
-      size: 9,
-      font: boldFont,
-      color: colors.primary,
-    });
-    page.drawText("DESCRIPTION", {
-      x: colX.desc,
-      y: y - 14,
-      size: 9,
-      font: boldFont,
-      color: colors.primary,
-    });
-    const amtWidth = boldFont.widthOfTextAtSize("AMOUNT", 9);
-    page.drawText("AMOUNT", {
-      x: colX.amount - amtWidth,
-      y: y - 14,
-      size: 9,
-      font: boldFont,
-      color: colors.primary,
-    });
-  };
-
-  drawTableHeaders(tableTop);
-  cursorY -= 40;
-
-  // Rows
-  for (const exp of filteredExpenses) {
-    if (cursorY < margin.bottom + 40) {
-      page = pdfDoc.addPage(PageSizes.A4);
-      cursorY = height - margin.top;
-      // Re-draw header on new page
-      page.drawRectangle({
-        x: margin.left,
-        y: cursorY - 20,
-        width: contentWidth,
-        height: 24,
-        color: colors.accent,
-      });
-      drawTableHeaders(cursorY);
-      cursorY -= 40;
-    }
-
-    const dateStr = exp.date.toDate().toLocaleDateString("en-IN", {
-      day: "2-digit",
-      month: "short",
-    });
-
-    page.drawText(dateStr, {
-      x: colX.date,
-      y: cursorY,
-      size: 9,
-      font: regularFont,
-      color: colors.text,
-    });
-
-    // Category Badge
-    const cat = exp.category || "General";
-    // Shorten if needed
-    const displayCat = cat.length > 15 ? cat.substring(0, 12) + "..." : cat;
-
-    page.drawText(displayCat, {
-      x: colX.category,
-      y: cursorY,
-      size: 9,
-      font: regularFont,
-      color: colors.text,
-    });
-
-    // Description
-    const desc =
-      exp.remarks.length > 35
-        ? exp.remarks.substring(0, 32) + "..."
-        : exp.remarks;
-    page.drawText(desc, {
-      x: colX.desc,
-      y: cursorY,
-      size: 9,
-      font: regularFont,
-      color: colors.subtext,
-    });
-
-    // Amount
-    const amtStr = `Rs. ${exp.amount.toLocaleString("en-IN")}`;
-    const amtWidth = regularFont.widthOfTextAtSize(amtStr, 9);
-    page.drawText(amtStr, {
-      x: colX.amount - amtWidth,
-      y: cursorY,
-      size: 9,
-      font: boldFont,
-      color: colors.text,
-    });
-
-    // Separator line
-    drawLine(cursorY - 8, 0.5, rgb(0.95, 0.95, 0.95));
-    cursorY -= 24;
-  }
-
-  // --- Footer ---
-  const pages = pdfDoc.getPages();
-  pages.forEach((pg, idx) => {
-    const footerY = margin.bottom - 20;
-
-    // Page number centered
-    const pageNum = `${idx + 1} / ${pages.length}`;
-    const pWidth = regularFont.widthOfTextAtSize(pageNum, 8);
-
-    pg.drawText(pageNum, {
-      x: (width - pWidth) / 2,
-      y: footerY,
-      size: 8,
-      font: regularFont,
-      color: colors.subtext,
-    });
-  });
-
-  return pdfDoc.save();
+  addFooters(ctx);
+  return doc.save();
 };

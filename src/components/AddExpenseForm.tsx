@@ -1,321 +1,562 @@
-import { useState } from "react";
-import { addExpense } from "../services/expenseService";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Timestamp } from "firebase/firestore";
-import { useAuth } from "../services/authService";
+import { FileText, IndianRupee, Receipt, Trash2, X } from "lucide-react";
+import type { Expense } from "../services/firebase";
+import type { Category } from "../services/categoryService";
+import type { GoalBudget } from "../services/budgetService";
 import {
-  Plus,
-  Calendar,
-  IndianRupee,
-  FileText,
-  Zap,
-  Coffee,
-  Car,
-  Home,
-  ShoppingBag,
-  Gamepad2,
-  Heart,
-  MoreHorizontal,
-  ChevronDown,
-  ChevronUp,
-} from "lucide-react";
+  addExpense,
+  deleteExpense,
+  updateExpense,
+} from "../services/expenseService";
+import { useAuth } from "../services/authService";
+import DatePicker from "./DatePicker";
+import { cn } from "../utils/cn";
+import { categoryHex, expenseDate, findCategory } from "../utils/dataMappers";
+import { getIcon } from "../utils/iconMap";
+import { recordExpense, getSuggestedCategory } from "../utils/smartDefaults";
+import { formatCurrency } from "../utils/formatters";
 
-const QUICK_CATEGORIES = [
-  { icon: Coffee, label: "Food & Drink", color: "bg-orange-500" },
-  { icon: Car, label: "Transport", color: "bg-blue-500" },
-  { icon: ShoppingBag, label: "Shopping", color: "bg-purple-500" },
-  { icon: Home, label: "Bills", color: "bg-green-500" },
-  { icon: Gamepad2, label: "Entertainment", color: "bg-red-500" },
-  { icon: Heart, label: "Healthcare", color: "bg-pink-500" },
-  { icon: MoreHorizontal, label: "Other", color: "bg-gray-500" },
-];
+interface AddExpenseFormProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+  onSaved?: (message: string) => void;
+  categories?: Category[];
+  expense?: Expense | null;
+  activeGoals?: GoalBudget[];
+  onManageCategories?: () => void;
+}
 
-const QUICK_AMOUNTS = [50, 100, 200, 500, 1000];
+interface ExpenseFormErrors {
+  amount?: string;
+  category?: string;
+  date?: string;
+  description?: string;
+  submit?: string;
+}
 
-export default function AddExpenseForm() {
-  const [amount, setAmount] = useState("");
-  const [remarks, setRemarks] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState("");
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+function evaluateAmount(input: string): number | null {
+  if (!/^[\d+\-*/.() ]+$/.test(input)) return null;
+  try {
+    const result = Function(`"use strict"; return (${input})`)() as unknown;
+    if (typeof result === "number" && Number.isFinite(result) && result >= 0) {
+      return Math.round(result * 100) / 100;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+function toInputDate(date: Date): string {
+  return date.toISOString().split("T")[0];
+}
+
+function isExpression(value: string): boolean {
+  return /[+\-*/()]/.test(value);
+}
+
+export default function AddExpenseForm({
+  isOpen,
+  onClose,
+  onSaved,
+  categories = [],
+  expense,
+  activeGoals = [],
+  onManageCategories,
+}: AddExpenseFormProps) {
   const { user } = useAuth();
+  const amountRef = useRef<HTMLInputElement>(null);
+  const editing = Boolean(expense?.id);
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+  const [date, setDate] = useState(new Date());
+  const [notes, setNotes] = useState("");
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  const [selectedGoalId, setSelectedGoalId] = useState<string | undefined>();
+  const [isSaving, setIsSaving] = useState(false);
+  const [errors, setErrors] = useState<ExpenseFormErrors>({});
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
 
-  const validateForm = () => {
-    const newErrors: { [key: string]: string } = {};
+  useEffect(() => {
+    if (!isOpen && isOpen !== undefined) return;
+    const timer = setTimeout(() => amountRef.current?.focus(), 120);
+    return () => clearTimeout(timer);
+  }, [isOpen]);
 
-    if (!amount) {
-      newErrors.amount = "Amount is required";
-    } else if (parseFloat(amount) <= 0) {
-      newErrors.amount = "Amount must be greater than 0";
-    } else if (parseFloat(amount) > 1000000) {
-      newErrors.amount = "Amount seems too high";
-    }
-
-    if (!remarks.trim()) {
-      newErrors.remarks = "Description is required";
-    } else if (remarks.trim().length < 3) {
-      newErrors.remarks = "Description must be at least 3 characters";
-    }
-
-    if (!date) {
-      newErrors.date = "Date is required";
+  useEffect(() => {
+    if (expense) {
+      setAmount(String(expense.amount));
+      setDescription(expense.remarks || "");
+      setDate(expenseDate(expense));
+      setNotes(expense.notes || "");
+      setNotesOpen(Boolean(expense.notes));
+      const category = findCategory(categories, expense.category);
+      setSelectedCategoryId(category?.id ?? expense.category ?? "");
+      setSelectedGoalId(expense.goalBudgetId);
     } else {
-      const selectedDate = new Date(date);
-      const today = new Date();
-      const oneYearAgo = new Date();
-      oneYearAgo.setFullYear(today.getFullYear() - 1);
-
-      if (selectedDate > today) {
-        newErrors.date = "Date cannot be in the future";
-      } else if (selectedDate < oneYearAgo) {
-        newErrors.date = "Date cannot be more than a year ago";
-      }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm() || !user) return;
-
-    setIsLoading(true);
-    try {
-      const expenseData = {
-        amount: parseFloat(amount),
-        remarks: selectedCategory ? `${selectedCategory}: ${remarks}` : remarks,
-        date: Timestamp.fromDate(new Date(date)),
-        editCount: 0,
-        category: selectedCategory,
-        createdAt: Timestamp.now(),
-      };
-
-      await addExpense(expenseData);
-
-      // Reset form
       setAmount("");
-      setRemarks("");
-      setSelectedCategory("");
+      setDescription("");
+      setDate(new Date());
+      setNotes("");
+      setNotesOpen(false);
+      setSelectedCategoryId("");
+      setSelectedGoalId(undefined);
+      setDeleteConfirm(false);
       setErrors({});
+    }
+  }, [categories, expense, isOpen]);
 
-      // Success animation
-      const submitBtn = document.querySelector(".submit-btn");
-      submitBtn?.classList.add("animate-pulse");
-      setTimeout(() => submitBtn?.classList.remove("animate-pulse"), 1000);
-    } catch (error) {
-      console.error("Error adding expense:", error);
-      setErrors({ submit: "Failed to add expense. Please try again." });
+  const selectedCategory = useMemo(
+    () => categories.find((category) => category.id === selectedCategoryId),
+    [categories, selectedCategoryId],
+  );
+
+  const evaluatedAmount = useMemo(
+    () => (isExpression(amount) ? evaluateAmount(amount) : null),
+    [amount],
+  );
+
+  const activeGoal = useMemo(() => {
+    const day = toInputDate(date);
+    return activeGoals.find(
+      (goal) => day >= goal.startDate && day <= goal.endDate,
+    );
+  }, [activeGoals, date]);
+
+  useEffect(() => {
+    const suggestion = getSuggestedCategory(description, categories);
+    if (suggestion && !selectedCategoryId) setSelectedCategoryId(suggestion.id);
+  }, [categories, description, selectedCategoryId]);
+
+  const finalAmount = evaluatedAmount ?? Number(amount);
+
+  const validate = (): boolean => {
+    const next: ExpenseFormErrors = {};
+    if (!amount.trim()) next.amount = "Amount is required.";
+    else if (!Number.isFinite(finalAmount) || finalAmount <= 0)
+      next.amount = "Enter an amount greater than 0.";
+    else if (String(Math.floor(finalAmount)).length > 10)
+      next.amount = "Amount can be at most 10 digits.";
+
+    if (!date) next.date = "Date is required.";
+    if (description.length > 100)
+      next.description = "Description must be 100 characters or fewer.";
+    if (date > new Date())
+      next.date = "Future date selected. You can still save it.";
+
+    setErrors(next);
+    return !next.amount && !next.description;
+  };
+
+  const handleClose = () => {
+    if (isSaving) return;
+    onClose?.();
+  };
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!user || !validate()) return;
+
+    setIsSaving(true);
+    setErrors({});
+    const fallbackDescription =
+      description.trim() || selectedCategory?.label || "Expense";
+    const payload = {
+      amount: finalAmount,
+      remarks: fallbackDescription,
+      date: Timestamp.fromDate(date),
+      editCount: expense?.editCount ?? 0,
+      category: selectedCategory?.label || undefined,
+      notes: notes.trim() || undefined,
+      goalBudgetId: selectedGoalId,
+      updatedAt: Timestamp.now(),
+      createdAt: expense?.createdAt ?? Timestamp.now(),
+    };
+    const sanitizedPayload = Object.fromEntries(
+      Object.entries(payload).filter(([, value]) => value !== undefined),
+    ) as typeof payload;
+
+    try {
+      if (expense?.id) {
+        await updateExpense(expense.id, {
+          ...sanitizedPayload,
+          editCount: (expense.editCount ?? 0) + 1,
+        });
+        onSaved?.("Expense updated.");
+      } else {
+        await addExpense(sanitizedPayload);
+        recordExpense(
+          fallbackDescription,
+          selectedCategory?.id ?? "uncategorized",
+        );
+        onSaved?.("Expense added.");
+      }
+      onClose?.();
+    } catch {
+      setErrors({ submit: "Failed to save expense. Please try again." });
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
-  const handleQuickAmount = (quickAmount: number) => {
-    setAmount(quickAmount.toString());
-    setErrors({ ...errors, amount: "" });
+  const handleDelete = async () => {
+    if (!expense?.id) return;
+    setIsSaving(true);
+    try {
+      await deleteExpense(expense.id);
+      onSaved?.("Expense deleted.");
+      onClose?.();
+    } catch {
+      setErrors({ submit: "Failed to delete expense. Please try again." });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleCategorySelect = (category: string) => {
-    setSelectedCategory(selectedCategory === category ? "" : category);
-  };
+  if (isOpen === false) return null;
 
-  return (
-    <div className="mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center">
-          <div className="w-8 h-8 md:w-10 md:h-10 bg-red-600 rounded-lg md:rounded-xl flex items-center justify-center mr-2 md:mr-3 shadow-lg">
-            <Plus className="w-4 h-4 md:w-5 md:h-5 text-white" />
-          </div>
-          <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-            Add New Expense
+  const form = (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="section-label">Expense</p>
+          <h2 className="text-xl">
+            {editing ? "Edit Expense" : "Add Expense"}
           </h2>
         </div>
-
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="flex items-center text-sm font-medium transition-colors p-2 bg-white text-gray-700 hover:bg-slate-50 dark:bg-white/10 dark:text-white dark:hover:bg-white/20 rounded-lg border border-gray-200 dark:border-white/10"
-        >
-          <Zap className="w-3 h-3 md:w-4 md:h-4 mr-1" />
-          {isExpanded ? "Simple" : "Quick"}
-          {isExpanded ? (
-            <ChevronUp className="w-3 h-3 md:w-4 md:h-4 ml-1" />
-          ) : (
-            <ChevronDown className="w-3 h-3 md:w-4 md:h-4 ml-1" />
-          )}
-        </button>
+        {onClose && (
+          <button
+            type="button"
+            className="btn btn-ghost btn-icon-sm"
+            aria-label="Close expense form"
+            onClick={handleClose}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white border border-gray-200 dark:bg-white/10 dark:backdrop-blur-xl dark:border-white/20 rounded-2xl overflow-hidden shadow-sm dark:shadow-none transition-colors duration-300"
-      >
-        {/* Quick Categories */}
-        {isExpanded && (
-          <div className="p-4 md:p-6 bg-slate-100 dark:bg-white/5 border-b border-gray-200 dark:border-white/20">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-white mb-3">
-              Quick Categories
-            </h3>
-            <div className="grid grid-cols-4 md:grid-cols-7 gap-2">
-              {QUICK_CATEGORIES.map((category, index) => {
-                const IconComponent = category.icon;
-                const isSelected = selectedCategory === category.label;
-                return (
-                  <button
-                    key={index}
-                    type="button"
-                    onClick={() => handleCategorySelect(category.label)}
-                    className={`p-2 md:p-3 rounded-lg md:rounded-xl transition-all duration-200 flex flex-col items-center space-y-1 group ${isSelected
-                        ? `${category.color} text-white shadow-lg scale-105`
-                        : "bg-white border border-gray-200 text-gray-600 hover:bg-slate-50 hover:border-gray-300 dark:bg-white/10 dark:text-white dark:hover:bg-white/20 dark:border-white/20"
-                      }`}
-                  >
-                    <IconComponent className="w-4 h-4 md:w-5 md:h-5" />
-                    <span className="text-xs font-medium truncate hidden md:block">
-                      {category.label}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
+      {errors.submit && (
+        <div
+          className="rounded-lg border px-3 py-2 text-sm"
+          style={{
+            borderColor: "var(--status-expense-border)",
+            background: "var(--status-expense-bg)",
+            color: "var(--status-expense-text)",
+          }}
+        >
+          {errors.submit}
+        </div>
+      )}
 
-        <div className="p-4 md:p-6">
-          {errors.submit && (
-            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-100 text-sm">
-              {errors.submit}
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">
-            {/* Date Input */}
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700 dark:text-white">
-                Date
-              </label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400 dark:text-red-300" />
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => {
-                    setDate(e.target.value);
-                    setErrors({ ...errors, date: "" });
-                  }}
-                  className={`w-full pl-10 pr-4 py-2 md:py-3 border rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all bg-white text-gray-900 border-gray-200 dark:bg-white/5 dark:text-white dark:placeholder-red-300 ${errors.date
-                      ? "border-red-300 bg-red-50 dark:bg-red-500/20"
-                      : "border-gray-200 dark:border-white/20"
-                    }`}
-                  required
-                />
-              </div>
-              {errors.date && (
-                <p className="text-red-500 dark:text-red-300 text-xs">
-                  {errors.date}
-                </p>
-              )}
-            </div>
-
-            {/* Amount Input */}
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700 dark:text-white">
-                Amount
-              </label>
-              <div className="relative">
-                <IndianRupee className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400 dark:text-red-300" />
-                <input
-                  type="number"
-                  step="0.01"
-                  value={amount}
-                  onChange={(e) => {
-                    setAmount(e.target.value);
-                    setErrors({ ...errors, amount: "" });
-                  }}
-                  placeholder="0.00"
-                  className={`w-full pl-10 pr-4 py-2 md:py-3 border rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all text-lg font-semibold bg-white text-gray-900 border-gray-200 dark:bg-white/5 dark:text-white dark:placeholder-red-300 ${errors.amount
-                      ? "border-red-300 bg-red-50 dark:bg-red-500/20"
-                      : "border-gray-200 dark:border-white/20"
-                    }`}
-                  required
-                />
-              </div>
-              {errors.amount && (
-                <p className="text-red-500 dark:text-red-300 text-xs">
-                  {errors.amount}
-                </p>
-              )}
-
-              {/* Quick Amount Buttons */}
-              {isExpanded && (
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {QUICK_AMOUNTS.map((quickAmount) => (
-                    <button
-                      key={quickAmount}
-                      type="button"
-                      onClick={() => handleQuickAmount(quickAmount)}
-                      className="px-2 py-1 text-xs bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-white/10 dark:text-white dark:hover:bg-red-600 rounded-full transition-colors"
-                    >
-                      ₹{quickAmount}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Description Input */}
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700 dark:text-white">
-                Description
-              </label>
-              <div className="relative">
-                <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400 dark:text-red-300" />
-                <input
-                  type="text"
-                  value={remarks}
-                  onChange={(e) => {
-                    setRemarks(e.target.value);
-                    setErrors({ ...errors, remarks: "" });
-                  }}
-                  placeholder="What did you spend on?"
-                  className={`w-full pl-10 pr-4 py-2 md:py-3 border rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all bg-white text-gray-900 border-gray-200 dark:bg-white/5 dark:text-white dark:placeholder-red-300 ${errors.remarks
-                      ? "border-red-300 bg-red-50 dark:bg-red-500/20"
-                      : "border-gray-200 dark:border-white/20"
-                    }`}
-                  required
-                />
-              </div>
-              {errors.remarks && (
-                <p className="text-red-500 dark:text-red-300 text-xs">
-                  {errors.remarks}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Submit Button */}
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              className="submit-btn bg-red-600 text-white py-2 md:py-3 px-6 md:px-8 rounded-xl hover:bg-red-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:shadow-lg flex items-center min-w-[120px] md:min-w-[140px] justify-center"
-              disabled={!user || isLoading}
-            >
-              {isLoading ? (
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-4 w-4 md:h-5 md:w-5 border-b-2 border-white mr-2"></div>
-                  <span className="text-sm md:text-base">Adding...</span>
-                </div>
-              ) : (
-                <div className="flex items-center">
-                  <Plus className="w-4 h-4 md:w-5 md:h-5 mr-2" />
-                  <span className="text-sm md:text-base">Add Expense</span>
-                </div>
-              )}
-            </button>
+      <section>
+        <div className="mb-2 flex items-center justify-between">
+          <label
+            className="text-sm font-semibold"
+            style={{ color: "var(--text-primary)" }}
+          >
+            Category
+          </label>
+          <div className="flex items-center gap-2">
+            {errors.category && (
+              <span
+                className="text-xs"
+                style={{ color: "var(--text-expense)" }}
+              >
+                {errors.category}
+              </span>
+            )}
+            {onManageCategories && (
+              <button
+                type="button"
+                onClick={onManageCategories}
+                className="text-xs font-semibold hover:underline"
+                style={{ color: "var(--color-primary-500)" }}
+              >
+                Manage
+              </button>
+            )}
           </div>
         </div>
-      </form>
+        <div
+          className={cn(
+            "grid grid-cols-4 gap-2 rounded-xl",
+            errors.category && "ring-2 ring-[var(--interactive-danger)]",
+          )}
+        >
+          {categories.map((category) => {
+            const Icon = getIcon(category.icon);
+            const color = categoryHex(category);
+            const isSelected = selectedCategoryId === category.id;
+            return (
+              <button
+                key={category.id}
+                type="button"
+                onClick={() => {
+                  setSelectedCategoryId(category.id);
+                  setErrors((prev) => ({ ...prev, category: undefined }));
+                }}
+                className={cn(
+                  "flex min-h-24 flex-col items-center gap-1 rounded-xl border-2 p-2 transition-all",
+                  isSelected
+                    ? "border-[var(--border-focus)] [background:var(--interactive-primary-subtle)]"
+                    : "border-transparent [background:var(--status-neutral-bg)] hover:border-[var(--border-default)]",
+                )}
+              >
+                <span
+                  className="flex h-10 w-10 items-center justify-center rounded-xl"
+                  style={{ background: `${color}22`, color }}
+                >
+                  <Icon className="h-5 w-5" />
+                </span>
+                <span
+                  className="text-center text-[10px] font-medium leading-tight"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {category.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {activeGoal && (
+        <div
+          className="rounded-lg border p-3"
+          style={{
+            borderColor: "var(--status-warning-border)",
+            background: "var(--status-warning-bg)",
+          }}
+        >
+          <label
+            className="flex items-start gap-3 text-sm"
+            style={{ color: "var(--status-warning-text)" }}
+          >
+            <input
+              type="checkbox"
+              checked={selectedGoalId === activeGoal.id}
+              onChange={(event) =>
+                setSelectedGoalId(
+                  event.target.checked ? activeGoal.id : undefined,
+                )
+              }
+              className="mt-1"
+            />
+            <span>
+              This looks like it is for {activeGoal.name}. Tag it to that goal?
+            </span>
+          </label>
+        </div>
+      )}
+
+      <section>
+        <label
+          className="mb-2 block text-sm font-semibold"
+          style={{ color: "var(--text-primary)" }}
+        >
+          Amount
+        </label>
+        <div
+          className="flex items-center rounded-xl border px-4 py-2"
+          style={{
+            borderColor: errors.amount
+              ? "var(--interactive-danger)"
+              : "var(--border-input)",
+            background: "var(--bg-input)",
+          }}
+        >
+          <IndianRupee
+            className="h-7 w-7 shrink-0"
+            style={{ color: "var(--text-secondary)" }}
+          />
+          <input
+            ref={amountRef}
+            value={amount}
+            onChange={(event) => {
+              setAmount(event.target.value);
+              setErrors((prev) => ({ ...prev, amount: undefined }));
+            }}
+            inputMode="decimal"
+            placeholder="0.00"
+            className="min-w-0 flex-1 bg-transparent text-right text-3xl sm:text-4xl md:text-[2.5rem] font-bold leading-tight tabular-nums outline-none"
+            style={{ color: "var(--text-primary)" }}
+          />
+        </div>
+        {evaluatedAmount !== null && (
+          <p
+            className="mt-1 text-right text-xs"
+            style={{ color: "var(--text-secondary)" }}
+          >
+            Result: {formatCurrency(evaluatedAmount)}
+          </p>
+        )}
+        {errors.amount && (
+          <p className="mt-1 text-xs" style={{ color: "var(--text-expense)" }}>
+            {errors.amount}
+          </p>
+        )}
+      </section>
+
+      <section>
+        <label
+          className="mb-2 block text-sm font-semibold"
+          style={{ color: "var(--text-primary)" }}
+        >
+          Description
+        </label>
+        <div className="relative">
+          <FileText
+            className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
+            style={{ color: "var(--text-tertiary)" }}
+          />
+          <input
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+            placeholder="What was this for?"
+            maxLength={100}
+            className="input pl-9"
+          />
+        </div>
+        {errors.description && (
+          <p className="mt-1 text-xs" style={{ color: "var(--text-expense)" }}>
+            {errors.description}
+          </p>
+        )}
+      </section>
+
+      <section>
+        <label
+          className="mb-2 block text-sm font-semibold"
+          style={{ color: "var(--text-primary)" }}
+        >
+          Date
+        </label>
+        <div className="mb-2 flex gap-2">
+          <button
+            type="button"
+            className="chip"
+            onClick={() => setDate(new Date())}
+          >
+            Today
+          </button>
+          <button
+            type="button"
+            className="chip"
+            onClick={() => {
+              const yesterday = new Date();
+              yesterday.setDate(yesterday.getDate() - 1);
+              setDate(yesterday);
+            }}
+          >
+            Yesterday
+          </button>
+        </div>
+        <DatePicker label="" value={date} onChange={setDate} />
+        {errors.date && (
+          <p className="mt-1 text-xs" style={{ color: "var(--text-warning)" }}>
+            {errors.date}
+          </p>
+        )}
+      </section>
+
+      <section>
+        {notesOpen ? (
+          <textarea
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            onBlur={() => {
+              if (!notes.trim()) setNotesOpen(false);
+            }}
+            rows={3}
+            placeholder="Add any details you may want to remember."
+            className="input h-auto py-3"
+          />
+        ) : (
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => setNotesOpen(true)}
+          >
+            Add notes +
+          </button>
+        )}
+      </section>
+
+      <button
+        type="submit"
+        className="btn btn-primary btn-lg w-full animate-scale-in"
+        disabled={!user || isSaving}
+      >
+        {isSaving ? (
+          <>
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            Saving...
+          </>
+        ) : (
+          <>
+            <Receipt className="h-4 w-4" />
+            {editing ? "Save Changes" : "Add Expense"}
+          </>
+        )}
+      </button>
+
+      {editing && (
+        <div className="text-center">
+          {deleteConfirm ? (
+            <div className="flex items-center justify-center gap-2 text-sm">
+              <span style={{ color: "var(--text-secondary)" }}>
+                Delete this expense?
+              </span>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setDeleteConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger btn-sm"
+                onClick={handleDelete}
+                disabled={isSaving}
+              >
+                Delete
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="btn btn-ghost btn-sm"
+              style={{ color: "var(--text-expense)" }}
+              onClick={() => setDeleteConfirm(true)}
+            >
+              <Trash2 className="h-4 w-4" /> Delete expense
+            </button>
+          )}
+        </div>
+      )}
+    </form>
+  );
+
+  if (isOpen === undefined) {
+    return <div className="card">{form}</div>;
+  }
+
+  return (
+    <div
+      className="bottom-sheet-backdrop md:flex md:items-center md:justify-center md:p-4"
+      onClick={handleClose}
+    >
+      <div
+        className="bottom-sheet md:static md:max-h-[90vh] md:w-full md:max-w-[480px] md:rounded-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="bottom-sheet-handle md:hidden" />
+        <div className="px-5 pb-6 pt-2 md:p-6">{form}</div>
+      </div>
     </div>
   );
 }

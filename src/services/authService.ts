@@ -39,7 +39,6 @@ export const useAuth = () => {
         firebaseError.code === "auth/popup-blocked" ||
         firebaseError.code === "auth/popup-closed-by-user"
       ) {
-        // console.log("Popup blocked, using redirect method");
         await signInWithRedirect(auth, provider);
       } else {
         throw error;

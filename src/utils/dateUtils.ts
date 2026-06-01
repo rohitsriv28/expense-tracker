@@ -51,7 +51,7 @@ export function getStartOfYear(date: Date): Date {
 // New function to get end of period
 export function getEndOfPeriod(
   start: Date,
-  period: "daily" | "weekly" | "monthly"
+  period: "daily" | "weekly" | "monthly",
 ): Date {
   const end = new Date(start);
 

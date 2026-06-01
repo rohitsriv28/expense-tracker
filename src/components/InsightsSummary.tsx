@@ -24,7 +24,7 @@ export default function InsightsSummary({ expenses }: InsightsSummaryProps) {
   const todayString = today.toISOString().split("T")[0];
 
   const dailyExpenses = expenses.filter(
-    (e) => e.date.toDate().toISOString().split("T")[0] === todayString
+    (e) => e.date.toDate().toISOString().split("T")[0] === todayString,
   );
 
   const weeklyExpenses = expenses.filter((e) => {
@@ -34,7 +34,7 @@ export default function InsightsSummary({ expenses }: InsightsSummaryProps) {
   });
 
   const monthlyExpenses = expenses.filter(
-    (e) => getCurrentMonth(e.date.toDate()) === getCurrentMonth(today)
+    (e) => getCurrentMonth(e.date.toDate()) === getCurrentMonth(today),
   );
 
   const calculateTotal = (items: Expense[]) =>
@@ -120,18 +120,20 @@ export default function InsightsSummary({ expenses }: InsightsSummaryProps) {
           {/* Dropdown toggle - only visible on mobile */}
           <div className="md:hidden">
             <ChevronDown
-              className={`w-6 h-6 text-gray-600 transition-all duration-300 ${isSpendingOverviewExpanded ? "rotate-180" : ""
-                }`}
+              className={`w-6 h-6 text-gray-600 transition-all duration-300 ${
+                isSpendingOverviewExpanded ? "rotate-180" : ""
+              }`}
             />
           </div>
         </div>
 
         {/* Collapsible content */}
         <div
-          className={`transition-all duration-300 ease-in-out overflow-hidden ${isSpendingOverviewExpanded
-            ? "max-h-[2000px] opacity-100"
-            : "max-h-0 opacity-0 md:max-h-[2000px] md:opacity-100"
-            }`}
+          className={`transition-all duration-300 ease-in-out overflow-hidden ${
+            isSpendingOverviewExpanded
+              ? "max-h-[2000px] opacity-100"
+              : "max-h-0 opacity-0 md:max-h-[2000px] md:opacity-100"
+          }`}
         >
           <div className="flex flex-col md:grid md:grid-cols-3 gap-4 md:gap-8">
             {summaryCards.map((card, index) => {
@@ -171,9 +173,11 @@ export default function InsightsSummary({ expenses }: InsightsSummaryProps) {
                           </div>
                         </div>
                         <ChevronDown
-                          className={`w-5 h-5 md:w-6 md:h-6 ${card.textColor
-                            } transition-all duration-300 opacity-60 hover:opacity-100 ${isExpanded ? "rotate-180" : ""
-                            } md:hidden`}
+                          className={`w-5 h-5 md:w-6 md:h-6 ${
+                            card.textColor
+                          } transition-all duration-300 opacity-60 hover:opacity-100 ${
+                            isExpanded ? "rotate-180" : ""
+                          } md:hidden`}
                         />
                       </div>
                     </div>
@@ -255,18 +259,20 @@ export default function InsightsSummary({ expenses }: InsightsSummaryProps) {
               {/* Dropdown toggle - only visible on mobile */}
               <div className="md:hidden">
                 <ChevronDown
-                  className={`w-6 h-6 text-gray-600 transition-all duration-300 ${isQuickStatsExpanded ? "rotate-180" : ""
-                    }`}
+                  className={`w-6 h-6 text-gray-600 transition-all duration-300 ${
+                    isQuickStatsExpanded ? "rotate-180" : ""
+                  }`}
                 />
               </div>
             </div>
 
             {/* Collapsible content */}
             <div
-              className={`transition-all duration-300 ease-in-out overflow-hidden ${isQuickStatsExpanded
-                ? "max-h-[1000px] opacity-100"
-                : "max-h-0 opacity-0 md:max-h-[1000px] md:opacity-100"
-                }`}
+              className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                isQuickStatsExpanded
+                  ? "max-h-[1000px] opacity-100"
+                  : "max-h-0 opacity-0 md:max-h-[1000px] md:opacity-100"
+              }`}
             >
               <div className="px-6 md:px-8 pb-6 md:pb-8">
                 <div className="grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
@@ -283,22 +289,24 @@ export default function InsightsSummary({ expenses }: InsightsSummaryProps) {
                     },
                     {
                       label: "Average",
-                      value: `₹${expenses.length > 0
-                        ? (
-                          calculateTotal(expenses) / expenses.length
-                        ).toFixed(0)
-                        : "0"
-                        }`,
+                      value: `₹${
+                        expenses.length > 0
+                          ? (
+                              calculateTotal(expenses) / expenses.length
+                            ).toFixed(0)
+                          : "0"
+                      }`,
                       color: "bg-red-600",
                     },
                     {
                       label: "Highest",
-                      value: `₹${expenses.length > 0
-                        ? Math.max(...expenses.map((e) => e.amount)).toFixed(
-                          0
-                        )
-                        : "0"
-                        }`,
+                      value: `₹${
+                        expenses.length > 0
+                          ? Math.max(...expenses.map((e) => e.amount)).toFixed(
+                              0,
+                            )
+                          : "0"
+                      }`,
                       color: "bg-slate-800",
                     },
                   ].map((stat, index) => (

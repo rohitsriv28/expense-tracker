@@ -1,339 +1,682 @@
-import { useState } from "react";
-import type { Budget } from "../services/budgetService";
-import { addBudget, deleteBudget } from "../services/budgetService";
+import { useMemo, useState } from "react";
+import { CalendarDays, Plus, Target, Trash2 } from "lucide-react";
+import type {
+  Budget,
+  GoalBudget,
+  RecurringBudget,
+} from "../services/budgetService";
+import {
+  addBudget,
+  calculateBudgetSummary,
+  calculateGoalSummary,
+  calculateHealthScore,
+  convertLegacyBudget,
+  deleteBudget,
+  isGoalBudget,
+  isRecurringBudget,
+} from "../services/budgetService";
 import type { Expense } from "../services/firebase";
-import { Timestamp } from "firebase/firestore";
+import type { Category } from "../services/categoryService";
 import { useAuth } from "../services/authService";
-import { Plus, Calendar, Trash2, Award, PiggyBank } from "lucide-react";
-import { formatDate } from "../utils/dateUtils";
+import DatePicker from "./DatePicker";
+import { categoryHex, findCategory } from "../utils/dataMappers";
+import { getIcon } from "../utils/iconMap";
+import {
+  formatCurrency,
+  formatPercent,
+  formatShortDate,
+} from "../utils/formatters";
+import { toLocalISODateString } from "../utils/dateUtils";
 
 interface BudgetManagerProps {
   budgets: Budget[];
   expenses: Expense[];
+  categories?: Category[];
+  onSaved?: (message: string) => void;
 }
 
-export default function BudgetManager({ budgets, expenses }: BudgetManagerProps) {
+type CreateMode = "selector" | "recurring" | "goal";
+
+function currentMonthRange(): { start: Date; end: Date } {
+  const now = new Date();
+  return {
+    start: new Date(now.getFullYear(), now.getMonth(), 1),
+    end: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999),
+  };
+}
+
+function daysLeftInMonth(): number {
+  const now = new Date();
+  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  return Math.max(0, end.getDate() - now.getDate() + 1);
+}
+
+export default function BudgetManager({
+  budgets,
+  expenses,
+  categories = [],
+  onSaved,
+}: BudgetManagerProps) {
   const { user } = useAuth();
-  const [name, setName] = useState("");
-  const [limit, setLimit] = useState("");
-  const [type, setType] = useState<"month" | "week" | "trip">("month");
-  const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
-  const [endDate, setEndDate] = useState(
-    new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().split("T")[0]
+  const [mode, setMode] = useState<CreateMode>("selector");
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [expandedBudgetId, setExpandedBudgetId] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
+  const [categoryId, setCategoryId] = useState("");
+  const [recurringAmount, setRecurringAmount] = useState("");
+  const [rollover, setRollover] = useState(false);
+  const [goalName, setGoalName] = useState("");
+  const [goalEmoji, setGoalEmoji] = useState("🎯");
+  const [goalAmount, setGoalAmount] = useState("");
+  const [goalStart, setGoalStart] = useState(new Date());
+  const [goalEnd, setGoalEnd] = useState(
+    new Date(new Date().setDate(new Date().getDate() + 30)),
   );
-  const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [excludeGoal, setExcludeGoal] = useState(true);
 
-  const handleTypeChange = (newType: "month" | "week" | "trip") => {
-    setType(newType);
-    const today = new Date();
-    if (newType === "month") {
-      const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split("T")[0];
-      const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0).toISOString().split("T")[0];
-      setStartDate(firstDay);
-      setEndDate(lastDay);
-    } else if (newType === "week") {
-      const day = today.getDay();
-      const diff = today.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
-      const monday = new Date(today.setDate(diff)).toISOString().split("T")[0];
-      const sunday = new Date(today.setDate(diff + 6)).toISOString().split("T")[0];
-      setStartDate(monday);
-      setEndDate(sunday);
-    }
+  const normalizedBudgets = useMemo(
+    () => budgets.map(convertLegacyBudget),
+    [budgets],
+  );
+  const recurringBudgets = normalizedBudgets.filter(isRecurringBudget);
+  const goalBudgets = normalizedBudgets.filter(isGoalBudget);
+  const period = useMemo(currentMonthRange, []);
+  const summaries = useMemo(
+    () =>
+      recurringBudgets.map((budget) =>
+        calculateBudgetSummary(budget, expenses, period),
+      ),
+    [expenses, period, recurringBudgets],
+  );
+  const goalSummaries = useMemo(
+    () => goalBudgets.map((budget) => calculateGoalSummary(budget, expenses)),
+    [expenses, goalBudgets],
+  );
+  const healthScore = calculateHealthScore(summaries);
+  const withinCount = summaries.filter(
+    (summary) => summary.status !== "exceeded",
+  ).length;
+
+  const resetForm = () => {
+    setMode("selector");
+    setCategoryId("");
+    setRecurringAmount("");
+    setRollover(false);
+    setGoalName("");
+    setGoalEmoji("🎯");
+    setGoalAmount("");
+    setGoalStart(new Date());
+    setGoalEnd(new Date(new Date().setDate(new Date().getDate() + 30)));
+    setExcludeGoal(true);
   };
 
-  const validateForm = () => {
-    const newErrors: { [key: string]: string } = {};
-
-    if (!name.trim()) {
-      newErrors.name = "Budget name is required";
-    }
-    if (!limit || parseFloat(limit) <= 0) {
-      newErrors.limit = "Limit must be greater than 0";
-    }
-    if (!startDate || !endDate) {
-      newErrors.dates = "Start and End dates are required";
-    } else if (new Date(startDate) > new Date(endDate)) {
-      newErrors.dates = "Start date must be before or equal to End date";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm() || !user) return;
-
-    setIsLoading(true);
+  const handleCreateRecurring = async () => {
+    const category = categories.find((item) => item.id === categoryId);
+    const amount = Number(recurringAmount);
+    if (!user || !category || !Number.isFinite(amount) || amount <= 0) return;
+    setIsSaving(true);
     try {
-      const budgetData = {
-        name: name.trim(),
-        limit: parseFloat(limit),
-        type,
-        startDate: Timestamp.fromDate(new Date(startDate)),
-        endDate: Timestamp.fromDate(new Date(endDate)),
-      };
-
-      await addBudget(budgetData);
-
-      // Reset form
-      setName("");
-      setLimit("");
-      setErrors({});
-    } catch (error) {
-      console.error("Error adding budget:", error);
-      setErrors({ submit: "Failed to add budget. Please try again." });
+      await addBudget({
+        type: "recurring",
+        name: category.label,
+        categoryId: category.label,
+        amount,
+        period: "monthly",
+        rollover,
+        rolloverAmount: 0,
+      } as Omit<RecurringBudget, "id" | "userId">);
+      onSaved?.("Budget created.");
+      setSheetOpen(false);
+      resetForm();
+    } catch {
+      onSaved?.("Failed to create budget.");
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
-  const handleDeleteBudget = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this budget?")) return;
+  const handleCreateGoal = async () => {
+    const totalAmount = Number(goalAmount);
+    if (
+      !user ||
+      !goalName.trim() ||
+      !Number.isFinite(totalAmount) ||
+      totalAmount <= 0
+    )
+      return;
+    setIsSaving(true);
+    try {
+      await addBudget({
+        type: "goal",
+        name: goalName.trim(),
+        emoji: goalEmoji,
+        totalAmount,
+        startDate: toLocalISODateString(goalStart),
+        endDate: toLocalISODateString(goalEnd),
+        allocations: [],
+        excludeFromMonthlyBudgets: excludeGoal,
+      } as Omit<GoalBudget, "id" | "userId">);
+      onSaved?.("Goal created.");
+      setSheetOpen(false);
+      resetForm();
+    } catch {
+      onSaved?.("Failed to create goal.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async (id?: string) => {
+    if (!id) return;
     try {
       await deleteBudget(id);
-    } catch (error) {
-      console.error("Error deleting budget:", error);
+      setPendingDeleteId(null);
+      onSaved?.("Budget deleted.");
+    } catch {
+      onSaved?.("Failed to delete budget.");
     }
-  };
-
-  // Helper to compute spent amount within the budget duration
-  const getSpentForBudget = (budget: Budget) => {
-    const start = budget.startDate.toDate().getTime();
-    // end of day for comparison
-    const end = new Date(budget.endDate.toDate());
-    end.setHours(23, 59, 59, 999);
-    const endTime = end.getTime();
-
-    return expenses
-      .filter((expense) => {
-        const expTime = expense.date.toDate().getTime();
-        return expTime >= start && expTime <= endTime;
-      })
-      .reduce((sum, exp) => sum + exp.amount, 0);
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Set Budget Form */}
-      <div className="lg:col-span-1 bg-white border border-gray-200 dark:bg-white/10 dark:backdrop-blur-xl dark:border-white/20 rounded-2xl p-4 md:p-6 shadow-xl transition-colors duration-300">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="bg-purple-600 rounded-xl p-2.5 shadow-lg shadow-purple-500/20">
-            <PiggyBank className="w-5 h-5 text-white" />
+    <div className="space-y-6 animate-enter">
+      <section className="card">
+        <div className="mb-3 flex items-center justify-between">
+          <div>
+            <p className="section-label">Budget Health</p>
+            <h2 className="text-2xl">{healthScore}</h2>
           </div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-            Set Budget Limit
-          </h2>
+          <Target className="h-8 w-8" style={{ color: "var(--text-brand)" }} />
         </div>
+        <div className="progress-track mb-3 h-3">
+          <div
+            className={`progress-fill ${healthScore >= 80 ? "progress-safe" : healthScore >= 60 ? "progress-warn" : "progress-danger"}`}
+            style={{ width: `${healthScore}%` }}
+          />
+        </div>
+        <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
+          You are within budget in {withinCount} of {summaries.length}{" "}
+          categories.
+        </p>
+      </section>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {errors.submit && (
-            <div className="p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-100 text-sm">
-              {errors.submit}
-            </div>
-          )}
-
+      <section className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-1">
-              Budget Name
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. May 2026, Paris Trip, Week 22"
-              className="w-full px-4 py-2 border border-gray-200 dark:border-white/20 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white text-gray-900 dark:bg-white/5 dark:text-white"
-              required
-            />
-            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+            <p className="section-label">Monthly Budgets</p>
+            <h2>Recurring limits</h2>
           </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-1">
-              Budget Limit Amount (₹)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={limit}
-              onChange={(e) => setLimit(e.target.value)}
-              placeholder="0.00"
-              className="w-full px-4 py-2 border border-gray-200 dark:border-white/20 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white text-gray-900 dark:bg-white/5 dark:text-white font-semibold text-lg"
-              required
-            />
-            {errors.limit && <p className="text-red-500 text-xs mt-1">{errors.limit}</p>}
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-1">
-              Budget Type
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {(["month", "week", "trip"] as const).map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => handleTypeChange(t)}
-                  className={`py-2 px-3 text-xs font-semibold rounded-xl border capitalize transition-all ${
-                    type === t
-                      ? "bg-purple-600 border-purple-600 text-white shadow-md shadow-purple-500/20"
-                      : "bg-white border-gray-200 text-gray-700 hover:bg-slate-50 dark:bg-white/5 dark:border-white/10 dark:text-white dark:hover:bg-white/10"
-                  }`}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-1">
-                Start Date
-              </label>
-              <input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 dark:border-white/20 rounded-xl focus:ring-2 focus:ring-purple-500 bg-white text-gray-900 dark:bg-white/5 dark:text-white"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 dark:text-white mb-1">
-                End Date
-              </label>
-              <input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 dark:border-white/20 rounded-xl focus:ring-2 focus:ring-purple-500 bg-white text-gray-900 dark:bg-white/5 dark:text-white"
-                required
-              />
-            </div>
-          </div>
-          {errors.dates && <p className="text-red-500 text-xs mt-1">{errors.dates}</p>}
-
           <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full mt-4 bg-purple-600 text-white py-3 rounded-xl hover:bg-purple-700 font-semibold shadow-lg hover:shadow-xl transition-all flex items-center justify-center gap-2"
+            type="button"
+            className="btn btn-primary"
+            onClick={() => setSheetOpen(true)}
           >
-            {isLoading ? (
-              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-            ) : (
-              <>
-                <Plus className="w-5 h-5" /> Set Active Budget
-              </>
-            )}
+            <Plus className="h-4 w-4" /> Add Budget
           </button>
-        </form>
-      </div>
-
-      {/* Active Budgets List */}
-      <div className="lg:col-span-2 bg-white border border-gray-200 dark:bg-white/10 dark:backdrop-blur-xl dark:border-white/20 rounded-2xl p-4 md:p-6 shadow-xl transition-colors duration-300">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="bg-amber-500 rounded-xl p-2.5 shadow-lg shadow-amber-500/20">
-            <Award className="w-5 h-5 text-white" />
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-            Active Budgets & Depletion
-          </h2>
         </div>
 
-        {budgets.length === 0 ? (
-          <div className="text-center py-12 bg-slate-50 dark:bg-white/5 border border-dashed border-gray-200 dark:border-white/10 rounded-xl">
-            <PiggyBank className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-500 dark:text-purple-300 text-sm">
-              No active budgets configured. Set a weekly, monthly, or trip budget to see dynamic expense depletion.
+        {summaries.length === 0 ? (
+          <div className="empty-state card">
+            <Target className="empty-state-icon" />
+            <p className="empty-state-title">No monthly budgets</p>
+            <p className="empty-state-desc">
+              Set a category limit and CashFlow will track depletion
+              automatically.
             </p>
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={() => setSheetOpen(true)}
+            >
+              Create budget
+            </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {budgets.map((budget) => {
-              const spent = getSpentForBudget(budget);
-              const remaining = Math.max(0, budget.limit - spent);
-              const percentage = Math.min(100, (spent / budget.limit) * 100);
-              const isOverBudget = spent > budget.limit;
-
+          <div className="grid gap-3 md:grid-cols-2">
+            {summaries.map((summary) => {
+              const category = findCategory(
+                categories,
+                summary.budget.categoryId,
+              );
+              const Icon = getIcon(category?.icon);
+              const color = categoryHex(category);
+              const expanded = expandedBudgetId === summary.budget.id;
               return (
-                <div
-                  key={budget.id}
-                  className={`border rounded-2xl p-4 md:p-5 relative transition-all duration-300 ${
-                    isOverBudget
-                      ? "border-red-300 bg-red-500/5"
-                      : "border-gray-200 dark:border-white/10 bg-slate-50/50 dark:bg-white/5"
-                  }`}
+                <article
+                  key={summary.budget.id ?? summary.budget.name}
+                  className="card card-hover"
                 >
                   <button
-                    onClick={() => handleDeleteBudget(budget.id!)}
-                    className="absolute top-4 right-4 text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1"
-                    title="Delete Budget"
+                    type="button"
+                    className="w-full text-left"
+                    onClick={() =>
+                      setExpandedBudgetId(
+                        expanded
+                          ? null
+                          : (summary.budget.id ?? summary.budget.name),
+                      )
+                    }
                   >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-
-                  <div className="mb-3">
-                    <span className="inline-block text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 mb-1.5 capitalize">
-                      {budget.type}
-                    </span>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-white truncate pr-6">
-                      {budget.name}
-                    </h3>
-                    <p className="text-xs text-gray-500 dark:text-purple-300 flex items-center gap-1.5 mt-1">
-                      <Calendar className="w-3.5 h-3.5" />
-                      {formatDate(budget.startDate.toDate())} - {formatDate(budget.endDate.toDate())}
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 text-center bg-white dark:bg-slate-900/50 rounded-xl p-3 border border-gray-100 dark:border-white/10 mb-4">
-                    <div>
-                      <span className="block text-[10px] text-gray-400 font-semibold">LIMIT</span>
-                      <span className="text-sm font-bold text-gray-900 dark:text-white">₹{budget.limit}</span>
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span
+                          className="category-icon-wrap"
+                          style={{ background: `${color}22`, color }}
+                        >
+                          <Icon className="h-5 w-5" />
+                        </span>
+                        <div className="min-w-0">
+                          <h3 className="truncate text-base">
+                            {summary.budget.name}
+                          </h3>
+                          <p
+                            className="text-xs"
+                            style={{ color: "var(--text-secondary)" }}
+                          >
+                            {formatCurrency(summary.remaining)} remaining ·{" "}
+                            {daysLeftInMonth()} days left
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-sm font-semibold tabular-nums">
+                        {formatCurrency(summary.spent)} /{" "}
+                        {formatCurrency(summary.budget.amount)}
+                      </p>
                     </div>
-                    <div>
-                      <span className="block text-[10px] text-gray-400 font-semibold">SPENT</span>
-                      <span className={`text-sm font-bold ${isOverBudget ? "text-red-600 dark:text-red-400" : "text-gray-900 dark:text-white"}`}>
-                        ₹{spent.toFixed(2)}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="block text-[10px] text-gray-400 font-semibold">REMAINING</span>
-                      <span className={`text-sm font-bold ${isOverBudget ? "text-red-600" : "text-green-600 dark:text-green-400"}`}>
-                        ₹{remaining.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-xs font-semibold mb-1">
-                      <span className={isOverBudget ? "text-red-500" : "text-gray-500 dark:text-purple-300"}>
-                        {isOverBudget ? "Over Budget!" : `${percentage.toFixed(0)}% Depleted`}
-                      </span>
-                      <span className="text-gray-500 dark:text-purple-300">
-                        ₹{remaining.toFixed(0)} left
-                      </span>
-                    </div>
-                    <div className="w-full bg-slate-200 dark:bg-white/10 h-3.5 rounded-full overflow-hidden">
+                    <div className="progress-track">
                       <div
-                        className={`h-full transition-all duration-500 ${
-                          isOverBudget
-                            ? "bg-red-600 animate-pulse"
-                            : percentage > 85
-                            ? "bg-amber-500"
-                            : "bg-purple-600"
-                        }`}
-                        style={{ width: `${percentage}%` }}
-                      ></div>
+                        className={`progress-fill ${summary.status === "safe" ? "progress-safe" : summary.status === "warning" ? "progress-warn" : "progress-danger"}`}
+                        style={{
+                          width: `${Math.min(100, summary.percentage)}%`,
+                        }}
+                      />
                     </div>
-                  </div>
-                </div>
+                    <div
+                      className="mt-2 flex items-center justify-between text-xs"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      <span>{formatPercent(summary.percentage)}% used</span>
+                      {summary.budget.rollover && (
+                        <span>
+                          ↻ {formatCurrency(summary.budget.rolloverAmount)}{" "}
+                          rolled over
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                  {expanded && (
+                    <div
+                      className="mt-4 space-y-2 border-t pt-3"
+                      style={{ borderColor: "var(--border-subtle)" }}
+                    >
+                      {summary.expenses.slice(0, 4).map((expense) => (
+                        <div
+                          key={expense.id}
+                          className="flex justify-between text-sm"
+                        >
+                          <span className="truncate">{expense.remarks}</span>
+                          <span className="amount-negative">
+                            {formatCurrency(expense.amount)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <DeleteControls
+                    id={summary.budget.id}
+                    pendingDeleteId={pendingDeleteId}
+                    setPendingDeleteId={setPendingDeleteId}
+                    onDelete={handleDelete}
+                  />
+                </article>
               );
             })}
           </div>
         )}
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="section-label">Goals & Trips</p>
+            <h2>One-time envelopes</h2>
+          </div>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => {
+              setSheetOpen(true);
+              setMode("goal");
+            }}
+          >
+            <Plus className="h-4 w-4" /> Add Goal
+          </button>
+        </div>
+
+        {goalSummaries.length === 0 ? (
+          <div className="empty-state card">
+            <CalendarDays className="empty-state-icon" />
+            <p className="empty-state-title">No goals yet</p>
+            <p className="empty-state-desc">
+              Create a trip, purchase, or event budget to keep it separate from
+              monthly spending.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2">
+            {goalSummaries.map((summary) => (
+              <article
+                key={summary.budget.id ?? summary.budget.name}
+                className="card"
+              >
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-3xl">{summary.budget.emoji}</span>
+                    <div>
+                      <h3>{summary.budget.name}</h3>
+                      <p
+                        className="text-xs"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
+                        {formatShortDate(
+                          new Date(`${summary.budget.startDate}T00:00:00`),
+                        )}{" "}
+                        -{" "}
+                        {formatShortDate(
+                          new Date(`${summary.budget.endDate}T00:00:00`),
+                        )}{" "}
+                        · {summary.daysRemaining} days left
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="progress-track mb-2">
+                  <div
+                    className={`progress-fill ${summary.status === "on-track" ? "progress-safe" : summary.status === "warning" ? "progress-warn" : "progress-danger"}`}
+                    style={{ width: `${Math.min(100, summary.percentage)}%` }}
+                  />
+                </div>
+                <p className="text-sm font-semibold">
+                  {formatCurrency(summary.totalSpent)} /{" "}
+                  {formatCurrency(summary.budget.totalAmount)}
+                </p>
+                <p
+                  className="mt-1 text-xs"
+                  style={{ color: "var(--text-secondary)" }}
+                >
+                  {formatCurrency(summary.remaining)} remaining · projected to
+                  spend {formatCurrency(summary.projectedTotal)}
+                </p>
+                <DeleteControls
+                  id={summary.budget.id}
+                  pendingDeleteId={pendingDeleteId}
+                  setPendingDeleteId={setPendingDeleteId}
+                  onDelete={handleDelete}
+                />
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {sheetOpen && (
+        <div
+          className="bottom-sheet-backdrop md:flex md:items-center md:justify-center md:p-4"
+          onClick={() => setSheetOpen(false)}
+        >
+          <div
+            className="bottom-sheet md:static md:max-h-[90vh] md:w-full md:max-w-[520px] md:rounded-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="bottom-sheet-handle md:hidden" />
+            <div className="space-y-5 px-5 pb-6 pt-2 md:p-6">
+              {mode === "selector" && (
+                <>
+                  <div>
+                    <p className="section-label">Create budget</p>
+                    <h2>What do you want to budget for?</h2>
+                  </div>
+                  <button
+                    type="button"
+                    className="card w-full text-left"
+                    onClick={() => setMode("recurring")}
+                  >
+                    <p className="font-semibold">Monthly category budget</p>
+                    <p
+                      className="text-sm"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      For regular spending limits.
+                    </p>
+                  </button>
+                  <button
+                    type="button"
+                    className="card w-full text-left"
+                    onClick={() => setMode("goal")}
+                  >
+                    <p className="font-semibold">Goal or trip budget</p>
+                    <p
+                      className="text-sm"
+                      style={{ color: "var(--text-secondary)" }}
+                    >
+                      For one-time events and envelopes.
+                    </p>
+                  </button>
+                </>
+              )}
+
+              {mode === "recurring" && (
+                <>
+                  <SheetHeader
+                    title="Monthly category budget"
+                    onBack={() => setMode("selector")}
+                  />
+                  <div className="grid grid-cols-3 gap-2">
+                    {categories.map((category) => {
+                      const Icon = getIcon(category.icon);
+                      const color = categoryHex(category);
+                      return (
+                        <button
+                          key={category.id}
+                          type="button"
+                          className={`rounded-xl border-2 p-2 ${categoryId === category.id ? "border-[var(--border-focus)] [background:var(--interactive-primary-subtle)]" : "border-transparent [background:var(--status-neutral-bg)]"}`}
+                          onClick={() => setCategoryId(category.id)}
+                        >
+                          <span
+                            className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl"
+                            style={{ color, background: `${color}22` }}
+                          >
+                            <Icon className="h-5 w-5" />
+                          </span>
+                          <span className="mt-1 block text-xs">
+                            {category.label}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <label className="block">
+                    <span className="mb-2 block text-sm font-semibold">
+                      Limit per month
+                    </span>
+                    <input
+                      className="input input-lg"
+                      inputMode="decimal"
+                      value={recurringAmount}
+                      onChange={(event) =>
+                        setRecurringAmount(event.target.value)
+                      }
+                      placeholder="₹ 0"
+                    />
+                  </label>
+                  <label
+                    className="flex items-center justify-between rounded-lg border p-3"
+                    style={{ borderColor: "var(--border-default)" }}
+                  >
+                    <span>Carry unspent amount to next month</span>
+                    <input
+                      type="checkbox"
+                      checked={rollover}
+                      onChange={(event) => setRollover(event.target.checked)}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-lg w-full"
+                    disabled={isSaving || !categoryId || !recurringAmount}
+                    onClick={handleCreateRecurring}
+                  >
+                    Create Budget
+                  </button>
+                </>
+              )}
+
+              {mode === "goal" && (
+                <>
+                  <SheetHeader
+                    title="Goal or trip budget"
+                    onBack={() => setMode("selector")}
+                  />
+                  <input
+                    className="input input-lg"
+                    value={goalName}
+                    onChange={(event) => setGoalName(event.target.value)}
+                    placeholder="Goa Trip, New Laptop, Wedding Gift..."
+                  />
+                  <div className="scroll-x flex gap-2">
+                    {["🎯", "✈️", "💻", "🏠", "🎁", "🚗", "🎓"].map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        className={`h-11 w-11 rounded-xl border text-xl ${goalEmoji === emoji ? "border-[var(--border-focus)] [background:var(--interactive-primary-subtle)]" : "border-[var(--border-default)]"}`}
+                        onClick={() => setGoalEmoji(emoji)}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    className="input input-lg"
+                    inputMode="decimal"
+                    value={goalAmount}
+                    onChange={(event) => setGoalAmount(event.target.value)}
+                    placeholder="Total budget: ₹ 0"
+                  />
+                  <div className="grid grid-cols-2 gap-3">
+                    <DatePicker
+                      label="Start date"
+                      value={goalStart}
+                      onChange={setGoalStart}
+                    />
+                    <DatePicker
+                      label="End date"
+                      value={goalEnd}
+                      onChange={setGoalEnd}
+                      min={goalStart}
+                    />
+                  </div>
+                  <label
+                    className="flex items-start justify-between gap-4 rounded-lg border p-3"
+                    style={{ borderColor: "var(--border-default)" }}
+                  >
+                    <span>
+                      <span className="block font-semibold">
+                        Exclude from monthly budgets
+                      </span>
+                      <span
+                        className="block text-xs"
+                        style={{ color: "var(--text-secondary)" }}
+                      >
+                        Goal-tagged expenses will not drain recurring category
+                        limits.
+                      </span>
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={excludeGoal}
+                      onChange={(event) => setExcludeGoal(event.target.checked)}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-lg w-full"
+                    disabled={isSaving || !goalName || !goalAmount}
+                    onClick={handleCreateGoal}
+                  >
+                    Create Goal
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SheetHeader({ title, onBack }: { title: string; onBack: () => void }) {
+  return (
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="section-label">New budget</p>
+        <h2>{title}</h2>
       </div>
+      <button type="button" className="btn btn-ghost btn-sm" onClick={onBack}>
+        Back
+      </button>
+    </div>
+  );
+}
+
+function DeleteControls({
+  id,
+  pendingDeleteId,
+  setPendingDeleteId,
+  onDelete,
+}: {
+  id?: string;
+  pendingDeleteId: string | null;
+  setPendingDeleteId: (id: string | null) => void;
+  onDelete: (id?: string) => void;
+}) {
+  if (!id) return null;
+  return (
+    <div
+      className="mt-4 border-t pt-3"
+      style={{ borderColor: "var(--border-subtle)" }}
+    >
+      {pendingDeleteId === id ? (
+        <div className="flex items-center justify-end gap-2 text-sm">
+          <span style={{ color: "var(--text-secondary)" }}>
+            Delete this budget?
+          </span>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => setPendingDeleteId(null)}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="btn btn-danger btn-sm"
+            onClick={() => onDelete(id)}
+          >
+            Delete
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm ml-auto"
+          style={{ color: "var(--text-expense)" }}
+          onClick={() => setPendingDeleteId(id)}
+        >
+          <Trash2 className="h-4 w-4" /> Delete
+        </button>
+      )}
     </div>
   );
 }

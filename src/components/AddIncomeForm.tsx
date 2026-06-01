@@ -1,204 +1,344 @@
-import { useState } from "react";
-import { addIncome } from "../services/incomeService";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Timestamp } from "firebase/firestore";
+import { IndianRupee, TrendingUp, X } from "lucide-react";
+import {
+  addIncome,
+  DEFAULT_INCOME_SOURCES,
+  type IncomeSource,
+} from "../services/incomeService";
 import { useAuth } from "../services/authService";
-import { Plus, Calendar, IndianRupee, FileText } from "lucide-react";
+import DatePicker from "./DatePicker";
+import { cn } from "../utils/cn";
+import { getIcon } from "../utils/iconMap";
 
-export default function AddIncomeForm() {
-  const [amount, setAmount] = useState("");
-  const [source, setSource] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+interface AddIncomeFormProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+  onSaved?: (message: string) => void;
+  sources?: IncomeSource[];
+}
+
+interface IncomeFormErrors {
+  amount?: string;
+  source?: string;
+  description?: string;
+  submit?: string;
+}
+
+export default function AddIncomeForm({
+  isOpen,
+  onClose,
+  onSaved,
+  sources = [],
+}: AddIncomeFormProps) {
   const { user } = useAuth();
+  const amountRef = useRef<HTMLInputElement>(null);
+  const availableSources = useMemo<IncomeSource[]>(
+    () =>
+      sources.length > 0
+        ? sources
+        : DEFAULT_INCOME_SOURCES.map((source) => ({
+            ...source,
+            id: source.name,
+            userId: user?.uid ?? "default",
+            createdAt: Timestamp.now(),
+          })),
+    [sources, user?.uid],
+  );
+  const [selectedSourceId, setSelectedSourceId] = useState("");
+  const [amount, setAmount] = useState("");
+  const [description, setDescription] = useState("");
+  const [date, setDate] = useState(new Date());
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringFrequency, setRecurringFrequency] = useState<
+    "weekly" | "biweekly" | "monthly"
+  >("monthly");
+  const [isSaving, setIsSaving] = useState(false);
+  const [errors, setErrors] = useState<IncomeFormErrors>({});
 
-  const validateForm = () => {
-    const newErrors: { [key: string]: string } = {};
+  useEffect(() => {
+    if (!isOpen && isOpen !== undefined) return;
+    const timer = setTimeout(() => amountRef.current?.focus(), 120);
+    return () => clearTimeout(timer);
+  }, [isOpen]);
 
-    if (!amount) {
-      newErrors.amount = "Amount is required";
-    } else if (parseFloat(amount) <= 0) {
-      newErrors.amount = "Amount must be greater than 0";
+  useEffect(() => {
+    if (!selectedSourceId && availableSources[0]?.id) {
+      setSelectedSourceId(availableSources[0].id);
     }
+  }, [availableSources, selectedSourceId]);
 
-    if (!source.trim()) {
-      newErrors.source = "Source is required";
-    } else if (source.trim().length < 2) {
-      newErrors.source = "Source must be at least 2 characters";
-    }
+  const selectedSource = availableSources.find(
+    (source) => source.id === selectedSourceId,
+  );
 
-    if (!date) {
-      newErrors.date = "Date is required";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const validate = (): boolean => {
+    const next: IncomeFormErrors = {};
+    const parsedAmount = Number(amount);
+    if (!selectedSource) next.source = "Choose an income source.";
+    if (!amount.trim()) next.amount = "Amount is required.";
+    else if (!Number.isFinite(parsedAmount) || parsedAmount <= 0)
+      next.amount = "Enter an amount greater than 0.";
+    if (description.length > 100)
+      next.description = "Description must be 100 characters or fewer.";
+    setErrors(next);
+    return Object.keys(next).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validateForm() || !user) return;
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!user || !validate() || !selectedSource) return;
 
-    setIsLoading(true);
+    setIsSaving(true);
     try {
-      const incomeData = {
-        amount: parseFloat(amount),
-        source: source.trim(),
-        date: Timestamp.fromDate(new Date(date)),
+      const payload = {
+        amount: Number(amount),
+        source: selectedSource.name,
+        sourceId: selectedSource.id,
+        description: description.trim() || selectedSource.name,
+        date: Timestamp.fromDate(date),
+        isRecurring,
+        recurringFrequency: isRecurring ? recurringFrequency : undefined,
       };
-
-      await addIncome(incomeData);
-
-      // Reset form
+      const sanitizedPayload = Object.fromEntries(
+        Object.entries(payload).filter(([, value]) => value !== undefined),
+      ) as typeof payload;
+      await addIncome(sanitizedPayload);
       setAmount("");
-      setSource("");
-      setErrors({});
-    } catch (error) {
-      console.error("Error adding income:", error);
-      setErrors({ submit: "Failed to add income. Please try again." });
+      setDescription("");
+      setIsRecurring(false);
+      onSaved?.("Income logged.");
+      onClose?.();
+    } catch {
+      setErrors({ submit: "Failed to save income. Please try again." });
     } finally {
-      setIsLoading(false);
+      setIsSaving(false);
     }
   };
 
-  return (
-    <div className="mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center">
-          <div className="w-8 h-8 md:w-10 md:h-10 bg-green-600 rounded-lg md:rounded-xl flex items-center justify-center mr-2 md:mr-3 shadow-lg">
-            <Plus className="w-4 h-4 md:w-5 md:h-5 text-white" />
-          </div>
-          <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-            Log New Income
-          </h2>
+  if (isOpen === false) return null;
+
+  const form = (
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="section-label">Income</p>
+          <h2 className="text-xl">Log Income</h2>
         </div>
+        {onClose && (
+          <button
+            type="button"
+            className="btn btn-ghost btn-icon-sm"
+            aria-label="Close income form"
+            onClick={onClose}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white border border-gray-200 dark:bg-white/10 dark:backdrop-blur-xl dark:border-white/20 rounded-2xl overflow-hidden shadow-sm dark:shadow-none transition-colors duration-300"
-      >
-        <div className="p-4 md:p-6">
-          {errors.submit && (
-            <div className="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-100 text-sm">
-              {errors.submit}
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-4 md:mb-6">
-            {/* Date Input */}
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700 dark:text-white">
-                Date
-              </label>
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400 dark:text-green-300" />
-                <input
-                  type="date"
-                  value={date}
-                  onChange={(e) => {
-                    setDate(e.target.value);
-                    setErrors({ ...errors, date: "" });
-                  }}
-                  className={`w-full pl-10 pr-4 py-2 md:py-3 border rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all bg-white text-gray-900 border-gray-200 dark:bg-white/5 dark:text-white dark:placeholder-green-300 ${
-                    errors.date
-                      ? "border-red-300 bg-red-50 dark:bg-red-500/20"
-                      : "border-gray-200 dark:border-white/20"
-                  }`}
-                  required
-                />
-              </div>
-              {errors.date && (
-                <p className="text-red-500 dark:text-red-300 text-xs">
-                  {errors.date}
-                </p>
-              )}
-            </div>
-
-            {/* Amount Input */}
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700 dark:text-white">
-                Amount
-              </label>
-              <div className="relative">
-                <IndianRupee className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400 dark:text-green-300" />
-                <input
-                  type="number"
-                  step="0.01"
-                  value={amount}
-                  onChange={(e) => {
-                    setAmount(e.target.value);
-                    setErrors({ ...errors, amount: "" });
-                  }}
-                  placeholder="0.00"
-                  className={`w-full pl-10 pr-4 py-2 md:py-3 border rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all text-lg font-semibold bg-white text-gray-900 border-gray-200 dark:bg-white/5 dark:text-white dark:placeholder-green-300 ${
-                    errors.amount
-                      ? "border-red-300 bg-red-50 dark:bg-red-500/20"
-                      : "border-gray-200 dark:border-white/20"
-                  }`}
-                  required
-                />
-              </div>
-              {errors.amount && (
-                <p className="text-red-500 dark:text-red-300 text-xs">
-                  {errors.amount}
-                </p>
-              )}
-            </div>
-
-            {/* Source Input */}
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-gray-700 dark:text-white">
-                Source of Income
-              </label>
-              <div className="relative">
-                <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-gray-400 dark:text-green-300" />
-                <input
-                  type="text"
-                  value={source}
-                  onChange={(e) => {
-                    setSource(e.target.value);
-                    setErrors({ ...errors, source: "" });
-                  }}
-                  placeholder="Salary, Freelance, Investment, etc."
-                  className={`w-full pl-10 pr-4 py-2 md:py-3 border rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all bg-white text-gray-900 border-gray-200 dark:bg-white/5 dark:text-white dark:placeholder-green-300 ${
-                    errors.source
-                      ? "border-red-300 bg-red-50 dark:bg-red-500/20"
-                      : "border-gray-200 dark:border-white/20"
-                  }`}
-                  required
-                />
-              </div>
-              {errors.source && (
-                <p className="text-red-500 dark:text-red-300 text-xs">
-                  {errors.source}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Submit Button */}
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              className="submit-btn bg-green-600 text-white py-2 md:py-3 px-6 md:px-8 rounded-xl hover:bg-green-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none disabled:hover:shadow-lg flex items-center min-w-[120px] md:min-w-[140px] justify-center"
-              disabled={!user || isLoading}
-            >
-              {isLoading ? (
-                <div className="flex items-center">
-                  <div className="animate-spin rounded-full h-4 w-4 md:h-5 md:w-5 border-b-2 border-white mr-2"></div>
-                  <span className="text-sm md:text-base">Logging...</span>
-                </div>
-              ) : (
-                <div className="flex items-center">
-                  <Plus className="w-4 h-4 md:w-5 md:h-5 mr-2" />
-                  <span className="text-sm md:text-base">Log Income</span>
-                </div>
-              )}
-            </button>
-          </div>
+      {errors.submit && (
+        <div
+          className="rounded-lg border px-3 py-2 text-sm"
+          style={{
+            borderColor: "var(--status-expense-border)",
+            background: "var(--status-expense-bg)",
+            color: "var(--status-expense-text)",
+          }}
+        >
+          {errors.submit}
         </div>
-      </form>
+      )}
+
+      <section>
+        <div className="mb-2 flex items-center justify-between">
+          <label
+            className="text-sm font-semibold"
+            style={{ color: "var(--text-primary)" }}
+          >
+            Income source
+          </label>
+          {errors.source && (
+            <span className="text-xs" style={{ color: "var(--text-expense)" }}>
+              {errors.source}
+            </span>
+          )}
+        </div>
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+          {availableSources.map((source) => {
+            const Icon = getIcon(source.icon);
+            const selected = selectedSourceId === source.id;
+            return (
+              <button
+                key={source.id}
+                type="button"
+                onClick={() => setSelectedSourceId(source.id ?? source.name)}
+                className={cn(
+                  "flex min-h-24 flex-col items-center gap-1 rounded-xl border-2 p-2 transition-all",
+                  selected
+                    ? "border-[var(--border-focus)] [background:var(--interactive-primary-subtle)]"
+                    : "border-transparent [background:var(--status-neutral-bg)] hover:border-[var(--border-default)]",
+                )}
+              >
+                <span
+                  className="flex h-10 w-10 items-center justify-center rounded-xl"
+                  style={{
+                    background: `${source.color}22`,
+                    color: source.color,
+                  }}
+                >
+                  <Icon className="h-5 w-5" />
+                </span>
+                <span
+                  className="text-center text-[10px] font-medium leading-tight"
+                  style={{ color: "var(--text-primary)" }}
+                >
+                  {source.name}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section>
+        <label
+          className="mb-2 block text-sm font-semibold"
+          style={{ color: "var(--text-primary)" }}
+        >
+          Amount
+        </label>
+        <div
+          className="flex items-center rounded-xl border px-4 py-2"
+          style={{
+            borderColor: errors.amount
+              ? "var(--interactive-danger)"
+              : "var(--border-input)",
+            background: "var(--bg-input)",
+          }}
+        >
+          <IndianRupee
+            className="h-7 w-7 shrink-0"
+            style={{ color: "var(--text-income)" }}
+          />
+          <input
+            ref={amountRef}
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+            inputMode="decimal"
+            placeholder="0.00"
+            className="min-w-0 flex-1 bg-transparent text-right text-3xl sm:text-4xl md:text-[2.5rem] font-bold leading-tight tabular-nums outline-none"
+            style={{ color: "var(--text-income)" }}
+          />
+        </div>
+        {errors.amount && (
+          <p className="mt-1 text-xs" style={{ color: "var(--text-expense)" }}>
+            {errors.amount}
+          </p>
+        )}
+      </section>
+
+      <section>
+        <label
+          className="mb-2 block text-sm font-semibold"
+          style={{ color: "var(--text-primary)" }}
+        >
+          Description
+        </label>
+        <input
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          placeholder="Salary, client payment, dividend..."
+          maxLength={100}
+          className="input"
+        />
+        {errors.description && (
+          <p className="mt-1 text-xs" style={{ color: "var(--text-expense)" }}>
+            {errors.description}
+          </p>
+        )}
+      </section>
+
+      <DatePicker label="Date" value={date} onChange={setDate} />
+
+      <section
+        className="rounded-lg border p-3"
+        style={{
+          borderColor: "var(--border-default)",
+          background: "var(--bg-card-subtle)",
+        }}
+      >
+        <label className="flex items-center justify-between gap-4">
+          <span>
+            <span className="block text-sm font-semibold">
+              Mark as recurring
+            </span>
+            <span
+              className="block text-xs"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              Useful for salary and retainers.
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            checked={isRecurring}
+            onChange={(event) => setIsRecurring(event.target.checked)}
+          />
+        </label>
+        {isRecurring && (
+          <select
+            value={recurringFrequency}
+            onChange={(event) =>
+              setRecurringFrequency(
+                event.target.value as typeof recurringFrequency,
+              )
+            }
+            className="input select mt-3"
+          >
+            <option value="monthly">Every month</option>
+            <option value="weekly">Every week</option>
+            <option value="biweekly">Every two weeks</option>
+          </select>
+        )}
+      </section>
+
+      <button
+        type="submit"
+        className="btn btn-primary btn-lg w-full"
+        disabled={!user || isSaving}
+      >
+        {isSaving ? (
+          <>
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+            Saving...
+          </>
+        ) : (
+          <>
+            <TrendingUp className="h-4 w-4" />
+            Log Income
+          </>
+        )}
+      </button>
+    </form>
+  );
+
+  if (isOpen === undefined) {
+    return <div className="card">{form}</div>;
+  }
+
+  return (
+    <div
+      className="bottom-sheet-backdrop md:flex md:items-center md:justify-center md:p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bottom-sheet md:static md:max-h-[90vh] md:w-full md:max-w-[480px] md:rounded-2xl"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="bottom-sheet-handle md:hidden" />
+        <div className="px-5 pb-6 pt-2 md:p-6">{form}</div>
+      </div>
     </div>
   );
 }

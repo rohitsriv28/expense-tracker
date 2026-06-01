@@ -7,10 +7,11 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className={`relative p-2 rounded-lg transition-colors overflow-hidden group ${theme === "dark"
-        ? "bg-slate-800 text-yellow-300 hover:bg-slate-700"
-        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-        }`}
+      className={`relative p-2 rounded-lg transition-colors overflow-hidden group ${
+        theme === "dark"
+          ? "bg-slate-800 text-yellow-300 hover:bg-slate-700"
+          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+      }`}
       aria-label="Toggle theme"
     >
       <div className="relative z-10">

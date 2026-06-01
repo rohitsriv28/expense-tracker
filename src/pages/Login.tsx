@@ -22,7 +22,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex bg-white dark:bg-slate-900 transition-colors">
+    <div className="min-h-[100dvh] flex bg-white dark:bg-slate-900 transition-colors">
       {/* Left Side - Hero Section (Desktop) */}
       <div className="hidden lg:flex lg:w-1/2 bg-slate-900 relative overflow-hidden flex-col justify-between p-12 text-white">
         {/* Abstract Background - Subtle Charcoal textures */}

@@ -14,6 +14,7 @@ import {
   startAfter,
   type QueryConstraint,
   type QueryDocumentSnapshot,
+  type FirestoreError,
 } from "firebase/firestore";
 
 export const addExpense = async (expense: Omit<Expense, "userId" | "id">) => {
@@ -63,11 +64,15 @@ export interface ExpenseFilters {
  */
 export const getExpenses = (
   userId: string,
-  callback: (expenses: Expense[], lastDoc: QueryDocumentSnapshot | null, hasMore: boolean) => void,
+  callback: (
+    expenses: Expense[],
+    lastDoc: QueryDocumentSnapshot | null,
+    hasMore: boolean,
+  ) => void,
   filters?: ExpenseFilters,
   onError?: (error: string) => void,
   limitCount: number = 10,
-  startAfterDoc: QueryDocumentSnapshot | null = null
+  startAfterDoc: QueryDocumentSnapshot | null = null,
 ) => {
   const userExpensesRef = collection(db, "expenses", userId, "userExpenses");
   let q = query(userExpensesRef, orderBy("date", "desc"));
@@ -127,37 +132,42 @@ export const getExpenses = (
     (snapshot) => {
       const expenses = snapshot.docs.map(
         (doc) =>
-        ({
-          id: doc.id,
-          ...doc.data(),
-        } as Expense)
+          ({
+            id: doc.id,
+            ...doc.data(),
+          }) as Expense,
       );
 
-      const lastDoc = snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null;
+      const lastDoc =
+        snapshot.docs.length > 0
+          ? snapshot.docs[snapshot.docs.length - 1]
+          : null;
       const hasMore = snapshot.docs.length === limitCount;
 
       callback(expenses, lastDoc, hasMore);
     },
-    (error: any) => {
+    (error: FirestoreError) => {
       console.error("Error fetching expenses:", error);
       // If error is 'failed-precondition' (missing index), notify developer/user path
       if (error.code === "failed-precondition") {
         console.error("Missing Firestore Index. Creating link:", error.message);
         if (onError) {
-          onError("A database index is required for this filter combination. Please remove the category filter or contact support.");
+          onError(
+            "A database index is required for this filter combination. Please remove the category filter or contact support.",
+          );
         }
       } else if (onError) {
         onError(error.message);
       }
       callback([], null, false);
-    }
+    },
   );
 };
 
 export const getAllExpenses = (
   userId: string,
   callback: (expenses: Expense[]) => void,
-  filters?: ExpenseFilters
+  filters?: ExpenseFilters,
 ) => {
   const userExpensesRef = collection(db, "expenses", userId, "userExpenses");
   let q = query(userExpensesRef, orderBy("date", "desc"));
@@ -183,23 +193,23 @@ export const getAllExpenses = (
     (snapshot) => {
       const expenses = snapshot.docs.map(
         (doc) =>
-        ({
-          id: doc.id,
-          ...doc.data(),
-        } as Expense)
+          ({
+            id: doc.id,
+            ...doc.data(),
+          }) as Expense,
       );
       callback(expenses);
     },
-    (error: any) => {
+    (error: FirestoreError) => {
       console.error("Error fetching all expenses:", error);
       callback([]);
-    }
+    },
   );
 };
 
 // Batch operations helper
 export const batchUpdateExpenses = async (
-  updates: Array<{ id: string; data: Partial<Expense> }>
+  updates: Array<{ id: string; data: Partial<Expense> }>,
 ) => {
   const user = auth.currentUser;
   if (!user) throw new Error("User not authenticated");
@@ -210,8 +220,8 @@ export const batchUpdateExpenses = async (
 };
 
 export const exportToPDF = async (expenses: Expense[]) => {
-  // Implementation would go here
-  console.log("Exporting expenses to PDF", expenses);
+  const { generateExpensePDF } = await import("./pdfExport");
+  return generateExpensePDF(expenses);
 };
 
 // Utility function to get expense count
@@ -227,7 +237,7 @@ export const getExpenseCount = async (userId: string): Promise<number> => {
       (error) => {
         console.error("Error getting expense count:", error);
         resolve(0);
-      }
+      },
     );
   });
 };

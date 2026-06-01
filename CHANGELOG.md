@@ -8,6 +8,25 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [2.3.0] - 2026-06-01
+
+A major quality-of-life update focusing on UX improvements, pagination logic, UI refinements, and performance optimization.
+
+### Added
+- **Custom Calendar Modal:** Replaced the native browser date input with a fully custom, premium calendar modal. Includes interactive month and year grid views for rapid date selection without clunky dropdowns, plus quick presets for "Today" and "Yesterday".
+- **Legacy Category Fallbacks:** Built a mapping layer to gracefully support legacy string-based categories (e.g., "Food & Drink"), assigning them consistent colors and icons across the Dashboard, Expense List, Reports, and PDF exports.
+- **Premium Install Prompts:** Redesigned the PWA installation prompts for Android, iOS, and Desktop. Features a sleek, dark-gray aesthetic, red branding, and highly accurate native-feel iOS Share Sheet instructions.
+
+### Changed
+- **Date-Aware Pagination:** Overhauled Dashboard data fetching to rely on a single unified data stream. Implemented a custom client-side, date-group-aware pagination algorithm in the Expense List ensuring transactions from the same day are never split across pages.
+- **Optional Categories:** Expense logging no longer requires selecting a category. Uncategorized expenses seamlessly default to a generic "Uncategorized" display globally.
+
+### Fixed
+- **Vite Bundler Optimization:** Resolved a build warning by converting the PDF generation library (`jspdf`) import to a dynamic import inside the Reports section, correctly isolating it into a separate chunk and significantly reducing the main bundle size.
+- **TypeScript Strictness:** Cleaned up unused imports across components to satisfy strict compilation checks.
+
+---
+
 ## [2.2.0] - 2026-05-30
 
 A comprehensive upgrade introducing dynamic income tracking, automated budget allocation with dynamic expense depletion, an advanced dedicated reports and comparisons dashboard, and premium responsive design aesthetics.

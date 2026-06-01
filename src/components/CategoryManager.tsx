@@ -87,7 +87,7 @@ export default function CategoryManager({
       setNewCatName("");
       // Reset to defaults
       setNewCatColor(
-        AVAILABLE_COLORS[Math.floor(Math.random() * AVAILABLE_COLORS.length)]
+        AVAILABLE_COLORS[Math.floor(Math.random() * AVAILABLE_COLORS.length)],
       );
     } catch (err) {
       console.error("Error adding category:", err);
@@ -116,8 +116,8 @@ export default function CategoryManager({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-colors duration-300">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl animate-fade-in border border-gray-200 dark:border-white/10 transition-colors duration-300">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-4 bg-black/60 backdrop-blur-sm transition-colors duration-300">
+      <div className="bg-white dark:bg-slate-900 w-full h-full md:h-auto md:max-h-[85vh] md:rounded-2xl max-w-2xl overflow-hidden flex flex-col shadow-2xl animate-fade-in border-0 md:border border-gray-200 dark:border-white/10 transition-colors duration-300 pb-[env(safe-area-inset-bottom)]">
         <div className="p-4 md:p-6 border-b border-gray-200 dark:border-white/10 flex justify-between items-center bg-slate-100 dark:bg-white/5">
           <h2 className="text-xl font-bold text-gray-800 dark:text-white">
             Manage Categories
@@ -163,10 +163,11 @@ export default function CategoryManager({
                         key={color}
                         type="button"
                         onClick={() => setNewCatColor(color)}
-                        className={`w-6 h-6 rounded-full transition-transform hover:scale-110 ${color} ${newCatColor === color
-                          ? "ring-2 ring-offset-2 ring-red-600 scale-110"
-                          : ""
-                          }`}
+                        className={`w-6 h-6 rounded-full transition-transform hover:scale-110 ${color} ${
+                          newCatColor === color
+                            ? "ring-2 ring-offset-2 ring-red-600 scale-110"
+                            : ""
+                        }`}
                       />
                     ))}
                   </div>
@@ -183,10 +184,11 @@ export default function CategoryManager({
                       key={name}
                       type="button"
                       onClick={() => setNewCatIcon(name)}
-                      className={`p-2 rounded-lg transition-colors flex items-center justify-center ${newCatIcon === name
-                        ? "bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 ring-1 ring-red-300 dark:ring-red-700"
-                        : "hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400"
-                        }`}
+                      className={`p-2 rounded-lg transition-colors flex items-center justify-center ${
+                        newCatIcon === name
+                          ? "bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 ring-1 ring-red-300 dark:ring-red-700"
+                          : "hover:bg-gray-100 dark:hover:bg-white/10 text-gray-600 dark:text-gray-400"
+                      }`}
                       title={name}
                     >
                       <Icon className="w-5 h-5" />

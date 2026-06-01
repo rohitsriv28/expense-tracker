@@ -42,6 +42,8 @@ export interface Expense {
   updatedAt?: Timestamp; // Optional: track when expense was last updated
   category?: string;
   tags?: string[]; // Optional: expense tags for better organization
+  notes?: string;
+  goalBudgetId?: string;
 }
 
 // Helper type for creating new expenses (without auto-generated fields)

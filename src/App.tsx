@@ -46,13 +46,8 @@ function App() {
             "/sw.js",
             {
               scope: "/",
-            }
+            },
           );
-
-          if (import.meta.env.DEV) {
-            console.log("SW registered successfully:", registration);
-          }
-
           // Handle service worker updates
           registration.addEventListener("updatefound", () => {
             const newWorker = registration.installing;
@@ -63,9 +58,6 @@ function App() {
                   navigator.serviceWorker.controller
                 ) {
                   // New update available - silent update for now
-                  if (import.meta.env.DEV) {
-                    console.log("New app version available");
-                  }
                 }
               });
             }
@@ -91,7 +83,7 @@ function App() {
       }}
     >
       <ThemeProvider>
-        <div className="min-h-screen bg-gray-100 dark:bg-slate-900 relative transition-colors duration-300">
+        <div className="min-h-[100dvh] bg-gray-100 dark:bg-slate-900 relative transition-colors duration-300">
           <BrowserRouter>
             <Routes>
               <Route path="/login" element={<Login />} />

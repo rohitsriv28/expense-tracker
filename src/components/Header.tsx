@@ -1,16 +1,15 @@
 import { useState } from "react";
 import { useAuth } from "../services/authService";
-import { Download, LogOut, User, Menu, X } from "lucide-react";
+import { LogOut, User, Menu, X } from "lucide-react";
 import lightLogo from "../assets/cashflow-light.png";
 import darkLogo from "../assets/cashflow-dark.png";
 import ThemeToggle from "./ThemeToggle";
 
 interface HeaderProps {
   onLogout: () => void;
-  onExport: () => void;
 }
 
-export default function Header({ onLogout, onExport }: HeaderProps) {
+export default function Header({ onLogout }: HeaderProps) {
   const { user } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -38,35 +37,50 @@ export default function Header({ onLogout, onExport }: HeaderProps) {
               {/* Desktop View */}
               <div className="hidden md:flex items-center space-x-4">
                 <ThemeToggle />
-                <div className="hidden sm:flex items-center bg-slate-100 dark:bg-white/5 rounded-lg px-3 py-2">
-                  <User className="w-4 h-4 text-gray-500 dark:text-gray-400 mr-2" />
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+
+                <div className="relative group z-50">
+                  <div className="cursor-pointer">
+                    {user.photoURL ? (
+                      <img
+                        src={user.photoURL}
+                        alt="Profile"
+                        className="w-10 h-10 rounded-full border-2 border-gray-200 dark:border-gray-700 object-cover"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center border-2 border-gray-200 dark:border-gray-700">
+                        <User className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Hover Popover */}
+                  <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 origin-top-right transform scale-95 group-hover:scale-100 p-5 flex flex-col items-center">
+                    {user.photoURL ? (
+                      <img
+                        src={user.photoURL}
+                        alt="Profile"
+                        className="w-20 h-20 rounded-full mb-3 shadow-md object-cover border-4 border-white dark:border-slate-700"
+                      />
+                    ) : (
+                      <div className="w-20 h-20 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center mb-3 shadow-md border-4 border-white dark:border-slate-700">
+                        <User className="w-10 h-10 text-gray-400 dark:text-gray-500" />
+                      </div>
+                    )}
+                    <p className="font-bold text-lg text-gray-900 dark:text-white text-center leading-tight mb-1">
                       {user.displayName || "User"}
                     </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 text-center mb-5 truncate w-full">
                       {user.email}
                     </p>
+
+                    <button
+                      onClick={onLogout}
+                      className="w-full inline-flex items-center justify-center px-4 py-2.5 bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 rounded-xl transition-colors font-semibold text-sm"
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Logout
+                    </button>
                   </div>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={onExport}
-                    className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200 font-medium shadow-md hover:shadow-lg transform hover:-translate-y-0.5 text-sm"
-                  >
-                    <Download className="w-4 h-4 mr-2" />
-                    <span className="hidden sm:inline">Export PDF</span>
-                    <span className="sm:hidden">PDF</span>
-                  </button>
-
-                  <button
-                    onClick={onLogout}
-                    className="inline-flex items-center px-4 py-2 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 transition-colors font-medium text-sm border border-gray-200 dark:border-white/10"
-                  >
-                    <LogOut className="w-4 h-4 mr-2" />
-                    <span className="hidden sm:inline">Logout</span>
-                  </button>
                 </div>
               </div>
 
@@ -75,7 +89,7 @@ export default function Header({ onLogout, onExport }: HeaderProps) {
                 <ThemeToggle />
                 <button
                   onClick={() => setIsMenuOpen(!isMenuOpen)}
-                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 p-2"
                 >
                   {isMenuOpen ? (
                     <X className="w-6 h-6" />
@@ -90,41 +104,36 @@ export default function Header({ onLogout, onExport }: HeaderProps) {
 
         {/* Mobile Menu */}
         {isMenuOpen && user && (
-          <div className="md:hidden pb-4">
-            <div className="bg-slate-100 dark:bg-white/5 rounded-lg px-4 py-3 mb-3">
-              <div className="flex items-center">
-                <User className="w-4 h-4 text-gray-500 dark:text-gray-400 mr-2" />
-                <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    {user.displayName || "User"}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {user.email}
-                  </p>
+          <div className="md:hidden pb-4 pt-2 border-t border-gray-100 dark:border-white/10 mt-2 animate-fade-in">
+            <div className="flex flex-col items-center bg-slate-50 dark:bg-white/5 rounded-2xl p-5 mb-4">
+              {user.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt="Profile"
+                  className="w-16 h-16 rounded-full mb-3 shadow-sm object-cover border-2 border-white dark:border-slate-700"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center mb-3 shadow-sm border-2 border-white dark:border-slate-700">
+                  <User className="w-8 h-8 text-gray-400 dark:text-gray-500" />
                 </div>
-              </div>
+              )}
+              <p className="font-bold text-gray-900 dark:text-white text-center">
+                {user.displayName || "User"}
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 text-center">
+                {user.email}
+              </p>
             </div>
 
             <div className="flex flex-col space-y-2">
               <button
                 onClick={() => {
-                  onExport();
-                  setIsMenuOpen(false);
-                }}
-                className="w-full flex items-center justify-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200 font-medium shadow-md hover:shadow-lg"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Export PDF
-              </button>
-
-              <button
-                onClick={() => {
                   onLogout();
                   setIsMenuOpen(false);
                 }}
-                className="w-full flex items-center justify-center px-4 py-2 bg-gray-100 dark:bg-white/5 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 transition-colors font-medium border border-gray-200 dark:border-white/10"
+                className="w-full flex items-center justify-center px-4 py-3 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 rounded-xl hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors font-semibold shadow-sm"
               >
-                <LogOut className="w-4 h-4 mr-2" />
+                <LogOut className="w-5 h-5 mr-2" />
                 Logout
               </button>
             </div>

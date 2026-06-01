@@ -52,11 +52,6 @@ export const cleanupOldExpenses = async (userId: string): Promise<number> => {
 
       await batch.commit();
     }
-    console.log(
-      `[DataRetention] Cleaned up ${count} expenses older than`,
-      cutoffDate
-    );
-
     return count;
   } catch (error) {
     console.error("[DataRetention] Failed to cleanup old expenses:", error);

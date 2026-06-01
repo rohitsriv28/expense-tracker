@@ -4,11 +4,9 @@ import {
   addDoc,
   updateDoc,
   doc,
-  query,
   onSnapshot,
   writeBatch,
   getDocs,
-  where,
 } from "firebase/firestore";
 
 export interface Category {
@@ -53,18 +51,45 @@ export const DEFAULT_CATEGORIES: Omit<Category, "id">[] = [
 
 export const getCategories = (
   userId: string,
-  callback: (categories: Category[]) => void
+  callback: (categories: Category[]) => void,
 ) => {
   const categoriesRef = collection(db, "users", userId, "categories");
-  const q = query(categoriesRef, where("isArchived", "!=", true));
 
-  return onSnapshot(q, (snapshot) => {
-    const categories = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as Category[];
-    callback(categories);
-  });
+  return onSnapshot(
+    categoriesRef,
+    (snapshot) => {
+      const categories = snapshot.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+      })) as Category[];
+
+      const active = categories.filter((c) => c.isArchived !== true);
+
+      if (active.length > 0) {
+        callback(active);
+      } else {
+        // Firestore collection is empty — use hardcoded defaults so the UI
+        // always shows categories even when initializeDefaultCategories fails
+        // (e.g. due to permission rules or network issues).
+        const fallback: Category[] = DEFAULT_CATEGORIES.map((c, i) => ({
+          ...c,
+          id: `default-${i}`,
+          isArchived: false,
+        }));
+        callback(fallback);
+      }
+    },
+    (error) => {
+      console.error("Error fetching categories:", error);
+      // Return defaults on error so the app remains usable
+      const fallback: Category[] = DEFAULT_CATEGORIES.map((c, i) => ({
+        ...c,
+        id: `default-${i}`,
+        isArchived: false,
+      }));
+      callback(fallback);
+    },
+  );
 };
 
 export const initializeDefaultCategories = async (userId: string) => {
@@ -84,7 +109,7 @@ export const initializeDefaultCategories = async (userId: string) => {
 
 export const addCategory = async (
   userId: string,
-  category: Omit<Category, "id" | "type">
+  category: Omit<Category, "id" | "type">,
 ) => {
   const categoriesRef = collection(db, "users", userId, "categories");
   await addDoc(categoriesRef, {
@@ -97,7 +122,7 @@ export const addCategory = async (
 export const updateCategory = async (
   userId: string,
   categoryId: string,
-  data: Partial<Category>
+  data: Partial<Category>,
 ) => {
   const categoryRef = doc(db, "users", userId, "categories", categoryId);
   await updateDoc(categoryRef, data);

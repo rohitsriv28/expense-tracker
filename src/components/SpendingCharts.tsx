@@ -74,12 +74,12 @@ export default function SpendingCharts({
 
   const categoryData = useMemo(
     () => aggregateCategoryData(filteredExpenses, categories),
-    [filteredExpenses, categories]
+    [filteredExpenses, categories],
   );
 
   const chartData = useMemo(
     () => aggregateChartData(filteredExpenses, timeRange),
-    [filteredExpenses, timeRange]
+    [filteredExpenses, timeRange],
   );
 
   const ranges: { value: TimeRange; label: string }[] = [
@@ -105,10 +105,11 @@ export default function SpendingCharts({
             <button
               key={range.value}
               onClick={() => setTimeRange(range.value)}
-              className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all ${timeRange === range.value
-                ? "bg-white dark:bg-red-600 text-red-600 dark:text-white shadow-sm"
-                : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10"
-                }`}
+              className={`px-3 py-1.5 text-xs sm:text-sm font-medium rounded-lg transition-all ${
+                timeRange === range.value
+                  ? "bg-white dark:bg-red-600 text-red-600 dark:text-white shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10"
+              }`}
             >
               {range.label}
             </button>

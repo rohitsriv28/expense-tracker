@@ -1,138 +1,212 @@
-import type { Income } from "../services/incomeService";
+import { useMemo, useState } from "react";
+import { Trash2, TrendingUp } from "lucide-react";
+import type { Income, IncomeSource } from "../services/incomeService";
 import { deleteIncome } from "../services/incomeService";
-import { formatDate } from "../utils/dateUtils";
-import { Calendar, Trash2, TrendingUp, Clock, ReceiptIndianRupee } from "lucide-react";
-import { useState } from "react";
+import { incomeDate } from "../utils/dataMappers";
+import { formatCurrency, formatShortDate } from "../utils/formatters";
+import { getIcon } from "../utils/iconMap";
+import { CHART_COLORS } from "../utils/chartColors";
 
 interface IncomeListProps {
   incomes: Income[];
+  sources?: IncomeSource[];
+  onDeleted?: (message: string) => void;
 }
 
-export default function IncomeList({ incomes }: IncomeListProps) {
-  const [isDeleting, setIsDeleting] = useState<string | null>(null);
-
-  const handleDelete = async (id: string) => {
-    if (!window.confirm("Are you sure you want to delete this income entry?")) return;
-    setIsDeleting(id);
-    try {
-      await deleteIncome(id);
-    } catch (error) {
-      console.error("Error deleting income:", error);
-      alert("Failed to delete income. Please try again.");
-    } finally {
-      setIsDeleting(null);
-    }
-  };
+export default function IncomeList({
+  incomes,
+  sources = [],
+  onDeleted,
+}: IncomeListProps) {
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const totalAmount = incomes.reduce((sum, income) => sum + income.amount, 0);
 
+  const grouped = useMemo(() => {
+    const sorted = [...incomes].sort(
+      (a, b) => incomeDate(b).getTime() - incomeDate(a).getTime(),
+    );
+    return sorted.reduce<
+      Array<{ label: string; total: number; items: Income[] }>
+    >((groups, income) => {
+      const date = incomeDate(income);
+      const label = date.toLocaleDateString("en-IN", {
+        month: "long",
+        year: "numeric",
+      });
+      const group = groups.find((item) => item.label === label);
+      if (group) {
+        group.total += income.amount;
+        group.items.push(income);
+      } else {
+        groups.push({ label, total: income.amount, items: [income] });
+      }
+      return groups;
+    }, []);
+  }, [incomes]);
+
+  const bySource = useMemo(() => {
+    const totals = new Map<string, number>();
+    incomes.forEach((income) =>
+      totals.set(
+        income.source,
+        (totals.get(income.source) || 0) + income.amount,
+      ),
+    );
+    return Array.from(totals.entries()).sort((a, b) => b[1] - a[1]);
+  }, [incomes]);
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteIncome(id);
+      setPendingDeleteId(null);
+      onDeleted?.("Income deleted.");
+    } catch {
+      onDeleted?.("Failed to delete income. Please try again.");
+    }
+  };
+
   if (incomes.length === 0) {
     return (
-      <div className="bg-white border text-center border-gray-200 dark:bg-white/10 dark:backdrop-blur-xl dark:border-white/20 rounded-2xl p-8 shadow-lg dark:shadow-none transition-colors duration-300">
-        <div className="bg-green-500/20 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
-          <ReceiptIndianRupee className="w-8 h-8 text-green-300" />
-        </div>
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-          No income logged yet
-        </h3>
-        <p className="text-gray-500 dark:text-green-300">
-          Log your first income source above to get started!
+      <div className="empty-state card">
+        <TrendingUp className="empty-state-icon" />
+        <p className="empty-state-title">No income logged yet</p>
+        <p className="empty-state-desc">
+          Log salary, freelance work, or investment income to see your monthly
+          inflow.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      {/* Header Summary */}
-      <div className="bg-white border border-gray-200 dark:bg-white/10 dark:backdrop-blur-xl dark:border-white/20 rounded-2xl p-4 md:p-6 shadow-lg dark:shadow-none transition-colors duration-300">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <div className="bg-green-500/20 rounded-lg p-2">
-                <ReceiptIndianRupee className="w-5 h-5 md:w-6 md:h-6 text-green-300" />
-              </div>
-              <div>
-                <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-                  Income Log
-                </h2>
-                <div className="flex items-center gap-4 mt-1">
-                  <span className="text-sm text-gray-500 dark:text-green-300 flex items-center gap-1">
-                    <Clock className="w-3 h-3 md:w-4 md:h-4" />
-                    {incomes.length} {incomes.length === 1 ? "source" : "sources"}
-                  </span>
-                  <span className="text-sm text-gray-500 dark:text-green-300 flex items-center gap-1">
-                    <TrendingUp className="w-3 h-3 md:w-4 md:h-4" />
-                    Total Income: ₹{totalAmount.toFixed(2)}
-                  </span>
+    <div className="space-y-5">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)]">
+        <div className="stat-card">
+          <p className="stat-label">Total income this month</p>
+          <p className="stat-value amount-positive">
+            {formatCurrency(totalAmount)}
+          </p>
+          <p className="stat-delta stat-delta-positive">
+            {incomes.length} entries logged
+          </p>
+        </div>
+        <div className="card">
+          <p className="section-label mb-3">Breakdown by source</p>
+          <div className="space-y-3">
+            {bySource.map(([source, amount]) => {
+              const sourceMeta = sources.find(
+                (item) => item.name === source || item.id === source,
+              );
+              const color = sourceMeta?.color ?? CHART_COLORS.income;
+              const percentage =
+                totalAmount > 0 ? (amount / totalAmount) * 100 : 0;
+              return (
+                <div key={source}>
+                  <div className="mb-1 flex items-center justify-between text-sm">
+                    <span>{source}</span>
+                    <span className="tabular-nums">
+                      {formatCurrency(amount)}
+                    </span>
+                  </div>
+                  <div className="progress-track">
+                    <div
+                      className="progress-fill"
+                      style={{ width: `${percentage}%`, background: color }}
+                    />
+                  </div>
                 </div>
-              </div>
-            </div>
+              );
+            })}
           </div>
         </div>
       </div>
 
-      {/* Income Table */}
-      <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl overflow-hidden shadow-xl">
-        <div className="overflow-x-auto">
-          <table className="min-w-full">
-            <thead className="bg-slate-100 border-b border-gray-200 dark:bg-white/10 dark:border-white/20">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">
-                  Source
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">
-                  Amount
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-500 dark:text-white uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-white/10">
-              {incomes.map((income) => (
-                <tr
+      {grouped.map((group) => (
+        <section key={group.label} className="card card-flush overflow-hidden">
+          <div
+            className="flex items-center justify-between px-4 py-3"
+            style={{ background: "var(--bg-card-subtle)" }}
+          >
+            <p className="section-label">{group.label}</p>
+            <p className="text-xs font-semibold amount-positive">
+              {formatCurrency(group.total)}
+            </p>
+          </div>
+          <div
+            className="divide-y"
+            style={{ borderColor: "var(--border-subtle)" }}
+          >
+            {group.items.map((income) => {
+              const source = sources.find(
+                (item) =>
+                  item.name === income.source || item.id === income.sourceId,
+              );
+              const Icon = getIcon(source?.icon ?? "TrendingUp");
+              const color = source?.color ?? CHART_COLORS.income;
+              return (
+                <div
                   key={income.id}
-                  className="transition-all duration-150 hover:bg-slate-50 dark:hover:bg-white/5"
+                  className="grid grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3"
                 >
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-green-50 dark:bg-white/10 rounded-lg p-2">
-                        <Calendar className="w-4 h-4 text-green-500 dark:text-green-300" />
-                      </div>
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">
-                        {formatDate(income.date.toDate())}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-semibold text-gray-900 dark:text-white">
-                      {income.source}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-lg font-bold text-green-600 dark:text-green-400">
-                      ₹{income.amount.toFixed(2)}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button
-                      onClick={() => handleDelete(income.id!)}
-                      disabled={isDeleting === income.id}
-                      className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-all"
+                  <div
+                    className="category-icon-wrap"
+                    style={{ background: `${color}22`, color }}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div
+                    className="min-w-0 border-l-2 pl-3"
+                    style={{ borderColor: color }}
+                  >
+                    <p className="truncate text-sm font-semibold">
+                      {income.description || income.source}
+                    </p>
+                    <p
+                      className="text-xs"
+                      style={{ color: "var(--text-tertiary)" }}
                     >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                      {income.source} · {formatShortDate(incomeDate(income))}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <p className="amount-positive">
+                      {formatCurrency(income.amount)}
+                    </p>
+                    {pendingDeleteId === income.id ? (
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          className="btn btn-ghost btn-sm"
+                          onClick={() => setPendingDeleteId(null)}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn-danger btn-sm"
+                          onClick={() => income.id && handleDelete(income.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn-ghost btn-icon-sm"
+                        aria-label={`Delete ${income.source}`}
+                        onClick={() => setPendingDeleteId(income.id ?? null)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }
