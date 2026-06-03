@@ -1,12 +1,33 @@
 import { useMemo } from "react";
-import { ChevronLeft, ChevronRight, PiggyBank, Plus, Target, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  PiggyBank,
+  Plus,
+  Target,
+  TrendingDown,
+  TrendingUp,
+  Wallet,
+} from "lucide-react";
 import type { Expense } from "../../services/firebase";
 import type { Income } from "../../services/incomeService";
 import type { Category } from "../../services/categoryService";
 import type { Budget } from "../../services/budgetService";
-import { calculateBudgetSummary, convertLegacyBudget, isRecurringBudget } from "../../services/budgetService";
-import { expenseDate, incomeDate, resolveExpenseVisuals } from "../../utils/dataMappers";
-import { formatCurrency, formatMonthYear, formatPercent } from "../../utils/formatters";
+import {
+  calculateBudgetSummary,
+  convertLegacyBudget,
+  isRecurringBudget,
+} from "../../services/budgetService";
+import {
+  expenseDate,
+  incomeDate,
+  resolveExpenseVisuals,
+} from "../../utils/dataMappers";
+import {
+  formatCurrency,
+  formatMonthYear,
+  formatPercent,
+} from "../../utils/formatters";
 import { CHART_COLORS } from "../../utils/chartColors";
 import type { GroupedTransaction } from "../expenses/GroupedTransactionList";
 
@@ -34,7 +55,15 @@ interface FinancialOverviewProps {
 function monthRange(month: Date): { start: Date; end: Date } {
   return {
     start: new Date(month.getFullYear(), month.getMonth(), 1),
-    end: new Date(month.getFullYear(), month.getMonth() + 1, 0, 23, 59, 59, 999),
+    end: new Date(
+      month.getFullYear(),
+      month.getMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999,
+    ),
   };
 }
 
@@ -64,39 +93,60 @@ export default function FinancialOverview({
 }: FinancialOverviewProps) {
   const range = useMemo(() => monthRange(selectedMonth), [selectedMonth]);
   const previousRange = useMemo(
-    () => monthRange(new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() - 1, 1)),
+    () =>
+      monthRange(
+        new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() - 1, 1),
+      ),
     [selectedMonth],
   );
 
   const monthExpenses = useMemo(
-    () => expenses.filter((e) => isInRange(expenseDate(e), range.start, range.end)),
+    () =>
+      expenses.filter((e) => isInRange(expenseDate(e), range.start, range.end)),
     [expenses, range],
   );
   const monthIncomes = useMemo(
-    () => incomes.filter((i) => isInRange(incomeDate(i), range.start, range.end)),
+    () =>
+      incomes.filter((i) => isInRange(incomeDate(i), range.start, range.end)),
     [incomes, range],
   );
   const previousExpenses = useMemo(
-    () => expenses.filter((e) => isInRange(expenseDate(e), previousRange.start, previousRange.end)),
+    () =>
+      expenses.filter((e) =>
+        isInRange(expenseDate(e), previousRange.start, previousRange.end),
+      ),
     [expenses, previousRange],
   );
   const previousIncomes = useMemo(
-    () => incomes.filter((i) => isInRange(incomeDate(i), previousRange.start, previousRange.end)),
+    () =>
+      incomes.filter((i) =>
+        isInRange(incomeDate(i), previousRange.start, previousRange.end),
+      ),
     [incomes, previousRange],
   );
 
   const totalExpenses = monthExpenses.reduce((sum, e) => sum + e.amount, 0);
   const totalIncome = monthIncomes.reduce((sum, i) => sum + i.amount, 0);
-  const previousExpenseTotal = previousExpenses.reduce((sum, e) => sum + e.amount, 0);
-  const previousIncomeTotal = previousIncomes.reduce((sum, i) => sum + i.amount, 0);
-  
+  const previousExpenseTotal = previousExpenses.reduce(
+    (sum, e) => sum + e.amount,
+    0,
+  );
+  const previousIncomeTotal = previousIncomes.reduce(
+    (sum, i) => sum + i.amount,
+    0,
+  );
+
   const netBalance = totalIncome - totalExpenses;
   const previousNet = previousIncomeTotal - previousExpenseTotal;
   const savingsRate = totalIncome > 0 ? (netBalance / totalIncome) * 100 : null;
 
   const dailyTrend = useMemo(() => {
     const days = new Map<string, number>();
-    for (let date = new Date(range.start); date <= range.end; date.setDate(date.getDate() + 1)) {
+    for (
+      let date = new Date(range.start);
+      date <= range.end;
+      date.setDate(date.getDate() + 1)
+    ) {
       days.set(date.toISOString().split("T")[0], 0);
     }
     monthExpenses.forEach((expense) => {
@@ -110,7 +160,8 @@ export default function FinancialOverview({
     }));
   }, [monthExpenses, range]);
 
-  const dailyAverage = dailyTrend.length > 0 ? totalExpenses / dailyTrend.length : 0;
+  const dailyAverage =
+    dailyTrend.length > 0 ? totalExpenses / dailyTrend.length : 0;
 
   const topCategories = useMemo(() => {
     const totals = new Map<string, number>();
@@ -175,7 +226,10 @@ export default function FinancialOverview({
   }, [categories, expenses, incomes]);
 
   const targetRate = 20;
-  const targetProgress = savingsRate === null ? 0 : Math.min(100, Math.max(0, (savingsRate / targetRate) * 100));
+  const targetProgress =
+    savingsRate === null
+      ? 0
+      : Math.min(100, Math.max(0, (savingsRate / targetRate) * 100));
 
   return (
     <div className="space-y-6 animate-enter">
@@ -191,18 +245,38 @@ export default function FinancialOverview({
             type="button"
             className="btn btn-secondary btn-icon"
             aria-label="Previous month"
-            onClick={() => onMonthChange(new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() - 1, 1))}
+            onClick={() =>
+              onMonthChange(
+                new Date(
+                  selectedMonth.getFullYear(),
+                  selectedMonth.getMonth() - 1,
+                  1,
+                ),
+              )
+            }
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <button type="button" className="chip" onClick={() => onMonthChange(new Date())}>
+          <button
+            type="button"
+            className="chip"
+            onClick={() => onMonthChange(new Date())}
+          >
             This Month
           </button>
           <button
             type="button"
             className="btn btn-secondary btn-icon"
             aria-label="Next month"
-            onClick={() => onMonthChange(new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 1))}
+            onClick={() =>
+              onMonthChange(
+                new Date(
+                  selectedMonth.getFullYear(),
+                  selectedMonth.getMonth() + 1,
+                  1,
+                ),
+              )
+            }
           >
             <ChevronRight className="h-4 w-4" />
           </button>
@@ -238,32 +312,56 @@ export default function FinancialOverview({
           tone="brand"
         >
           <div className="mt-4">
-            <div className="mb-1 flex justify-between text-xs" style={{ color: "var(--text-secondary)" }}>
+            <div
+              className="mb-1 flex justify-between text-xs"
+              style={{ color: "var(--text-secondary)" }}
+            >
               <span>Target: {targetRate}%</span>
               <span>{Math.round(targetProgress)}%</span>
             </div>
             <div className="progress-track">
-              <div className="progress-fill progress-safe" style={{ width: `${targetProgress}%` }} />
+              <div
+                className="progress-fill progress-safe"
+                style={{ width: `${targetProgress}%` }}
+              />
             </div>
           </div>
         </StatCard>
       </section>
 
       <section className="grid gap-3 sm:grid-cols-3">
-        <button type="button" className="btn btn-primary btn-lg" onClick={onAddExpense}>
+        <button
+          type="button"
+          className="btn btn-primary btn-lg"
+          onClick={onAddExpense}
+        >
           <Plus className="h-4 w-4" /> Add Expense
         </button>
-        <button type="button" className="btn btn-secondary btn-lg" onClick={onAddIncome}>
+        <button
+          type="button"
+          className="btn btn-secondary btn-lg"
+          onClick={onAddIncome}
+        >
           <TrendingUp className="h-4 w-4" /> Log Income
         </button>
-        <button type="button" className="btn btn-secondary btn-lg" onClick={onSetBudget}>
+        <button
+          type="button"
+          className="btn btn-secondary btn-lg"
+          onClick={onSetBudget}
+        >
           <Target className="h-4 w-4" /> Set Budget
         </button>
       </section>
 
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_minmax(18rem,0.8fr)]">
-        <DashboardTrendChart dailyTrend={dailyTrend} dailyAverage={dailyAverage} />
-        <DashboardTopCategories topCategories={topCategories} onViewExpenses={onViewExpenses} />
+        <DashboardTrendChart
+          dailyTrend={dailyTrend}
+          dailyAverage={dailyAverage}
+        />
+        <DashboardTopCategories
+          topCategories={topCategories}
+          onViewExpenses={onViewExpenses}
+        />
       </section>
 
       <section className="grid gap-6 lg:grid-cols-[minmax(18rem,0.85fr)_minmax(0,1.15fr)]">

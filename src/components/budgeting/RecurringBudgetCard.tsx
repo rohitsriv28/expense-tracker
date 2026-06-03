@@ -46,13 +46,8 @@ export default function RecurringBudgetCard({
               <Icon className="h-5 w-5" />
             </span>
             <div className="min-w-0">
-              <h3 className="truncate text-base">
-                {summary.budget.name}
-              </h3>
-              <p
-                className="text-xs"
-                style={{ color: "var(--text-secondary)" }}
-              >
+              <h3 className="truncate text-base">{summary.budget.name}</h3>
+              <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
                 {formatCurrency(summary.remaining)} remaining ·{" "}
                 {daysLeftInMonth} days left
               </p>
@@ -78,8 +73,7 @@ export default function RecurringBudgetCard({
           <span>{formatPercent(summary.percentage)}% used</span>
           {summary.budget.rollover && (
             <span>
-              ↻ {formatCurrency(summary.budget.rolloverAmount)}{" "}
-              rolled over
+              ↻ {formatCurrency(summary.budget.rolloverAmount)} rolled over
             </span>
           )}
         </div>
@@ -90,10 +84,7 @@ export default function RecurringBudgetCard({
           style={{ borderColor: "var(--border-subtle)" }}
         >
           {summary.expenses.slice(0, 4).map((expense) => (
-            <div
-              key={expense.id}
-              className="flex justify-between text-sm"
-            >
+            <div key={expense.id} className="flex justify-between text-sm">
               <span className="truncate">{expense.remarks}</span>
               <span className="amount-negative">
                 {formatCurrency(expense.amount)}

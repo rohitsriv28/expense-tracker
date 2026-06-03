@@ -83,7 +83,7 @@ export interface GoalBudgetSummary {
 }
 
 function budgetCollection(userId: string) {
-  return collection(db, "budgets", userId, "userBudgets");
+  return collection(db, "users", userId, "budgets");
 }
 
 export const addBudget = async (
@@ -108,7 +108,7 @@ export const updateBudget = async (
   const user = auth.currentUser;
   if (!user) throw new Error("User not authenticated");
 
-  const budgetRef = doc(db, "budgets", user.uid, "userBudgets", id);
+  const budgetRef = doc(db, "users", user.uid, "budgets", id);
   await updateDoc(budgetRef, data);
 };
 
@@ -116,7 +116,7 @@ export const deleteBudget = async (id: string): Promise<void> => {
   const user = auth.currentUser;
   if (!user) throw new Error("User not authenticated");
 
-  const budgetRef = doc(db, "budgets", user.uid, "userBudgets", id);
+  const budgetRef = doc(db, "users", user.uid, "budgets", id);
   await deleteDoc(budgetRef);
 };
 

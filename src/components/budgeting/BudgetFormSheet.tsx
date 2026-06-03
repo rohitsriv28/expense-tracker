@@ -191,9 +191,7 @@ export default function BudgetFormSheet({
                   className="input input-lg"
                   inputMode="decimal"
                   value={recurringAmount}
-                  onChange={(event) =>
-                    setRecurringAmount(event.target.value)
-                  }
+                  onChange={(event) => setRecurringAmount(event.target.value)}
                   placeholder="₹ 0"
                 />
               </label>

@@ -1,4 +1,13 @@
-import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ReferenceLine,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { BarChart3 } from "lucide-react";
 import { CHART_COLORS } from "../../utils/chartColors";
 import { formatCurrency } from "../../utils/formatters";
@@ -14,7 +23,10 @@ interface DashboardTrendChartProps {
   dailyAverage: number;
 }
 
-export default function DashboardTrendChart({ dailyTrend, dailyAverage }: DashboardTrendChartProps) {
+export default function DashboardTrendChart({
+  dailyTrend,
+  dailyAverage,
+}: DashboardTrendChartProps) {
   return (
     <div className="card">
       <div className="mb-4 flex items-center justify-between">
@@ -22,10 +34,7 @@ export default function DashboardTrendChart({ dailyTrend, dailyAverage }: Dashbo
           <p className="section-label">30 day trend</p>
           <h2 className="text-lg">Daily spending</h2>
         </div>
-        <BarChart3
-          className="h-5 w-5"
-          style={{ color: "var(--text-brand)" }}
-        />
+        <BarChart3 className="h-5 w-5" style={{ color: "var(--text-brand)" }} />
       </div>
       <div className="h-[200px] md:h-[240px]">
         <ResponsiveContainer width="100%" height="100%">
@@ -80,10 +89,7 @@ export default function DashboardTrendChart({ dailyTrend, dailyAverage }: Dashbo
                 color: "var(--text-primary)",
                 fontSize: "13px",
               }}
-              formatter={(value) => [
-                formatCurrency(Number(value)),
-                "Spent",
-              ]}
+              formatter={(value) => [formatCurrency(Number(value)), "Spent"]}
             />
             <ReferenceLine
               y={dailyAverage}

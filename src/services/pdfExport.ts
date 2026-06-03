@@ -1,4 +1,12 @@
-import { PDFDocument, PageSizes, StandardFonts, rgb, type PDFPage, type PDFFont, type RGB } from "pdf-lib";
+import {
+  PDFDocument,
+  PageSizes,
+  StandardFonts,
+  rgb,
+  type PDFPage,
+  type PDFFont,
+  type RGB,
+} from "pdf-lib";
 import type { Expense } from "./firebase";
 import type { Income } from "./incomeService";
 import type { BudgetPeriodSummary } from "./budgetService";
@@ -48,7 +56,11 @@ function colorFromHex(hex: string): RGB {
   const r = parseInt(normalized.slice(0, 2), 16) / 255;
   const g = parseInt(normalized.slice(2, 4), 16) / 255;
   const b = parseInt(normalized.slice(4, 6), 16) / 255;
-  return rgb(Number.isFinite(r) ? r : 0.58, Number.isFinite(g) ? g : 0.64, Number.isFinite(b) ? b : 0.72);
+  return rgb(
+    Number.isFinite(r) ? r : 0.58,
+    Number.isFinite(g) ? g : 0.64,
+    Number.isFinite(b) ? b : 0.72,
+  );
 }
 
 function drawText(
@@ -63,10 +75,24 @@ function drawText(
   page.drawText(pdfText(text), { x, y, size, font, color });
 }
 
-function drawHeader(page: PDFPage, ctx: PdfContext, title: string, subtitle?: string) {
+function drawHeader(
+  page: PDFPage,
+  ctx: PdfContext,
+  title: string,
+  subtitle?: string,
+) {
   const { width, height } = page.getSize();
   drawText(page, title, margin, height - margin, 18, ctx.bold, ctx.colors.text);
-  if (subtitle) drawText(page, subtitle, margin, height - margin - 18, 10, ctx.font, ctx.colors.textSecondary);
+  if (subtitle)
+    drawText(
+      page,
+      subtitle,
+      margin,
+      height - margin - 18,
+      10,
+      ctx.font,
+      ctx.colors.textSecondary,
+    );
   page.drawLine({
     start: { x: margin, y: height - margin - 30 },
     end: { x: width - margin, y: height - margin - 30 },
@@ -85,18 +111,45 @@ function drawMetricCard(
   width: number,
   height: number,
 ) {
-  page.drawRectangle({ x, y, width, height, color: ctx.colors.bgAlt, borderColor: ctx.colors.border, borderWidth: 1 });
-  drawText(page, label.toUpperCase(), x + 12, y + height - 18, 8, ctx.bold, ctx.colors.textSecondary);
+  page.drawRectangle({
+    x,
+    y,
+    width,
+    height,
+    color: ctx.colors.bgAlt,
+    borderColor: ctx.colors.border,
+    borderWidth: 1,
+  });
+  drawText(
+    page,
+    label.toUpperCase(),
+    x + 12,
+    y + height - 18,
+    8,
+    ctx.bold,
+    ctx.colors.textSecondary,
+  );
   drawText(page, value, x + 12, y + 14, 15, ctx.bold, ctx.colors.text);
 }
 
 function categoryRows(expenses: Expense[], categories: Category[]) {
-  const map = new Map<string, { amount: number; count: number; color: string }>();
+  const map = new Map<
+    string,
+    { amount: number; count: number; color: string }
+  >();
   expenses.forEach((expense) => {
     const name = expense.category || "Uncategorized";
     const visuals = resolveExpenseVisuals(categories, name);
-    const current = map.get(name) ?? { amount: 0, count: 0, color: visuals.color };
-    map.set(name, { ...current, amount: current.amount + expense.amount, count: current.count + 1 });
+    const current = map.get(name) ?? {
+      amount: 0,
+      count: 0,
+      color: visuals.color,
+    };
+    map.set(name, {
+      ...current,
+      amount: current.amount + expense.amount,
+      count: current.count + 1,
+    });
   });
   return Array.from(map.entries())
     .map(([name, value]) => ({ name, ...value }))
@@ -106,18 +159,71 @@ function categoryRows(expenses: Expense[], categories: Category[]) {
 function addCoverPage(ctx: PdfContext, data: ReportData) {
   const page = ctx.doc.addPage(PageSizes.A4);
   const { width, height } = page.getSize();
-  page.drawRectangle({ x: 0, y: height - 150, width, height: 150, color: ctx.colors.primary });
-  drawText(page, "CashFlow", margin, height - 70, 28, ctx.bold, ctx.colors.white);
-  drawText(page, "Financial Report", margin, height - 96, 15, ctx.font, ctx.colors.white);
-  drawText(page, data.period.label, margin, height - 116, 11, ctx.font, ctx.colors.white);
-  drawText(page, `Generated for ${data.userName}`, width - 220, height - 76, 10, ctx.font, ctx.colors.white);
-  drawText(page, new Date().toLocaleDateString("en-IN"), width - 220, height - 94, 10, ctx.font, ctx.colors.white);
+  page.drawRectangle({
+    x: 0,
+    y: height - 150,
+    width,
+    height: 150,
+    color: ctx.colors.primary,
+  });
+  drawText(
+    page,
+    "CashFlow",
+    margin,
+    height - 70,
+    28,
+    ctx.bold,
+    ctx.colors.white,
+  );
+  drawText(
+    page,
+    "Financial Report",
+    margin,
+    height - 96,
+    15,
+    ctx.font,
+    ctx.colors.white,
+  );
+  drawText(
+    page,
+    data.period.label,
+    margin,
+    height - 116,
+    11,
+    ctx.font,
+    ctx.colors.white,
+  );
+  drawText(
+    page,
+    `Generated for ${data.userName}`,
+    width - 220,
+    height - 76,
+    10,
+    ctx.font,
+    ctx.colors.white,
+  );
+  drawText(
+    page,
+    new Date().toLocaleDateString("en-IN"),
+    width - 220,
+    height - 94,
+    10,
+    ctx.font,
+    ctx.colors.white,
+  );
 
   const totalIncome = data.income.reduce((sum, item) => sum + item.amount, 0);
-  const totalExpenses = data.expenses.reduce((sum, item) => sum + item.amount, 0);
+  const totalExpenses = data.expenses.reduce(
+    (sum, item) => sum + item.amount,
+    0,
+  );
   const netSavings = totalIncome - totalExpenses;
-  const savingsRate = totalIncome > 0 ? `${Math.round((netSavings / totalIncome) * 100)}%` : "N/A";
-  const avgExpense = data.expenses.length > 0 ? totalExpenses / data.expenses.length : 0;
+  const savingsRate =
+    totalIncome > 0
+      ? `${Math.round((netSavings / totalIncome) * 100)}%`
+      : "N/A";
+  const avgExpense =
+    data.expenses.length > 0 ? totalExpenses / data.expenses.length : 0;
   const metrics = [
     ["Total Income", formatCurrency(totalIncome)],
     ["Total Expenses", formatCurrency(totalExpenses)],
@@ -132,7 +238,16 @@ function addCoverPage(ctx: PdfContext, data: ReportData) {
   metrics.forEach(([label, value], index) => {
     const col = index % 2;
     const row = Math.floor(index / 2);
-    drawMetricCard(page, ctx, label, value, margin + col * (cardWidth + 18), height - 240 - row * 82, cardWidth, cardHeight);
+    drawMetricCard(
+      page,
+      ctx,
+      label,
+      value,
+      margin + col * (cardWidth + 18),
+      height - 240 - row * 82,
+      cardWidth,
+      cardHeight,
+    );
   });
 }
 
@@ -147,32 +262,118 @@ function addCategoryPage(ctx: PdfContext, data: ReportData) {
 
   rows.forEach((row) => {
     const percentage = total > 0 ? row.amount / total : 0;
-    drawText(page, row.name.slice(0, 24), margin, y, 10, ctx.font, ctx.colors.text);
-    page.drawRectangle({ x: margin + 130, y: y - 2, width: barMax, height: 9, color: ctx.colors.bgAlt });
-    page.drawRectangle({ x: margin + 130, y: y - 2, width: barMax * percentage, height: 9, color: colorFromHex(row.color) });
-    drawText(page, `${formatCurrency(row.amount)}  ${Math.round(percentage * 100)}%`, width - 150, y, 9, ctx.font, ctx.colors.textSecondary);
+    drawText(
+      page,
+      row.name.slice(0, 24),
+      margin,
+      y,
+      10,
+      ctx.font,
+      ctx.colors.text,
+    );
+    page.drawRectangle({
+      x: margin + 130,
+      y: y - 2,
+      width: barMax,
+      height: 9,
+      color: ctx.colors.bgAlt,
+    });
+    page.drawRectangle({
+      x: margin + 130,
+      y: y - 2,
+      width: barMax * percentage,
+      height: 9,
+      color: colorFromHex(row.color),
+    });
+    drawText(
+      page,
+      `${formatCurrency(row.amount)}  ${Math.round(percentage * 100)}%`,
+      width - 150,
+      y,
+      9,
+      ctx.font,
+      ctx.colors.textSecondary,
+    );
     y -= 24;
   });
 
   y -= 18;
   drawText(page, "Category", margin, y, 9, ctx.bold, ctx.colors.textSecondary);
-  drawText(page, "Amount", margin + 190, y, 9, ctx.bold, ctx.colors.textSecondary);
-  drawText(page, "% of Total", margin + 300, y, 9, ctx.bold, ctx.colors.textSecondary);
-  drawText(page, "Transactions", margin + 400, y, 9, ctx.bold, ctx.colors.textSecondary);
+  drawText(
+    page,
+    "Amount",
+    margin + 190,
+    y,
+    9,
+    ctx.bold,
+    ctx.colors.textSecondary,
+  );
+  drawText(
+    page,
+    "% of Total",
+    margin + 300,
+    y,
+    9,
+    ctx.bold,
+    ctx.colors.textSecondary,
+  );
+  drawText(
+    page,
+    "Transactions",
+    margin + 400,
+    y,
+    9,
+    ctx.bold,
+    ctx.colors.textSecondary,
+  );
   y -= 18;
 
   rows.forEach((row) => {
     const percentage = total > 0 ? (row.amount / total) * 100 : 0;
-    drawText(page, row.name.slice(0, 28), margin, y, 9, ctx.font, ctx.colors.text);
-    drawText(page, formatCurrency(row.amount), margin + 190, y, 9, ctx.font, ctx.colors.text);
-    drawText(page, `${percentage.toFixed(1)}%`, margin + 300, y, 9, ctx.font, ctx.colors.text);
-    drawText(page, String(row.count), margin + 400, y, 9, ctx.font, ctx.colors.text);
+    drawText(
+      page,
+      row.name.slice(0, 28),
+      margin,
+      y,
+      9,
+      ctx.font,
+      ctx.colors.text,
+    );
+    drawText(
+      page,
+      formatCurrency(row.amount),
+      margin + 190,
+      y,
+      9,
+      ctx.font,
+      ctx.colors.text,
+    );
+    drawText(
+      page,
+      `${percentage.toFixed(1)}%`,
+      margin + 300,
+      y,
+      9,
+      ctx.font,
+      ctx.colors.text,
+    );
+    drawText(
+      page,
+      String(row.count),
+      margin + 400,
+      y,
+      9,
+      ctx.font,
+      ctx.colors.text,
+    );
     y -= 16;
   });
 }
 
 function addTransactionPages(ctx: PdfContext, data: ReportData) {
-  const sorted = [...data.expenses].sort((a, b) => expenseDate(b).getTime() - expenseDate(a).getTime());
+  const sorted = [...data.expenses].sort(
+    (a, b) => expenseDate(b).getTime() - expenseDate(a).getTime(),
+  );
   let page = ctx.doc.addPage(PageSizes.A4);
   let { width, height } = page.getSize();
   let y = height - 110;
@@ -180,9 +381,33 @@ function addTransactionPages(ctx: PdfContext, data: ReportData) {
 
   const drawTableHeader = () => {
     drawText(page, "Date", margin, y, 9, ctx.bold, ctx.colors.textSecondary);
-    drawText(page, "Category", margin + 80, y, 9, ctx.bold, ctx.colors.textSecondary);
-    drawText(page, "Description", margin + 190, y, 9, ctx.bold, ctx.colors.textSecondary);
-    drawText(page, "Amount", width - 110, y, 9, ctx.bold, ctx.colors.textSecondary);
+    drawText(
+      page,
+      "Category",
+      margin + 80,
+      y,
+      9,
+      ctx.bold,
+      ctx.colors.textSecondary,
+    );
+    drawText(
+      page,
+      "Description",
+      margin + 190,
+      y,
+      9,
+      ctx.bold,
+      ctx.colors.textSecondary,
+    );
+    drawText(
+      page,
+      "Amount",
+      width - 110,
+      y,
+      9,
+      ctx.bold,
+      ctx.colors.textSecondary,
+    );
     y -= 18;
   };
 
@@ -198,14 +423,49 @@ function addTransactionPages(ctx: PdfContext, data: ReportData) {
     }
 
     if (index % 2 === 0) {
-      page.drawRectangle({ x: margin - 6, y: y - 5, width: width - margin * 2 + 12, height: 17, color: ctx.colors.bgAlt });
+      page.drawRectangle({
+        x: margin - 6,
+        y: y - 5,
+        width: width - margin * 2 + 12,
+        height: 17,
+        color: ctx.colors.bgAlt,
+      });
     }
 
     const visuals = resolveExpenseVisuals(data.categories, expense.category);
-    page.drawCircle({ x: margin + 86, y: y + 4, size: 3, color: colorFromHex(visuals.color) });
-    drawText(page, expenseDate(expense).toLocaleDateString("en-IN"), margin, y, 8, ctx.font, ctx.colors.text);
-    drawText(page, visuals.categoryName.slice(0, 18), margin + 96, y, 8, ctx.font, ctx.colors.text);
-    drawText(page, expense.remarks.slice(0, 36), margin + 190, y, 8, ctx.font, ctx.colors.textSecondary);
+    page.drawCircle({
+      x: margin + 86,
+      y: y + 4,
+      size: 3,
+      color: colorFromHex(visuals.color),
+    });
+    drawText(
+      page,
+      expenseDate(expense).toLocaleDateString("en-IN"),
+      margin,
+      y,
+      8,
+      ctx.font,
+      ctx.colors.text,
+    );
+    drawText(
+      page,
+      visuals.categoryName.slice(0, 18),
+      margin + 96,
+      y,
+      8,
+      ctx.font,
+      ctx.colors.text,
+    );
+    drawText(
+      page,
+      expense.remarks.slice(0, 36),
+      margin + 190,
+      y,
+      8,
+      ctx.font,
+      ctx.colors.textSecondary,
+    );
     const amount = formatCurrency(expense.amount);
     drawText(page, amount, width - 110, y, 8, ctx.font, ctx.colors.text);
     y -= 17;
@@ -221,18 +481,53 @@ function addBudgetPage(ctx: PdfContext, data: ReportData) {
   const barWidth = width - margin * 2 - 210;
 
   data.budgets.forEach((summary) => {
-    drawText(page, summary.budget.name, margin, y, 10, ctx.bold, ctx.colors.text);
-    drawText(page, `${formatCurrency(summary.spent)} / ${formatCurrency(summary.budget.amount)}`, width - 150, y, 9, ctx.font, ctx.colors.textSecondary);
+    drawText(
+      page,
+      summary.budget.name,
+      margin,
+      y,
+      10,
+      ctx.bold,
+      ctx.colors.text,
+    );
+    drawText(
+      page,
+      `${formatCurrency(summary.spent)} / ${formatCurrency(summary.budget.amount)}`,
+      width - 150,
+      y,
+      9,
+      ctx.font,
+      ctx.colors.textSecondary,
+    );
     y -= 16;
-    page.drawRectangle({ x: margin, y, width: barWidth, height: 8, color: ctx.colors.bgAlt });
+    page.drawRectangle({
+      x: margin,
+      y,
+      width: barWidth,
+      height: 8,
+      color: ctx.colors.bgAlt,
+    });
     page.drawRectangle({
       x: margin,
       y,
       width: Math.min(barWidth, barWidth * (summary.percentage / 100)),
       height: 8,
-      color: summary.status === "safe" ? ctx.colors.income : summary.status === "warning" ? rgb(0.961, 0.62, 0.043) : ctx.colors.expense,
+      color:
+        summary.status === "safe"
+          ? ctx.colors.income
+          : summary.status === "warning"
+            ? rgb(0.961, 0.62, 0.043)
+            : ctx.colors.expense,
     });
-    drawText(page, `${Math.round(summary.percentage)}%`, margin + barWidth + 12, y - 1, 8, ctx.font, ctx.colors.textSecondary);
+    drawText(
+      page,
+      `${Math.round(summary.percentage)}%`,
+      margin + barWidth + 12,
+      y - 1,
+      8,
+      ctx.font,
+      ctx.colors.textSecondary,
+    );
     y -= 28;
   });
 }
@@ -243,7 +538,15 @@ function addFooters(ctx: PdfContext) {
     const { width } = page.getSize();
     const text = `Page ${index + 1} of ${pages.length}`;
     const textWidth = ctx.font.widthOfTextAtSize(text, 8);
-    drawText(page, text, (width - textWidth) / 2, 28, 8, ctx.font, ctx.colors.textSecondary);
+    drawText(
+      page,
+      text,
+      (width - textWidth) / 2,
+      28,
+      8,
+      ctx.font,
+      ctx.colors.textSecondary,
+    );
   });
 }
 

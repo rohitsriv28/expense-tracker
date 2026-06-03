@@ -1,4 +1,6 @@
-import GroupedTransactionList, { type GroupedTransaction } from "../expenses/GroupedTransactionList";
+import GroupedTransactionList, {
+  type GroupedTransaction,
+} from "../expenses/GroupedTransactionList";
 
 interface DashboardRecentTransactionsProps {
   transactions: GroupedTransaction[];

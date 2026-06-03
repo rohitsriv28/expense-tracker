@@ -59,9 +59,9 @@ export type UpdateExpenseData = Partial<Omit<Expense, "id" | "userId">> & {
 
 // Database structure type for better TypeScript support
 export interface DatabaseStructure {
-  expenses: {
+  users: {
     [userId: string]: {
-      userExpenses: {
+      expenses: {
         [expenseId: string]: Expense;
       };
     };
@@ -75,7 +75,7 @@ export const createTimestamp = (date?: Date) => {
 
 // Helper function to format Firestore paths
 export const getExpensePath = (userId: string, expenseId?: string) => {
-  const basePath = `expenses/${userId}/userExpenses`;
+  const basePath = `users/${userId}/expenses`;
   return expenseId ? `${basePath}/${expenseId}` : basePath;
 };
 

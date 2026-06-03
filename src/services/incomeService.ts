@@ -76,7 +76,7 @@ export const addIncome = async (income: Omit<Income, "userId" | "id">) => {
   const user = auth.currentUser;
   if (!user) throw new Error("User not authenticated");
 
-  const userIncomesRef = collection(db, "incomes", user.uid, "userIncomes");
+  const userIncomesRef = collection(db, "users", user.uid, "income");
 
   await addDoc(userIncomesRef, {
     ...income,
@@ -89,7 +89,7 @@ export const deleteIncome = async (id: string) => {
   const user = auth.currentUser;
   if (!user) throw new Error("User not authenticated");
 
-  const incomeRef = doc(db, "incomes", user.uid, "userIncomes", id);
+  const incomeRef = doc(db, "users", user.uid, "income", id);
   await deleteDoc(incomeRef);
 };
 
@@ -97,7 +97,7 @@ export const updateIncome = async (id: string, data: Partial<Income>) => {
   const user = auth.currentUser;
   if (!user) throw new Error("User not authenticated");
 
-  const incomeRef = doc(db, "incomes", user.uid, "userIncomes", id);
+  const incomeRef = doc(db, "users", user.uid, "income", id);
   await updateDoc(incomeRef, data);
 };
 
@@ -105,7 +105,7 @@ export const getIncomes = (
   userId: string,
   callback: (incomes: Income[]) => void,
 ) => {
-  const userIncomesRef = collection(db, "incomes", userId, "userIncomes");
+  const userIncomesRef = collection(db, "users", userId, "income");
   const q = query(userIncomesRef, orderBy("date", "desc"));
 
   return onSnapshot(
@@ -130,12 +130,7 @@ export const getIncomes = (
 export const initializeDefaultIncomeSources = async (
   userId: string,
 ): Promise<void> => {
-  const sourcesRef = collection(
-    db,
-    "incomeSources",
-    userId,
-    "userIncomeSources",
-  );
+  const sourcesRef = collection(db, "users", userId, "incomeSources");
   const snapshot = await getDocs(sourcesRef);
   if (!snapshot.empty) return;
 
@@ -160,12 +155,7 @@ export function getIncomeSources(
   userId: string,
   callback?: (sources: IncomeSource[]) => void,
 ): Promise<IncomeSource[]> | Unsubscribe {
-  const sourcesRef = collection(
-    db,
-    "incomeSources",
-    userId,
-    "userIncomeSources",
-  );
+  const sourcesRef = collection(db, "users", userId, "incomeSources");
   const q = query(
     sourcesRef,
     where("userId", "==", userId),
@@ -200,12 +190,7 @@ export const addIncomeSource = async (
   const user = auth.currentUser;
   if (!user) throw new Error("User not authenticated");
 
-  const sourcesRef = collection(
-    db,
-    "incomeSources",
-    user.uid,
-    "userIncomeSources",
-  );
+  const sourcesRef = collection(db, "users", user.uid, "incomeSources");
   const docRef = await addDoc(sourcesRef, {
     ...source,
     userId: user.uid,
@@ -221,7 +206,7 @@ export const updateIncomeSource = async (
   const user = auth.currentUser;
   if (!user) throw new Error("User not authenticated");
 
-  const sourceRef = doc(db, "incomeSources", user.uid, "userIncomeSources", id);
+  const sourceRef = doc(db, "users", user.uid, "incomeSources", id);
   await updateDoc(sourceRef, data);
 };
 
@@ -229,6 +214,6 @@ export const deleteIncomeSource = async (id: string): Promise<void> => {
   const user = auth.currentUser;
   if (!user) throw new Error("User not authenticated");
 
-  const sourceRef = doc(db, "incomeSources", user.uid, "userIncomeSources", id);
+  const sourceRef = doc(db, "users", user.uid, "incomeSources", id);
   await deleteDoc(sourceRef);
 };

@@ -1,4 +1,4 @@
-import { db, auth } from "./firebase";
+import { db, auth, getExpensePath } from "./firebase";
 import type { Expense } from "./firebase";
 import {
   collection,
@@ -21,8 +21,8 @@ export const addExpense = async (expense: Omit<Expense, "userId" | "id">) => {
   const user = auth.currentUser;
   if (!user) throw new Error("User not authenticated");
 
-  // New nested path: expenses/{userId}/userExpenses
-  const userExpensesRef = collection(db, "expenses", user.uid, "userExpenses");
+  // New nested path: users/{userId}/expenses
+  const userExpensesRef = collection(db, getExpensePath(user.uid));
 
   await addDoc(userExpensesRef, {
     ...expense,
@@ -35,7 +35,7 @@ export const updateExpense = async (id: string, data: Partial<Expense>) => {
   if (!user) throw new Error("User not authenticated");
 
   // Update using nested path
-  const expenseRef = doc(db, "expenses", user.uid, "userExpenses", id);
+  const expenseRef = doc(db, getExpensePath(user.uid, id));
   await updateDoc(expenseRef, data);
 };
 
@@ -44,7 +44,7 @@ export const deleteExpense = async (id: string) => {
   if (!user) throw new Error("User not authenticated");
 
   // Delete using nested path
-  const expenseRef = doc(db, "expenses", user.uid, "userExpenses", id);
+  const expenseRef = doc(db, getExpensePath(user.uid, id));
   await deleteDoc(expenseRef);
 };
 
@@ -58,7 +58,7 @@ export interface ExpenseFilters {
 
 /**
  * Note on Firestore Indexes:
- * The following composite indexes are required in the Firebase console for collection "userExpenses":
+ * The following composite indexes are required in the Firebase console for collection "expenses":
  * - Fields: category ASC, date DESC
  * - Fields: date DESC
  */
@@ -74,7 +74,7 @@ export const getExpenses = (
   limitCount: number = 10,
   startAfterDoc: QueryDocumentSnapshot | null = null,
 ) => {
-  const userExpensesRef = collection(db, "expenses", userId, "userExpenses");
+  const userExpensesRef = collection(db, getExpensePath(userId));
   let q = query(userExpensesRef, orderBy("date", "desc"));
 
   // Apply filters if provided
@@ -169,7 +169,7 @@ export const getAllExpenses = (
   callback: (expenses: Expense[]) => void,
   filters?: ExpenseFilters,
 ) => {
-  const userExpensesRef = collection(db, "expenses", userId, "userExpenses");
+  const userExpensesRef = collection(db, getExpensePath(userId));
   let q = query(userExpensesRef, orderBy("date", "desc"));
 
   if (filters) {
@@ -227,7 +227,7 @@ export const exportToPDF = async (expenses: Expense[]) => {
 // Utility function to get expense count
 export const getExpenseCount = async (userId: string): Promise<number> => {
   return new Promise((resolve) => {
-    const userExpensesRef = collection(db, "expenses", userId, "userExpenses");
+    const userExpensesRef = collection(db, getExpensePath(userId));
     const unsubscribe = onSnapshot(
       userExpensesRef,
       (snapshot) => {

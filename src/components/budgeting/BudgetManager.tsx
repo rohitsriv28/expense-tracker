@@ -54,7 +54,7 @@ export default function BudgetManager({
   const recurringBudgets = normalizedBudgets.filter(isRecurringBudget);
   const goalBudgets = normalizedBudgets.filter(isGoalBudget);
   const period = useMemo(currentMonthRange, []);
-  
+
   const summaries = useMemo(
     () =>
       recurringBudgets.map((budget) =>
@@ -66,7 +66,7 @@ export default function BudgetManager({
     () => goalBudgets.map((budget) => calculateGoalSummary(budget, expenses)),
     [expenses, goalBudgets],
   );
-  
+
   const healthScore = calculateHealthScore(summaries);
   const withinCount = summaries.filter(
     (summary) => summary.status !== "exceeded",
@@ -148,7 +148,7 @@ export default function BudgetManager({
                   setExpandedBudgetId(
                     expandedBudgetId === summary.budget.id
                       ? null
-                      : (summary.budget.id ?? summary.budget.name)
+                      : (summary.budget.id ?? summary.budget.name),
                   )
                 }
                 pendingDeleteId={pendingDeleteId}

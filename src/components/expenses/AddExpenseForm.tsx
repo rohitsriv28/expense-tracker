@@ -12,7 +12,11 @@ import {
 import { useAuth } from "../../services/authService";
 import DatePicker from "../ui/DatePicker";
 import { cn } from "../../utils/cn";
-import { categoryHex, expenseDate, findCategory } from "../../utils/dataMappers";
+import {
+  categoryHex,
+  expenseDate,
+  findCategory,
+} from "../../utils/dataMappers";
 import { getIcon } from "../../utils/iconMap";
 import { recordExpense, getSuggestedCategory } from "../../utils/smartDefaults";
 import { formatCurrency } from "../../utils/formatters";

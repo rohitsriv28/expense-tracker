@@ -14,7 +14,10 @@ interface DashboardTopCategoriesProps {
   onViewExpenses: (category?: string) => void;
 }
 
-export default function DashboardTopCategories({ topCategories, onViewExpenses }: DashboardTopCategoriesProps) {
+export default function DashboardTopCategories({
+  topCategories,
+  onViewExpenses,
+}: DashboardTopCategoriesProps) {
   return (
     <div className="card">
       <div className="mb-4 flex items-center justify-between">

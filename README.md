@@ -46,8 +46,8 @@ CashFlow is a premium, feature-rich expense tracking application built with mode
 - **PWA and offline support**
   Progressive Web App functionality allows offline usage and installation on devices.
 
-- **Real-time data sync**
-  Seamless synchronization across devices using Firestore.
+- **Real-time data sync & Multi-Tenant Architecture**
+  Seamless synchronization across devices using Firestore. Implements a highly scalable, user-centric database structure (`/users/{uid}/*`) to ensure strict data isolation and robust security rules for every user.
 
 ## Roadmap / Coming Soon 🚀
 
