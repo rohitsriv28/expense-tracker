@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, SlidersHorizontal, X } from "lucide-react";
-import DatePicker from "../../components/ui/DatePicker";
+import DatePicker from "../ui/DatePicker";
 import type { Category } from "../../services/categoryService";
 import { categoryHex } from "../../utils/dataMappers";
 

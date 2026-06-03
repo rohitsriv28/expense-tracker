@@ -27,7 +27,7 @@ import {
   type BudgetPeriodSummary,
 } from "../../services/budgetService";
 import type { Category } from "../../services/categoryService";
-import DatePicker from "../../components/ui/DatePicker";
+import DatePicker from "../ui/DatePicker";
 import {
   expenseDate,
   incomeDate,

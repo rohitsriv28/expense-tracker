@@ -10,7 +10,7 @@ import {
   updateExpense,
 } from "../../services/expenseService";
 import { useAuth } from "../../services/authService";
-import DatePicker from "../../components/ui/DatePicker";
+import DatePicker from "../ui/DatePicker";
 import { cn } from "../../utils/cn";
 import { categoryHex, expenseDate, findCategory } from "../../utils/dataMappers";
 import { getIcon } from "../../utils/iconMap";

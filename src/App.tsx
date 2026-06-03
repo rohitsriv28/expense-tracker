@@ -12,7 +12,7 @@ import ErrorFallback from "./components/shared/ErrorFallback";
 import NetworkStatusManager from "./components/shared/NetworkStatusManager";
 import NotFoundPage from "./components/layout/NotFoundPage";
 
-import { ThemeProvider } from "./context/ThemeContext";
+import { ThemeProvider } from "./contexts/ThemeContext";
 
 function App() {
   const isOffline = useOfflineStatus();

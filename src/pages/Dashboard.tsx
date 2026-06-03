@@ -23,17 +23,17 @@ import {
 import { cleanupOldExpenses } from "../services/dataRetentionService";
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
-import AddExpenseForm from "../features/expenses/AddExpenseForm";
-import AddIncomeForm from "../features/income/AddIncomeForm";
-import BudgetManager from "../features/budgeting/BudgetManager";
-import ExpenseList from "../features/expenses/ExpenseList";
-import CategoryManager from "../features/categories/CategoryManager";
-import IncomeList from "../features/income/IncomeList";
-import ReportsSection from "../features/reports/ReportsSection";
-import FinancialOverview from "../features/dashboard/FinancialOverview";
+import AddExpenseForm from "../components/expenses/AddExpenseForm";
+import AddIncomeForm from "../components/income/AddIncomeForm";
+import BudgetManager from "../components/budgeting/BudgetManager";
+import ExpenseList from "../components/expenses/ExpenseList";
+import CategoryManager from "../components/categories/CategoryManager";
+import IncomeList from "../components/income/IncomeList";
+import ReportsSection from "../components/reports/ReportsSection";
+import FinancialOverview from "../components/dashboard/FinancialOverview";
 import ExpenseFilters, {
   type ExpenseFilterValue,
-} from "../features/expenses/ExpenseFilters";
+} from "../components/expenses/ExpenseFilters";
 import SkeletonCard from "../components/ui/SkeletonCard";
 import SkeletonChart from "../components/ui/SkeletonChart";
 import SkeletonList from "../components/ui/SkeletonList";

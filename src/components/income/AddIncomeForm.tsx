@@ -7,7 +7,7 @@ import {
   type IncomeSource,
 } from "../../services/incomeService";
 import { useAuth } from "../../services/authService";
-import DatePicker from "../../components/ui/DatePicker";
+import DatePicker from "../ui/DatePicker";
 import { cn } from "../../utils/cn";
 import { getIcon } from "../../utils/iconMap";
 

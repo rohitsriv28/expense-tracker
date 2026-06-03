@@ -126,20 +126,25 @@ npm run dev
 
 ```
 src/
-├── components/
+├── assets/           # Global styles and static files
+├── components/       # Dedicated UI hub containing all visual elements
+│   ├── budgeting/    # Budget tracker components
+│   ├── categories/   # Category management UI
+│   ├── dashboard/    # Financial command center components
+│   ├── expenses/     # Expense listing and forms
+│   ├── income/       # Income logging components
 │   ├── layout/       # Application layout (Header, Footer, Nav)
+│   ├── reports/      # Analytics and charting components
 │   ├── shared/       # Cross-feature shared components
-│   └── ui/           # Generic reusable UI components (Buttons, Inputs)
-├── features/         # Feature-based domains (expenses, income, budgeting, reports)
-├── context/          # React Context providers
+│   └── ui/           # Generic reusable UI elements (Buttons, Inputs)
+├── contexts/         # React Context providers (Auth, Theme)
 ├── hooks/            # Custom React hooks
-├── pages/            # Top-level page views
+├── pages/            # Top-level route views (Dashboard, Login, Privacy)
 ├── services/         # Firebase, API, and export logic
-├── types/            # Global TypeScript definitions
 ├── utils/            # Helper utilities and formatters
 ├── App.tsx           # Main application with routing
 ├── main.tsx          # Entry point
-└── index.css         # Global styles
+└── index.css         # Tailwind directives and CSS vars
 ```
 
 ## Privacy and Terms
