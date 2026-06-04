@@ -14,12 +14,8 @@ import {
   getIncomes,
   initializeDefaultIncomeSources,
 } from "../services/incomeService";
-import type { Budget, GoalBudget } from "../services/budgetService";
-import {
-  convertLegacyBudget,
-  getBudgets,
-  isGoalBudget,
-} from "../services/budgetService";
+import type { Budget } from "../services/budgetService";
+import { getBudgets } from "../services/budgetService";
 import { cleanupOldExpenses } from "../services/dataRetentionService";
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
@@ -119,11 +115,6 @@ export default function Dashboard() {
     setEditingExpense(expense ?? null);
     setSheet("expense");
   }, []);
-
-  const goalBudgets = useMemo<GoalBudget[]>(
-    () => budgets.map(convertLegacyBudget).filter(isGoalBudget),
-    [budgets],
-  );
 
   const filteredExpenses = useMemo(() => {
     let result = expenses;
@@ -363,7 +354,6 @@ export default function Dashboard() {
           onSaved={(message) => showToast(message)}
           categories={categories}
           expense={editingExpense}
-          activeGoals={goalBudgets}
           onManageCategories={() => setIsCategoryManagerOpen(true)}
         />
       )}

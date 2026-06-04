@@ -3,7 +3,6 @@ import { Timestamp } from "firebase/firestore";
 import { FileText, IndianRupee, Receipt, Trash2, X } from "lucide-react";
 import type { Expense } from "../../services/firebase";
 import type { Category } from "../../services/categoryService";
-import type { GoalBudget } from "../../services/budgetService";
 import {
   addExpense,
   deleteExpense,
@@ -27,7 +26,6 @@ interface AddExpenseFormProps {
   onSaved?: (message: string) => void;
   categories?: Category[];
   expense?: Expense | null;
-  activeGoals?: GoalBudget[];
   onManageCategories?: () => void;
 }
 
@@ -52,10 +50,6 @@ function evaluateAmount(input: string): number | null {
   return null;
 }
 
-function toInputDate(date: Date): string {
-  return date.toISOString().split("T")[0];
-}
-
 function isExpression(value: string): boolean {
   return /[+\-*/()]/.test(value);
 }
@@ -66,7 +60,6 @@ export default function AddExpenseForm({
   onSaved,
   categories = [],
   expense,
-  activeGoals = [],
   onManageCategories,
 }: AddExpenseFormProps) {
   const { user } = useAuth();
@@ -78,7 +71,6 @@ export default function AddExpenseForm({
   const [notes, setNotes] = useState("");
   const [notesOpen, setNotesOpen] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
-  const [selectedGoalId, setSelectedGoalId] = useState<string | undefined>();
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<ExpenseFormErrors>({});
   const [deleteConfirm, setDeleteConfirm] = useState(false);
@@ -98,7 +90,6 @@ export default function AddExpenseForm({
       setNotesOpen(Boolean(expense.notes));
       const category = findCategory(categories, expense.category);
       setSelectedCategoryId(category?.id ?? expense.category ?? "");
-      setSelectedGoalId(expense.goalBudgetId);
     } else {
       setAmount("");
       setDescription("");
@@ -106,7 +97,6 @@ export default function AddExpenseForm({
       setNotes("");
       setNotesOpen(false);
       setSelectedCategoryId("");
-      setSelectedGoalId(undefined);
       setDeleteConfirm(false);
       setErrors({});
     }
@@ -121,13 +111,6 @@ export default function AddExpenseForm({
     () => (isExpression(amount) ? evaluateAmount(amount) : null),
     [amount],
   );
-
-  const activeGoal = useMemo(() => {
-    const day = toInputDate(date);
-    return activeGoals.find(
-      (goal) => day >= goal.startDate && day <= goal.endDate,
-    );
-  }, [activeGoals, date]);
 
   useEffect(() => {
     const suggestion = getSuggestedCategory(description, categories);
@@ -174,7 +157,6 @@ export default function AddExpenseForm({
       editCount: expense?.editCount ?? 0,
       category: selectedCategory?.label || undefined,
       notes: notes.trim() || undefined,
-      goalBudgetId: selectedGoalId,
       updatedAt: Timestamp.now(),
       createdAt: expense?.createdAt ?? Timestamp.now(),
     };
@@ -326,35 +308,6 @@ export default function AddExpenseForm({
           })}
         </div>
       </section>
-
-      {activeGoal && (
-        <div
-          className="rounded-lg border p-3"
-          style={{
-            borderColor: "var(--status-warning-border)",
-            background: "var(--status-warning-bg)",
-          }}
-        >
-          <label
-            className="flex items-start gap-3 text-sm"
-            style={{ color: "var(--status-warning-text)" }}
-          >
-            <input
-              type="checkbox"
-              checked={selectedGoalId === activeGoal.id}
-              onChange={(event) =>
-                setSelectedGoalId(
-                  event.target.checked ? activeGoal.id : undefined,
-                )
-              }
-              className="mt-1"
-            />
-            <span>
-              This looks like it is for {activeGoal.name}. Tag it to that goal?
-            </span>
-          </label>
-        </div>
-      )}
 
       <section>
         <label

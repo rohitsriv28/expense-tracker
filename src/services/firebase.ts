@@ -1,8 +1,9 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import {
-  getFirestore,
-  enableIndexedDbPersistence,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentSingleTabManager,
   Timestamp,
 } from "firebase/firestore";
 
@@ -17,17 +18,10 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
-
-// Enable offline persistence with enhanced error handling
-enableIndexedDbPersistence(db).catch((err) => {
-  if (err.code === "failed-precondition") {
-    console.warn("Firestore persistence failed: Multiple tabs open");
-  } else if (err.code === "unimplemented") {
-    console.warn("Firestore persistence not supported by browser");
-  } else {
-    console.error("Firestore offline persistence error:", err.code);
-  }
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentSingleTabManager({}),
+  }),
 });
 
 // Enhanced Expense interface with optional fields for better type safety
@@ -43,7 +37,6 @@ export interface Expense {
   category?: string;
   tags?: string[]; // Optional: expense tags for better organization
   notes?: string;
-  goalBudgetId?: string;
 }
 
 // Helper type for creating new expenses (without auto-generated fields)

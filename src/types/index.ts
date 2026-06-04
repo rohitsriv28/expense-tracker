@@ -27,7 +27,6 @@ export interface Expense {
   date: string;
   notes?: string;
   tags?: string[];
-  goalBudgetId?: string;
   createdAt: Timestamp;
   updatedAt?: Timestamp;
 }
@@ -60,54 +59,39 @@ export type BudgetType = "recurring" | "goal";
 export type BudgetPeriod = "weekly" | "monthly";
 export type BudgetStatus = "safe" | "warning" | "danger" | "exceeded";
 
-export interface RecurringBudget {
+export interface MonthlyEnvelopeBudget {
   id: string;
   userId: string;
-  type: "recurring";
+  type: "monthly_envelope";
   name: string;
-  categoryId: string;
   amount: number;
-  period: BudgetPeriod;
-  rollover: boolean;
-  rolloverAmount: number;
+  month: number;
+  year: number;
+  allocations: Record<string, number>;
   createdAt: Timestamp;
 }
+export type Budget = MonthlyEnvelopeBudget;
 
-export interface GoalBudget {
-  id: string;
-  userId: string;
-  type: "goal";
-  name: string;
-  emoji: string;
-  totalAmount: number;
-  startDate: string;
-  endDate: string;
-  allocations: Array<{ categoryId: string; amount: number }>;
-  excludeFromMonthlyBudgets: boolean;
-  createdAt: Timestamp;
-}
-
-export type Budget = RecurringBudget | GoalBudget;
-
-export interface BudgetPeriodSummary {
-  budget: RecurringBudget;
-  spent: number;
-  remaining: number;
-  percentage: number;
-  status: BudgetStatus;
-  rolloverApplied: number;
-  expenses: Expense[];
-}
-
-export interface GoalBudgetSummary {
-  budget: GoalBudget;
+export interface MonthlyEnvelopeSummary {
+  budget: MonthlyEnvelopeBudget;
   totalSpent: number;
   remaining: number;
   percentage: number;
-  status: "on-track" | "warning" | "exceeded";
-  byCategory: Array<{ categoryId: string; allocated: number; spent: number }>;
-  daysRemaining: number;
-  projectedTotal: number;
+  status: BudgetStatus;
+  allocations: Array<{
+    categoryId: string;
+    allocated: number;
+    spent: number;
+    percentage: number;
+    status: BudgetStatus;
+  }>;
+  unallocated: {
+    amount: number;
+    spent: number;
+    remaining: number;
+    percentage: number;
+    status: BudgetStatus;
+  };
   expenses: Expense[];
 }
 

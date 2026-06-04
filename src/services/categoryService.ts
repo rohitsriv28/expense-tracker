@@ -49,6 +49,10 @@ export const DEFAULT_CATEGORIES: Omit<Category, "id">[] = [
   },
 ];
 
+// Build a label→priority lookup from DEFAULT_CATEGORIES so we can sort
+// categories in a stable, user-friendly order (defaults first, customs last).
+const DEFAULT_ORDER = new Map(DEFAULT_CATEGORIES.map((c, i) => [c.label, i]));
+
 export const getCategories = (
   userId: string,
   callback: (categories: Category[]) => void,
@@ -66,11 +70,25 @@ export const getCategories = (
       const active = categories.filter((c) => c.isArchived !== true);
 
       if (active.length > 0) {
-        callback(active);
+        // Deduplicate by label (keep the first occurrence)
+        const seen = new Set<string>();
+        const deduped = active.filter((c) => {
+          const key = c.label.toLowerCase();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        // Sort: defaults in their defined order, then custom categories alphabetically
+        deduped.sort((a, b) => {
+          const ai = DEFAULT_ORDER.get(a.label) ?? 999;
+          const bi = DEFAULT_ORDER.get(b.label) ?? 999;
+          if (ai !== bi) return ai - bi;
+          return a.label.localeCompare(b.label);
+        });
+
+        callback(deduped);
       } else {
-        // Firestore collection is empty — use hardcoded defaults so the UI
-        // always shows categories even when initializeDefaultCategories fails
-        // (e.g. due to permission rules or network issues).
         const fallback: Category[] = DEFAULT_CATEGORIES.map((c, i) => ({
           ...c,
           id: `default-${i}`,
@@ -81,7 +99,6 @@ export const getCategories = (
     },
     (error) => {
       console.error("Error fetching categories:", error);
-      // Return defaults on error so the app remains usable
       const fallback: Category[] = DEFAULT_CATEGORIES.map((c, i) => ({
         ...c,
         id: `default-${i}`,

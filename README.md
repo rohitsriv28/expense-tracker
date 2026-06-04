@@ -16,7 +16,7 @@ CashFlow is a premium, feature-rich expense tracking application built with mode
   Built with a mobile-first approach using Tailwind CSS v4, featuring glassmorphism, smooth transitions, and a premium aesthetic.
 
 - **Secure authentication**
-  Google Sign-In integration via Firebase Authentication for secure and convenient access.
+  Google Sign-In integration via Firebase Authentication for secure access, housed in a premium dual-panel login interface with responsive hero presentation and brand compliance.
 
 - **Interactive dashboard**
   Real-time overview of spending, total incomes, wallet balance, active budget depletion, and charts using Recharts.
@@ -28,14 +28,14 @@ CashFlow is a premium, feature-rich expense tracking application built with mode
   - Sorting and search capabilities
 
 - **Dynamic Budget Tracker**
-  Set targeted limits for weeks, months, or custom trips. Expenses logged within dates are dynamically debited, displaying active progress status bars.
+  Create Monthly Envelope budgets to set an overall spending limit for the month. Optionally allocate specific amounts to categories, with unallocated funds tracked automatically. Expenses are dynamically debited to provide real-time health status bars.
 
 - **Dedicated Financial Reports Section**
   Deep-dive analytics dashboard with four sub-modules:
-  - *Overview:* Stats summaries and Day-of-Week spending charts.
-  - *Categories:* Spent breakdown list and category distribution Pie Chart.
-  - *Trends:* Real-time daily spending trend graphs (30 days).
-  - *Compare:* Period-over-period comparisons (e.g. Month vs Last Month) with delta values and grouped bar charts.
+  - _Overview:_ Stats summaries and Day-of-Week spending charts.
+  - _Categories:_ Spent breakdown list and category distribution Pie Chart.
+  - _Trends:_ Real-time daily spending trend graphs (30 days).
+  - _Compare:_ Period-over-period comparisons (e.g. Month vs Last Month) with delta values and grouped bar charts.
 
 - **Visual analytics & PDF reports**
   Detailed spending charts and on-demand professional PDF reports powered by `pdf-lib`.

@@ -11,7 +11,6 @@ import {
   updateDoc,
   getDocs,
   writeBatch,
-  where,
   type FirestoreError,
   type Unsubscribe,
 } from "firebase/firestore";
@@ -156,11 +155,7 @@ export function getIncomeSources(
   callback?: (sources: IncomeSource[]) => void,
 ): Promise<IncomeSource[]> | Unsubscribe {
   const sourcesRef = collection(db, "users", userId, "incomeSources");
-  const q = query(
-    sourcesRef,
-    where("userId", "==", userId),
-    orderBy("createdAt", "desc"),
-  );
+  const q = query(sourcesRef, orderBy("createdAt", "asc"));
 
   const mapDocs = (
     docs: Array<{ id: string; data: () => unknown }>,

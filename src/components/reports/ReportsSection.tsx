@@ -21,10 +21,10 @@ import type { Expense } from "../../services/firebase";
 import type { Income } from "../../services/incomeService";
 import type { Budget } from "../../services/budgetService";
 import {
-  calculateBudgetSummary,
+  calculateEnvelopeSummary,
   convertLegacyBudget,
-  isRecurringBudget,
-  type BudgetPeriodSummary,
+  isMonthlyEnvelopeBudget,
+  type MonthlyEnvelopeSummary,
 } from "../../services/budgetService";
 import type { Category } from "../../services/categoryService";
 import DatePicker from "../ui/DatePicker";
@@ -291,12 +291,12 @@ export default function ReportsSection({
     });
   }, [expenses, incomes]);
 
-  const budgetSummaries = useMemo<BudgetPeriodSummary[]>(() => {
+  const budgetSummaries = useMemo<MonthlyEnvelopeSummary[]>(() => {
     return budgets
       .map(convertLegacyBudget)
-      .filter(isRecurringBudget)
-      .map((budget) => calculateBudgetSummary(budget, expenses, range));
-  }, [budgets, expenses, range]);
+      .filter(isMonthlyEnvelopeBudget)
+      .map((budget) => calculateEnvelopeSummary(budget, expenses, categories));
+  }, [budgets, expenses, categories]);
 
   const dayOfWeek = useMemo(() => {
     const labels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -447,8 +447,8 @@ export default function ReportsSection({
       <section className="grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(18rem,0.8fr)]">
         <div className="card">
           <SectionTitle title="Spending Trend" />
-          <div className="h-[240px]">
-            <ResponsiveContainer width="100%" height="100%">
+          <div style={{ width: "100%", minWidth: 0 }}>
+            <ResponsiveContainer width="100%" height={240}>
               <AreaChart
                 data={dailyTrend}
                 margin={{ left: -18, right: 8, top: 8 }}
@@ -537,11 +537,11 @@ export default function ReportsSection({
 
         <div className="card">
           <SectionTitle title="Category Donut" />
-          <div className="h-[240px]">
+          <div style={{ width: "100%", minWidth: 0 }}>
             {categoryData.length === 0 ? (
               <EmptyMini title="No category data" />
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={240}>
                 <PieChart>
                   <Pie
                     data={
@@ -753,7 +753,7 @@ export default function ReportsSection({
                   />
                 </div>
                 <span className="text-sm tabular-nums">
-                  {formatCurrency(summary.spent)} /{" "}
+                  {formatCurrency(summary.totalSpent)} /{" "}
                   {formatCurrency(summary.budget.amount)}
                 </span>
               </div>

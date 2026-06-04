@@ -14,9 +14,9 @@ import type { Income } from "../../services/incomeService";
 import type { Category } from "../../services/categoryService";
 import type { Budget } from "../../services/budgetService";
 import {
-  calculateBudgetSummary,
+  calculateEnvelopeSummary,
   convertLegacyBudget,
-  isRecurringBudget,
+  isMonthlyEnvelopeBudget,
 } from "../../services/budgetService";
 import {
   expenseDate,
@@ -188,11 +188,11 @@ export default function FinancialOverview({
   const urgentBudgets = useMemo(() => {
     return budgets
       .map(convertLegacyBudget)
-      .filter(isRecurringBudget)
-      .map((budget) => calculateBudgetSummary(budget, expenses, range))
+      .filter(isMonthlyEnvelopeBudget)
+      .map((budget) => calculateEnvelopeSummary(budget, expenses, categories))
       .sort((a, b) => b.percentage - a.percentage)
       .slice(0, 3);
-  }, [budgets, expenses, range]);
+  }, [budgets, expenses, categories]);
 
   const recentTransactions = useMemo<GroupedTransaction[]>(() => {
     const expenseTransactions = expenses.map((expense) => {

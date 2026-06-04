@@ -1,11 +1,11 @@
 import { Target } from "lucide-react";
 import { formatCurrency } from "../../utils/formatters";
-import { categoryHex, findCategory } from "../../utils/dataMappers";
+
 import type { Category } from "../../services/categoryService";
-import type { BudgetPeriodSummary } from "../../services/budgetService";
+import type { MonthlyEnvelopeSummary } from "../../services/budgetService";
 
 interface DashboardUrgentBudgetsProps {
-  urgentBudgets: BudgetPeriodSummary[];
+  urgentBudgets: MonthlyEnvelopeSummary[];
   categories: Category[];
   onViewBudgets: () => void;
   onSetBudget: () => void;
@@ -13,7 +13,6 @@ interface DashboardUrgentBudgetsProps {
 
 export default function DashboardUrgentBudgets({
   urgentBudgets,
-  categories,
   onViewBudgets,
   onSetBudget,
 }: DashboardUrgentBudgetsProps) {
@@ -50,11 +49,6 @@ export default function DashboardUrgentBudgets({
       ) : (
         <div className="space-y-4">
           {urgentBudgets.map((summary) => {
-            const category = findCategory(
-              categories,
-              summary.budget.categoryId,
-            );
-            const color = categoryHex(category);
             return (
               <div
                 key={summary.budget.id ?? summary.budget.name}
@@ -65,7 +59,9 @@ export default function DashboardUrgentBudgets({
                   <div className="flex min-w-0 items-center gap-2">
                     <span
                       className="category-dot"
-                      style={{ background: color }}
+                      style={{
+                        background: "var(--interactive-primary-subtle)",
+                      }}
                     />
                     <p className="truncate text-sm font-semibold">
                       {summary.budget.name}
@@ -75,7 +71,7 @@ export default function DashboardUrgentBudgets({
                     className="text-xs tabular-nums"
                     style={{ color: "var(--text-secondary)" }}
                   >
-                    {formatCurrency(summary.spent)} /{" "}
+                    {formatCurrency(summary.totalSpent)} /{" "}
                     {formatCurrency(summary.budget.amount)}
                   </p>
                 </div>

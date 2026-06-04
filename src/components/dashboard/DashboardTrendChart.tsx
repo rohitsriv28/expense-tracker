@@ -36,8 +36,8 @@ export default function DashboardTrendChart({
         </div>
         <BarChart3 className="h-5 w-5" style={{ color: "var(--text-brand)" }} />
       </div>
-      <div className="h-[200px] md:h-[240px]">
-        <ResponsiveContainer width="100%" height="100%">
+      <div style={{ width: "100%", minWidth: 0 }}>
+        <ResponsiveContainer width="100%" height={200}>
           <AreaChart
             data={dailyTrend}
             margin={{ top: 8, right: 8, left: -18, bottom: 0 }}

@@ -124,9 +124,9 @@ export default function SpendingCharts({
             <PieIcon className="w-5 h-5 text-red-600 dark:text-red-400" />
             Spending by Category
           </h3>
-          <div className="h-[300px] w-full mt-auto">
+          <div style={{ width: "100%", minWidth: 0 }}>
             {categoryData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
                   <Pie
                     data={categoryData}
@@ -185,9 +185,9 @@ export default function SpendingCharts({
             <BarChart3 className="w-5 h-5 text-red-600 dark:text-red-400" />
             Spending Trend ({ranges.find((r) => r.value === timeRange)?.label})
           </h3>
-          <div className="h-[300px] w-full mt-auto">
+          <div style={{ width: "100%", minWidth: 0 }}>
             {chartData.length > 0 && chartData.some((d) => d.amount > 0) ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height={300}>
                 <BarChart
                   data={chartData}
                   margin={{ top: 10, right: 10, left: -20, bottom: 0 }}

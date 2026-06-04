@@ -1,34 +1,26 @@
-import { useMemo, useState } from "react";
-import { CalendarDays, Plus, Target } from "lucide-react";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { Plus, Target } from "lucide-react";
 import type { Budget } from "../../services/budgetService";
 import {
-  calculateBudgetSummary,
-  calculateGoalSummary,
+  calculateEnvelopeSummary,
   calculateHealthScore,
   convertLegacyBudget,
   deleteBudget,
-  isGoalBudget,
-  isRecurringBudget,
+  isMonthlyEnvelopeBudget,
+  type MonthlyEnvelopeBudget,
 } from "../../services/budgetService";
 import type { Expense } from "../../services/firebase";
 import type { Category } from "../../services/categoryService";
-import RecurringBudgetCard from "./RecurringBudgetCard";
-import GoalCard from "./GoalCard";
+import MonthlyEnvelopeCard from "./MonthlyEnvelopeCard";
 import BudgetFormSheet from "./BudgetFormSheet";
+import AllocationPromptModal from "./AllocationPromptModal";
+import AllocationSheet from "./AllocationSheet";
 
 interface BudgetManagerProps {
   budgets: Budget[];
   expenses: Expense[];
   categories?: Category[];
   onSaved?: (message: string) => void;
-}
-
-function currentMonthRange(): { start: Date; end: Date } {
-  const now = new Date();
-  return {
-    start: new Date(now.getFullYear(), now.getMonth(), 1),
-    end: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999),
-  };
 }
 
 function daysLeftInMonth(): number {
@@ -44,6 +36,12 @@ export default function BudgetManager({
   onSaved,
 }: BudgetManagerProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [allocationPromptBudgetId, setAllocationPromptBudgetId] = useState<
+    string | null
+  >(null);
+  const [allocationSheetBudgetId, setAllocationSheetBudgetId] = useState<
+    string | null
+  >(null);
   const [expandedBudgetId, setExpandedBudgetId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
@@ -51,20 +49,61 @@ export default function BudgetManager({
     () => budgets.map(convertLegacyBudget),
     [budgets],
   );
-  const recurringBudgets = normalizedBudgets.filter(isRecurringBudget);
-  const goalBudgets = normalizedBudgets.filter(isGoalBudget);
-  const period = useMemo(currentMonthRange, []);
+  const monthlyBudgets = normalizedBudgets.filter(isMonthlyEnvelopeBudget);
+
+  const hasCheckedRollover = useRef(false);
+
+  useEffect(() => {
+    if (hasCheckedRollover.current) return;
+    // Wait until budgets are loaded
+    if (budgets.length === 0) return;
+
+    hasCheckedRollover.current = true;
+
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+
+    // Check if we have an envelope for this month
+    const hasCurrentMonth = monthlyBudgets.some(
+      (b) => b.month === currentMonth && b.year === currentYear,
+    );
+
+    if (!hasCurrentMonth) {
+      // Find the most recent budget
+      const pastBudgets = [...monthlyBudgets].sort((a, b) => {
+        if (a.year !== b.year) return b.year - a.year;
+        return b.month - a.month;
+      });
+
+      const latestPast = pastBudgets[0];
+      if (latestPast) {
+        // Auto-generate for current month
+        import("../../services/budgetService").then(({ addBudget }) => {
+          addBudget({
+            type: "monthly_envelope",
+            name: now.toLocaleString("default", {
+              month: "long",
+              year: "numeric",
+            }),
+            amount: latestPast.amount,
+            month: currentMonth,
+            year: currentYear,
+            allocations: { ...latestPast.allocations },
+          } as Omit<MonthlyEnvelopeBudget, "id" | "userId">).catch(
+            console.error,
+          );
+        });
+      }
+    }
+  }, [budgets.length, monthlyBudgets]);
 
   const summaries = useMemo(
     () =>
-      recurringBudgets.map((budget) =>
-        calculateBudgetSummary(budget, expenses, period),
+      monthlyBudgets.map((budget) =>
+        calculateEnvelopeSummary(budget, expenses, categories),
       ),
-    [expenses, period, recurringBudgets],
-  );
-  const goalSummaries = useMemo(
-    () => goalBudgets.map((budget) => calculateGoalSummary(budget, expenses)),
-    [expenses, goalBudgets],
+    [expenses, monthlyBudgets, categories],
   );
 
   const healthScore = calculateHealthScore(summaries);
@@ -80,6 +119,13 @@ export default function BudgetManager({
       onSaved?.("Budget deleted.");
     } catch {
       onSaved?.("Failed to delete budget.");
+    }
+  };
+
+  const handleSavedBudget = (msg: string, newId?: string) => {
+    onSaved?.(msg);
+    if (newId) {
+      setAllocationPromptBudgetId(newId);
     }
   };
 
@@ -109,7 +155,7 @@ export default function BudgetManager({
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="section-label">Monthly Budgets</p>
-            <h2>Recurring limits</h2>
+            <h2>Envelopes</h2>
           </div>
           <button
             type="button"
@@ -123,23 +169,23 @@ export default function BudgetManager({
         {summaries.length === 0 ? (
           <div className="empty-state card">
             <Target className="empty-state-icon" />
-            <p className="empty-state-title">No monthly budgets</p>
+            <p className="empty-state-title">No monthly envelopes</p>
             <p className="empty-state-desc">
-              Set a category limit and CashFlow will track depletion
-              automatically.
+              Set an overall budget limit for the month, and optionally divide
+              it into categories.
             </p>
             <button
               type="button"
               className="btn btn-primary btn-sm"
               onClick={() => setSheetOpen(true)}
             >
-              Create budget
+              Create envelope
             </button>
           </div>
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
             {summaries.map((summary) => (
-              <RecurringBudgetCard
+              <MonthlyEnvelopeCard
                 key={summary.budget.id ?? summary.budget.name}
                 summary={summary}
                 categories={categories}
@@ -154,46 +200,8 @@ export default function BudgetManager({
                 pendingDeleteId={pendingDeleteId}
                 setPendingDeleteId={setPendingDeleteId}
                 onDelete={handleDelete}
+                onEditAllocations={(id) => setAllocationSheetBudgetId(id)}
                 daysLeftInMonth={daysLeftInMonth()}
-              />
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="section-label">Goals & Trips</p>
-            <h2>One-time envelopes</h2>
-          </div>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => setSheetOpen(true)}
-          >
-            <Plus className="h-4 w-4" /> Add Goal
-          </button>
-        </div>
-
-        {goalSummaries.length === 0 ? (
-          <div className="empty-state card">
-            <CalendarDays className="empty-state-icon" />
-            <p className="empty-state-title">No goals yet</p>
-            <p className="empty-state-desc">
-              Create a trip, purchase, or event budget to keep it separate from
-              monthly spending.
-            </p>
-          </div>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-2">
-            {goalSummaries.map((summary) => (
-              <GoalCard
-                key={summary.budget.id ?? summary.budget.name}
-                summary={summary}
-                pendingDeleteId={pendingDeleteId}
-                setPendingDeleteId={setPendingDeleteId}
-                onDelete={handleDelete}
               />
             ))}
           </div>
@@ -202,11 +210,44 @@ export default function BudgetManager({
 
       {sheetOpen && (
         <BudgetFormSheet
-          categories={categories}
-          onSaved={onSaved}
+          onSaved={handleSavedBudget}
           onClose={() => setSheetOpen(false)}
         />
       )}
+
+      {allocationPromptBudgetId &&
+        (() => {
+          const promptBudget = monthlyBudgets.find(
+            (b) => b.id === allocationPromptBudgetId,
+          );
+          if (!promptBudget) return null;
+          return (
+            <AllocationPromptModal
+              budget={promptBudget}
+              onAllocateNow={() => {
+                setAllocationPromptBudgetId(null);
+                setAllocationSheetBudgetId(promptBudget.id!);
+              }}
+              onDoLater={() => setAllocationPromptBudgetId(null)}
+            />
+          );
+        })()}
+
+      {allocationSheetBudgetId &&
+        (() => {
+          const sheetBudget = monthlyBudgets.find(
+            (b) => b.id === allocationSheetBudgetId,
+          );
+          if (!sheetBudget) return null;
+          return (
+            <AllocationSheet
+              budget={sheetBudget}
+              categories={categories}
+              onSaved={onSaved}
+              onClose={() => setAllocationSheetBudgetId(null)}
+            />
+          );
+        })()}
     </div>
   );
 }

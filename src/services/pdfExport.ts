@@ -9,7 +9,7 @@ import {
 } from "pdf-lib";
 import type { Expense } from "./firebase";
 import type { Income } from "./incomeService";
-import type { BudgetPeriodSummary } from "./budgetService";
+import type { MonthlyEnvelopeSummary } from "./budgetService";
 import type { Category } from "./categoryService";
 import { expenseDate, resolveExpenseVisuals } from "../utils/dataMappers";
 import { formatCurrency } from "../utils/formatters";
@@ -24,7 +24,7 @@ interface ReportData {
   period: { label: string; start: Date; end: Date };
   expenses: Expense[];
   income: Income[];
-  budgets: BudgetPeriodSummary[];
+  budgets: MonthlyEnvelopeSummary[];
   categories: Category[];
   userName: string;
 }
@@ -492,7 +492,7 @@ function addBudgetPage(ctx: PdfContext, data: ReportData) {
     );
     drawText(
       page,
-      `${formatCurrency(summary.spent)} / ${formatCurrency(summary.budget.amount)}`,
+      `${formatCurrency(summary.totalSpent)} / ${formatCurrency(summary.budget.amount)}`,
       width - 150,
       y,
       9,

@@ -14,7 +14,7 @@ import {
   type FirestoreError,
   type Unsubscribe,
 } from "firebase/firestore";
-import { toLocalISODateString } from "../utils/dateUtils";
+import type { Category } from "./categoryService";
 
 export type BudgetType = "recurring" | "goal";
 export type BudgetPeriod = "weekly" | "monthly";
@@ -31,54 +31,40 @@ export interface LegacyBudget {
   createdAt?: Timestamp;
 }
 
-export interface RecurringBudget {
+export interface MonthlyEnvelopeBudget {
   id?: string;
   userId: string;
-  type: "recurring";
+  type: "monthly_envelope";
   name: string;
-  categoryId: string;
   amount: number;
-  period: BudgetPeriod;
-  rollover: boolean;
-  rolloverAmount: number;
+  month: number;
+  year: number;
+  allocations: Record<string, number>;
   createdAt?: Timestamp;
 }
 
-export interface GoalBudget {
-  id?: string;
-  userId: string;
-  type: "goal";
-  name: string;
-  emoji: string;
-  totalAmount: number;
-  startDate: string;
-  endDate: string;
-  allocations: Array<{ categoryId: string; amount: number }>;
-  excludeFromMonthlyBudgets: boolean;
-  createdAt?: Timestamp;
-}
+export type Budget = LegacyBudget | MonthlyEnvelopeBudget;
 
-export type Budget = LegacyBudget | RecurringBudget | GoalBudget;
-
-export interface BudgetPeriodSummary {
-  budget: RecurringBudget;
-  spent: number;
-  remaining: number;
-  percentage: number;
-  status: BudgetStatus;
-  rolloverApplied: number;
-  expenses: Expense[];
-}
-
-export interface GoalBudgetSummary {
-  budget: GoalBudget;
+export interface MonthlyEnvelopeSummary {
+  budget: MonthlyEnvelopeBudget;
   totalSpent: number;
   remaining: number;
   percentage: number;
-  status: "on-track" | "warning" | "exceeded";
-  byCategory: Array<{ categoryId: string; allocated: number; spent: number }>;
-  daysRemaining: number;
-  projectedTotal: number;
+  status: BudgetStatus;
+  allocations: Array<{
+    categoryId: string;
+    allocated: number;
+    spent: number;
+    percentage: number;
+    status: BudgetStatus;
+  }>;
+  unallocated: {
+    amount: number;
+    spent: number;
+    remaining: number;
+    percentage: number;
+    status: BudgetStatus;
+  };
   expenses: Expense[];
 }
 
@@ -158,45 +144,52 @@ export function getBudgets(
   return getDocs(q).then((snapshot) => mapBudgetDocs(snapshot.docs));
 }
 
-export function isRecurringBudget(budget: Budget): budget is RecurringBudget {
-  return budget.type === "recurring";
-}
-
-export function isGoalBudget(budget: Budget): budget is GoalBudget {
-  return budget.type === "goal";
-}
-
-export function convertLegacyBudget(
+export function isMonthlyEnvelopeBudget(
   budget: Budget,
-): RecurringBudget | GoalBudget {
-  if (isRecurringBudget(budget) || isGoalBudget(budget)) return budget;
+): budget is MonthlyEnvelopeBudget {
+  return budget.type === "monthly_envelope";
+}
 
-  if (budget.type === "trip") {
-    return {
-      id: budget.id,
-      userId: budget.userId,
-      type: "goal",
-      name: budget.name,
-      emoji: "🎯",
-      totalAmount: budget.limit,
-      startDate: toLocalISODateString(budget.startDate.toDate()),
-      endDate: toLocalISODateString(budget.endDate.toDate()),
-      allocations: [],
-      excludeFromMonthlyBudgets: true,
-      createdAt: budget.createdAt,
-    };
+export function convertLegacyBudget(budget: Budget): MonthlyEnvelopeBudget {
+  if (isMonthlyEnvelopeBudget(budget)) return budget;
+
+  // Safely resolve a date from the legacy budget's startDate field.
+  // It could be a Firestore Timestamp, a plain string, or missing entirely.
+  let date: Date;
+  try {
+    const raw = (budget as unknown as Record<string, unknown>).startDate;
+    if (
+      raw &&
+      typeof raw === "object" &&
+      typeof (raw as Timestamp).toDate === "function"
+    ) {
+      date = (raw as Timestamp).toDate();
+    } else if (typeof raw === "string") {
+      date = new Date(raw);
+    } else {
+      date = new Date();
+    }
+    // Guard against Invalid Date
+    if (isNaN(date.getTime())) date = new Date();
+  } catch {
+    date = new Date();
   }
 
   return {
     id: budget.id,
     userId: budget.userId,
-    type: "recurring",
-    name: budget.name,
-    categoryId: "all",
-    amount: budget.limit,
-    period: budget.type === "week" ? "weekly" : "monthly",
-    rollover: false,
-    rolloverAmount: 0,
+    type: "monthly_envelope",
+    name:
+      budget.name ||
+      ((budget as unknown as Record<string, unknown>).name as string) ||
+      "Legacy Budget",
+    amount:
+      budget.limit ??
+      ((budget as unknown as Record<string, unknown>).totalAmount as number) ??
+      0,
+    month: date.getMonth(),
+    year: date.getFullYear(),
+    allocations: {},
     createdAt: budget.createdAt,
   };
 }
@@ -210,151 +203,110 @@ function isExpenseInRange(expense: Expense, start: Date, end: Date): boolean {
   return date >= start && date <= end;
 }
 
-export function getExpensesForGoal(
+export function getExpensesForEnvelopePeriod(
   expenses: Expense[],
-  goal: GoalBudget,
+  budget: MonthlyEnvelopeBudget,
 ): Expense[] {
-  const start = new Date(`${goal.startDate}T00:00:00`);
-  const end = new Date(`${goal.endDate}T23:59:59`);
+  const start = new Date(budget.year, budget.month, 1);
+  const end = new Date(budget.year, budget.month + 1, 0, 23, 59, 59, 999);
+
   return expenses.filter((expense) => {
-    if (expense.goalBudgetId === goal.id) return true;
     return isExpenseInRange(expense, start, end);
   });
 }
 
-export function isExpenseExcludedFromMonthly(
-  expense: Expense,
-  goals: GoalBudget[],
-): boolean {
-  return goals.some(
-    (goal) =>
-      goal.excludeFromMonthlyBudgets &&
-      (expense.goalBudgetId === goal.id ||
-        getExpensesForGoal([expense], goal).length > 0),
-  );
-}
-
-export function getExpensesForBudgetPeriod(
+export function calculateEnvelopeSummary(
+  budget: MonthlyEnvelopeBudget,
   expenses: Expense[],
-  budget: RecurringBudget,
-  period?: { start: Date; end: Date },
-  goals: GoalBudget[] = [],
-): Expense[] {
-  const now = new Date();
-  const start =
-    period?.start ??
-    (budget.period === "weekly"
-      ? new Date(
-          now.getFullYear(),
-          now.getMonth(),
-          now.getDate() - now.getDay() + 1,
-        )
-      : new Date(now.getFullYear(), now.getMonth(), 1));
-  const end =
-    period?.end ??
-    (budget.period === "weekly"
-      ? new Date(
-          start.getFullYear(),
-          start.getMonth(),
-          start.getDate() + 6,
-          23,
-          59,
-          59,
-          999,
-        )
-      : new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999));
+  categories: Category[] = [],
+): MonthlyEnvelopeSummary {
+  const matchingExpenses = getExpensesForEnvelopePeriod(expenses, budget);
 
-  return expenses.filter((expense) => {
-    const categoryMatches =
-      budget.categoryId === "all" || expense.category === budget.categoryId;
-    return (
-      categoryMatches &&
-      isExpenseInRange(expense, start, end) &&
-      !isExpenseExcludedFromMonthly(expense, goals)
-    );
-  });
-}
-
-export function calculateBudgetSummary(
-  budget: RecurringBudget,
-  expenses: Expense[],
-  period: { start: Date; end: Date },
-): BudgetPeriodSummary {
-  const matchingExpenses = getExpensesForBudgetPeriod(expenses, budget, period);
-  const rolloverApplied = budget.rollover ? budget.rolloverAmount : 0;
-  const effectiveAmount = budget.amount + rolloverApplied;
-  const spent = matchingExpenses.reduce(
-    (sum, expense) => sum + expense.amount,
-    0,
-  );
-  const remaining = effectiveAmount - spent;
-  const percentage = effectiveAmount > 0 ? (spent / effectiveAmount) * 100 : 0;
-  const status: BudgetStatus =
-    percentage > 100
+  const getStatus = (pct: number): BudgetStatus =>
+    pct > 100
       ? "exceeded"
-      : percentage >= 90
+      : pct >= 90
         ? "danger"
-        : percentage >= 75
+        : pct >= 75
           ? "warning"
           : "safe";
 
-  return {
-    budget,
-    spent,
-    remaining,
-    percentage,
-    status,
-    rolloverApplied,
-    expenses: matchingExpenses,
-  };
-}
+  // Build a label→ID lookup so we can match expense.category (label) to allocation keys (IDs)
+  const labelToId = new Map<string, string>();
+  categories.forEach((cat) => {
+    labelToId.set(cat.label.toLowerCase(), cat.id);
+  });
 
-export function calculateGoalSummary(
-  budget: GoalBudget,
-  expenses: Expense[],
-): GoalBudgetSummary {
-  const goalExpenses = getExpensesForGoal(expenses, budget);
-  const totalSpent = goalExpenses.reduce(
-    (sum, expense) => sum + expense.amount,
+  // Resolve an expense's category field to the corresponding category ID
+  const resolveId = (expense: Expense): string | undefined => {
+    if (!expense.category) return undefined;
+    // Direct match (already an ID)
+    if (budget.allocations[expense.category] !== undefined)
+      return expense.category;
+    // Lookup by label
+    return labelToId.get(expense.category.toLowerCase());
+  };
+
+  // Calculate allocations
+  const allocations = Object.entries(budget.allocations).map(
+    ([categoryId, allocated]) => {
+      const categoryExpenses = matchingExpenses.filter(
+        (e) => resolveId(e) === categoryId,
+      );
+      const spent = categoryExpenses.reduce((sum, e) => sum + e.amount, 0);
+      const percentage = allocated > 0 ? (spent / allocated) * 100 : 0;
+      return {
+        categoryId,
+        allocated,
+        spent,
+        percentage,
+        status: getStatus(percentage),
+      };
+    },
+  );
+
+  const totalAllocated = allocations.reduce((sum, a) => sum + a.allocated, 0);
+  const unallocatedAmount = Math.max(0, budget.amount - totalAllocated);
+
+  // Calculate unallocated spent (spending in categories that have no explicit allocation)
+  const allocatedCategoryIds = new Set(Object.keys(budget.allocations));
+  const unallocatedExpenses = matchingExpenses.filter((e) => {
+    const id = resolveId(e);
+    return !id || !allocatedCategoryIds.has(id);
+  });
+  const unallocatedSpent = unallocatedExpenses.reduce(
+    (sum, e) => sum + e.amount,
     0,
   );
-  const remaining = budget.totalAmount - totalSpent;
-  const percentage =
-    budget.totalAmount > 0 ? (totalSpent / budget.totalAmount) * 100 : 0;
-  const today = new Date();
-  const start = new Date(`${budget.startDate}T00:00:00`);
-  const end = new Date(`${budget.endDate}T23:59:59`);
-  const elapsedDays = Math.max(
-    1,
-    Math.ceil((today.getTime() - start.getTime()) / 86400000),
-  );
-  const daysRemaining = Math.max(
-    0,
-    Math.ceil((end.getTime() - today.getTime()) / 86400000),
-  );
-  const dailyAverage = totalSpent / elapsedDays;
+
+  const unallocatedPercentage =
+    unallocatedAmount > 0 ? (unallocatedSpent / unallocatedAmount) * 100 : 0;
+  const unallocated = {
+    amount: unallocatedAmount,
+    spent: unallocatedSpent,
+    remaining: unallocatedAmount - unallocatedSpent,
+    percentage: unallocatedPercentage,
+    status: getStatus(unallocatedPercentage),
+  };
+
+  const totalSpent = matchingExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const percentage = budget.amount > 0 ? (totalSpent / budget.amount) * 100 : 0;
 
   return {
     budget,
     totalSpent,
-    remaining,
+    remaining: budget.amount - totalSpent,
     percentage,
-    status:
-      percentage > 100 ? "exceeded" : percentage >= 85 ? "warning" : "on-track",
-    byCategory: budget.allocations.map((allocation) => ({
-      categoryId: allocation.categoryId,
-      allocated: allocation.amount,
-      spent: goalExpenses
-        .filter((expense) => expense.category === allocation.categoryId)
-        .reduce((sum, expense) => sum + expense.amount, 0),
-    })),
-    daysRemaining,
-    projectedTotal: totalSpent + dailyAverage * daysRemaining,
-    expenses: goalExpenses,
+    status: getStatus(percentage),
+    allocations,
+    unallocated,
+    expenses: matchingExpenses,
   };
 }
 
-export function calculateHealthScore(summaries: BudgetPeriodSummary[]): number {
+export function calculateHealthScore(
+  summaries: MonthlyEnvelopeSummary[],
+): number {
   if (summaries.length === 0) return 100;
   const totalWeight = summaries.reduce(
     (acc, summary) => acc + summary.budget.amount,
