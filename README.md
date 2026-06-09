@@ -5,7 +5,8 @@
   <img height="24" src="https://ziadoua.github.io/m3-Markdown-Badges/badges/TypeScript/typescript1.svg" />
   <img height="24" src="https://ziadoua.github.io/m3-Markdown-Badges/badges/TailwindCSS/tailwindcss1.svg" />
   <img height="24" src="https://ziadoua.github.io/m3-Markdown-Badges/badges/ViteJS/vitejs1.svg" />
-  <img height="24" src="https://ziadoua.github.io/m3-Markdown-Badges/badges/Firebase/firebase1.svg" />
+  <img height="24" src="https://ziadoua.github.io/m3-Markdown-Badges/badges/NodeJS/nodejs1.svg" />
+  <img height="24" src="https://ziadoua.github.io/m3-Markdown-Badges/badges/MongoDB/mongodb1.svg" />
 </p>
 
 CashFlow is a premium, feature-rich expense tracking application built with modern web technologies. It helps users manage their finances with a clean, responsive interface, detailed analytics, and seamless cross-device synchronization.
@@ -16,7 +17,7 @@ CashFlow is a premium, feature-rich expense tracking application built with mode
   Built with a mobile-first approach using Tailwind CSS v4, featuring glassmorphism, smooth transitions, and a premium aesthetic.
 
 - **Secure authentication**
-  Google Sign-In integration via Firebase Authentication for secure access, housed in a premium dual-panel login interface with responsive hero presentation and brand compliance.
+  Google OAuth integration for secure access, utilizing HTTP-only cookies and robust JWT refresh token flows housed in a premium dual-panel login interface.
 
 - **Interactive dashboard**
   Real-time overview of spending, total incomes, wallet balance, active budget depletion, and charts using Recharts.
@@ -38,16 +39,16 @@ CashFlow is a premium, feature-rich expense tracking application built with mode
   - _Compare:_ Period-over-period comparisons (e.g. Month vs Last Month) with delta values and grouped bar charts.
 
 - **Visual analytics & PDF reports**
-  Detailed spending charts and on-demand professional PDF reports powered by `pdf-lib`.
+  Detailed spending charts and on-demand professional PDF reports powered by a custom React-to-PDF rendering engine (`html2canvas-pro` + `jsPDF`).
 
 - **Dark mode**
   System-aware dark mode for comfortable viewing in any environment.
 
-- **PWA and offline support**
-  Progressive Web App functionality allows offline usage and installation on devices.
+- **PWA and Advanced Offline Sync**
+  Progressive Web App functionality allows native-like installation on devices. Features a robust custom offline architecture: caches API requests for instant offline viewing, queues mutations locally (logging expenses/incomes offline), and auto-syncs securely in the background when connectivity returns.
 
 - **Real-time data sync & Multi-Tenant Architecture**
-  Seamless synchronization across devices using Firestore. Implements a highly scalable, user-centric database structure (`/users/{uid}/*`) to ensure strict data isolation and robust security rules for every user.
+  Seamless synchronization across devices using a custom REST API. Implements a highly scalable, user-centric database structure in MongoDB (Mongoose) to ensure strict data isolation and robust security via Express middlewares.
 
 ## Roadmap / Coming Soon 🚀
 
@@ -60,7 +61,8 @@ CashFlow is a premium, feature-rich expense tracking application built with mode
 - **Build tool:** Vite
 - **Language:** TypeScript
 - **Styling:** Tailwind CSS v4
-- **Backend-as-a-Service:** Firebase (Authentication, Firestore, Hosting)
+- **Backend:** Node.js, Express
+- **Database:** MongoDB (Mongoose)
 - **Icons:** Lucide React
 - **Charts:** Recharts
 - **Routing:** React Router v7
@@ -73,7 +75,7 @@ Follow these steps to set up the project locally.
 
 - Node.js v18 or higher
 - npm or yarn
-- A Firebase project
+- MongoDB Instance (Local or MongoDB Atlas)
 
 ### Installation
 
@@ -84,72 +86,85 @@ git clone https://github.com/yourusername/expense-tracker.git
 cd expense-tracker
 ```
 
-2. Install dependencies
+2. Setup the Server
 
 ```bash
+cd server
 npm install
 ```
 
-3. Configure Firebase
-
-- Create a project in the Firebase Console
-- Enable Google Authentication
-- Enable Firestore Database
-- Create a `.env.local` file in the project root and add:
+Create a `.env` file in the `server` directory and configure:
 
 ```env
-VITE_FIREBASE_API_KEY=your_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_project_id.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_project_id.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
+PORT=5000
+MONGODB_URI=mongodb://localhost:27017/expense-tracker
+CLIENT_URL=http://localhost:5173
+JWT_SECRET=your_jwt_secret
+JWT_REFRESH_SECRET=your_refresh_secret
+GOOGLE_CLIENT_ID=your_google_client_id
 ```
 
-4. Start the development server
-
+Start the server:
 ```bash
 npm run dev
 ```
 
-5. Open the app
+3. Setup the Client
+
+Open a new terminal:
+```bash
+cd client
+npm install
+```
+
+Create a `.env` file in the `client` directory and configure:
+
+```env
+VITE_API_URL=http://localhost:5000/api
+VITE_GOOGLE_CLIENT_ID=your_google_client_id
+```
+
+Start the client:
+```bash
+npm run dev
+```
+
+4. Open the app
    Visit `http://localhost:5173` in your browser.
 
 ## Scripts
 
+You can run these scripts from within the respective `client` or `server` directories.
+
 - `npm run dev` – Starts the development server
 - `npm run build` – Type-checks and builds the app for production
 - `npm run lint` – Runs ESLint for code quality checks
-- `npm run preview` – Previews the production build locally
 
 ## Project Structure
 
 ```
-src/
-├── assets/           # Global styles and static files
-├── components/       # Dedicated UI hub containing all visual elements
-│   ├── budgeting/    # Budget tracker components
-│   ├── categories/   # Category management UI
-│   ├── dashboard/    # Financial command center components
-│   ├── expenses/     # Expense listing and forms
-│   ├── income/       # Income logging components
-│   ├── layout/       # Application layout (Header, Footer, Nav)
-│   ├── reports/      # Analytics and charting components
-│   ├── shared/       # Cross-feature shared components
-│   └── ui/           # Generic reusable UI elements (Buttons, Inputs)
-├── contexts/         # React Context providers (Auth, Theme)
-├── hooks/            # Custom React hooks
-├── pages/            # Top-level route views (Dashboard, Login, Privacy)
-├── services/         # Firebase, API, and export logic
-├── utils/            # Helper utilities and formatters
-├── App.tsx           # Main application with routing
-├── main.tsx          # Entry point
-└── index.css         # Tailwind directives and CSS vars
+expense-tracker/
+├── client/           # React Frontend
+│   ├── src/
+│   │   ├── components/  # Dedicated UI hub containing all visual elements
+│   │   ├── contexts/    # React Context providers (Auth, Theme)
+│   │   ├── pages/       # Top-level route views (Dashboard, Login, Privacy)
+│   │   ├── services/    # API integration and export logic
+│   │   └── utils/       # Helper utilities and formatters
+│   └── vite.config.ts
+└── server/           # Express/Node Backend
+    ├── src/
+    │   ├── controllers/ # Route handlers
+    │   ├── middleware/  # Auth, Error handling, Rate limiting
+    │   ├── models/      # Mongoose Schemas
+    │   ├── routes/      # Express API Routes
+    │   └── utils/       # Server utilities
+    └── app.ts           # Express App Configuration
 ```
 
 ## Privacy and Terms
 
-The application includes dedicated Privacy Policy and Terms of Service pages. User data is securely stored in Firebase and is accessible only to the authenticated user.
+The application includes dedicated Privacy Policy and Terms of Service pages. User data is securely stored in MongoDB and is accessible only to the authenticated user via secure JWT tokens.
 
 ## License
 

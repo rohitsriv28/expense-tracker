@@ -9,6 +9,60 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [3.0.0] - 2026-06-10
+
+A massive architectural overhaul migrating the application from Firebase to a robust, custom Node.js, Express, and MongoDB backend (a monumental effort underway since early May 2026!), alongside restoring and upgrading full Progressive Web App (PWA) and Offline functionality.
+
+### Added
+
+- **Custom Backend Architecture:** Built a fully custom REST API using Node.js, Express, and MongoDB (Mongoose) to handle users, budgets, expenses, incomes, and categories.
+- **Custom Offline Sync Architecture:** Designed a robust caching layer using `localforage` (IndexedDB) and advanced `Axios` interceptors to enable full application usability without an internet connection.
+- **Offline Mutation Queue:** Added the ability to seamlessly log expenses and incomes even while completely offline. The application locally stages requests and optimistically updates the UI with mock `temp-` identifiers.
+- **Multi-Device Session Support:** Replaced the legacy single-token architecture with a multi-token array, enabling users to maintain up to 5 concurrent active sessions across different devices (e.g., phone, tablet, laptop).
+- **SmartDefaults Cross-Device Sync:** The predictive expense classification engine now synchronizes to the remote server, intelligently merging classification patterns via an LRU-capped LocalStorage policy so your phone and laptop learn together.
+- **BroadcastChannel Multi-Tab Sync:** Implemented a robust native BroadcastChannel adapter. Data mutations happening in one browser tab automatically trigger re-fetches in other open tabs, providing a seamless multi-screen experience.
+- **Automated Background Re-Sync:** Re-engineered the application's network awareness so the moment internet connectivity is restored, all offline mutations are reliably replayed against the remote MongoDB server.
+- **Offline Conflict Protection:** Implemented intelligent UI safety blockers that prevent the editing or deletion of locally staged (un-synced) records until the background sync resolves, preventing data collisions.
+- **Priority Sorting:** Categories and Income Sources now feature an `order` field, ensuring they appear consistently in dropdowns and lists based on predefined priority.
+- **HTML-to-PDF Export Engine:** Completely overhauled the reporting module, replacing the legacy `pdf-lib` renderer with a robust HTML-to-PDF engine (`html2canvas-pro` & `jsPDF`).
+- **Premium PDF Templates:** Built highly aesthetic, token-driven React templates for PDF exports (`PdfReportTemplate.tsx`), featuring dynamic `conic-gradients`, beautiful data visualizations, and robust micro-components.
+
+### Changed
+
+- **Monorepo Restructure:** The codebase is now cleanly split into `client/` (React/Vite) and `server/` (Node/Express) directories.
+- **PWA Re-Integration:** Successfully re-implemented `vite-plugin-pwa` to auto-generate fully cached Service Workers within the new Vite client build architecture, restoring instantaneous offline load times and native "Add to Home Screen" prompts across all platforms.
+- **Codebase Standardization:** Executed a massive, codebase-wide refactoring pass to enforce consistent syntax (e.g., standardizing double quotes) and clean up imports.
+- **UI Color Logic:** Reserved slate/grey colors strictly for "Unallocated" or "Uncategorized" entities. Updated the default "Transport" category color to Blue.
+
+### Removed
+
+- **Firebase Deprecation:** Completely removed all legacy Firebase configuration files, services, and dependencies from the project.
+- **Dead Code Eradication:** Utilized strict dependency analysis (`knip`) to identify and securely delete unused React components, stale hooks, and obsolete task scripts across both client and server.
+
+### Fixed
+
+- **IndexedDB Cache Eviction Strategy:** Hardened the `localforage` offline API cache by introducing an advanced envelope architecture. Cache entries are now subject to an aggressive 30-day age limit and a 100-item LRU cap, preventing unbounded browser quota consumption.
+- **Offline Sync Queue Resolution:** Fixed an issue with offline sequential mutations by deploying an internal `tempIdMap`. If an expense is created offline and immediately edited, the system safely maps the temporary ID to the real MongoDB ObjectID before dispatching the edit request.
+- **Data Retention Job Scalability:** Refactored the nightly `dataRetention` cron job from a sequential loop to a heavily concurrent cursor-paginated architecture, allowing scalable data purges for tens of thousands of users without stalling the database pool.
+- **Google Auth COOP Policy:** Resolved an issue where the Google Sign-In popup was blocked by setting correct `Cross-Origin-Opener-Policy: same-origin-allow-popups` headers in both the Vite dev server and the Express production `helmet` configuration.
+
+---
+
+## [2.4.1] - 2026-06-07
+
+A minor patch to enhance security and fix database sync issues caused by strict Firestore security rules.
+
+### Added
+
+- **Secure Math Parser:** Implemented a custom recursive descent parser for mathematical expressions in the Add Expense form, removing the dangerous `new Function()` dynamic evaluation method.
+
+### Fixed
+
+- **Firestore Sync Denial:** Fixed a critical bug where categories (both custom and default) were failing to sync to the remote Firestore database due to a missing `userId` property required by strict database rules.
+- **Database Schema Alignment:** Renamed the `income` collection to `incomes` to exactly match the target architectural schema layout across the application.
+
+---
+
 ## [2.4.0] - 2026-06-04
 
 A major update refactoring the budgeting system to a unified "Monthly Envelope" model, along with a complete premium visual redesign of the Authentication (Login) page, Terms of Service page, and Privacy Policy page.
