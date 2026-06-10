@@ -10,7 +10,7 @@ import {
 import { useMemo, useState } from "react";
 
 interface ErrorFallbackProps {
-  error: Error;
+  error: any;
   resetErrorBoundary: () => void;
 }
 
