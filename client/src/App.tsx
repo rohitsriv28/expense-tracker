@@ -14,7 +14,7 @@ import NotFoundPage from "./components/layout/NotFoundPage";
 
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider } from "./contexts/AuthContext";
-import { processSyncQueue, evictStaleCacheEntries } from "./services/offlineSync";
+import { processSyncQueue, evictStaleCacheEntries, resetStuckQueueItems } from "./services/offlineSync";
 import apiClient from "./services/apiClient";
 
 function App() {
@@ -32,7 +32,9 @@ function App() {
 
       // If we just came back online, process the offline queue!
       if (!isOffline && wasOffline) {
-        processSyncQueue(apiClient);
+        resetStuckQueueItems().then(() => {
+          processSyncQueue(apiClient);
+        });
       }
 
       // Auto-dismiss toast after 3 seconds

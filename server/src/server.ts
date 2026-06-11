@@ -15,9 +15,33 @@ mongoose
   .then(() => {
     logger.info("Connected to MongoDB");
     startDataRetentionJob();
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT}`);
     });
+
+    const shutdown = async (signal: string) => {
+      logger.info(`Received ${signal}. Graceful shutdown initiated...`);
+
+      server.close(async () => {
+        logger.info("HTTP server closed.");
+        try {
+          await mongoose.connection.close();
+          logger.info("MongoDB connection closed.");
+        } catch (err) {
+          logger.error("Error closing MongoDB connection:", err);
+        }
+        process.exit(0);
+      });
+
+      // Force exit after 10 seconds if graceful shutdown hangs
+      setTimeout(() => {
+        logger.error("Graceful shutdown timed out. Forcing exit.");
+        process.exit(1);
+      }, 10_000);
+    };
+
+    process.on("SIGTERM", () => shutdown("SIGTERM"));
+    process.on("SIGINT", () => shutdown("SIGINT"));
   })
   .catch((err) => {
     logger.error("Failed to connect to MongoDB", err);

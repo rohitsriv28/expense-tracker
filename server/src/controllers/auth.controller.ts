@@ -63,7 +63,7 @@ export const googleAuth = asyncHandler(async (req: Request, res: Response) => {
   const { accessToken, refreshToken } = generateTokens(
     (user._id as any).toString(),
   );
-  
+
   if (!user.refreshTokens) user.refreshTokens = [];
   user.refreshTokens.push(refreshToken);
   if (user.refreshTokens.length > 5) {
@@ -77,9 +77,9 @@ export const googleAuth = asyncHandler(async (req: Request, res: Response) => {
 
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    secure: true,
+    sameSite: "none",
+    maxAge: 30 * 24 * 60 * 60 * 1000,
   });
 
   res.json({
@@ -97,20 +97,23 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
       refreshToken,
       process.env.JWT_REFRESH_SECRET!,
     ) as { userId: string };
-    const user = await User.findOne({ _id: decoded.userId, refreshTokens: refreshToken }).select("+refreshTokens");
+    const user = await User.findOne({
+      _id: decoded.userId,
+      refreshTokens: refreshToken,
+    }).select("+refreshTokens");
 
     if (!user) throw new AppError("Invalid refresh token", 401);
 
     const tokens = generateTokens((user._id as any).toString());
-    user.refreshTokens = user.refreshTokens!.filter(t => t !== refreshToken);
+    user.refreshTokens = user.refreshTokens!.filter((t) => t !== refreshToken);
     user.refreshTokens.push(tokens.refreshToken);
     await user.save();
 
     res.cookie("refreshToken", tokens.refreshToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      secure: true,
+      sameSite: "none",
+      maxAge: 30 * 24 * 60 * 60 * 1000,
     });
 
     res.json({

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import type { ReactNode } from "react";
 import apiClient, { setAccessToken } from "../services/apiClient";
 
@@ -41,14 +41,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initAuth();
   }, []);
 
-  const loginWithToken = async (accessToken: string) => {
+  const loginWithToken = useCallback(async (accessToken: string) => {
     const { data } = await apiClient.post("/auth/google", { accessToken });
     setAccessToken(data.data.accessToken);
     setUser(data.data.user);
     await pullFrequencyMapFromServer();
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await pushFrequencyMapToServer();
       await apiClient.post("/auth/logout");
@@ -56,10 +56,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAccessToken(null);
       setUser(null);
     }
-  };
+  }, []);
+
+  const contextValue = useMemo(
+    () => ({ user, loading, loginWithToken, logout }),
+    [user, loading, loginWithToken, logout]
+  );
 
   return (
-    <AuthContext.Provider value={{ user, loading, loginWithToken, logout }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

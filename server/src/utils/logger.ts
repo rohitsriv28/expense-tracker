@@ -7,11 +7,18 @@ export const logger = winston.createLogger({
     winston.format.json(),
   ),
   transports: [
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple(),
-      ),
-    }),
+    process.env.NODE_ENV === "production"
+      ? new winston.transports.Console({
+          format: winston.format.combine(
+            winston.format.timestamp(),
+            winston.format.json()
+          ),
+        })
+      : new winston.transports.Console({
+          format: winston.format.combine(
+            winston.format.colorize(),
+            winston.format.simple()
+          ),
+        }),
   ],
 });

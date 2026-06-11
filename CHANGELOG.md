@@ -9,6 +9,33 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [3.0.1] - 2026-06-11
+
+A crucial production-readiness patch addressing offline sync race conditions, memory optimization, caching, and server stability.
+
+### Added
+
+- **Graceful Shutdown:** Implemented robust `SIGTERM` and `SIGINT` handlers in the Express server to ensure active MongoDB connections and HTTP requests drain safely before process exit, enabling zero-downtime deploys.
+- **Structured Production Logging:** Upgraded `winston` to output parsable, structured JSON logs when running in `NODE_ENV=production`.
+- **Robust Database Connectivity:** Replaced standard MongoDB Atlas SRV connection strings with fully expanded, explicit replica-set URIs to bypass aggressive network DNS/ISP blocking and resolve frequent `querySrv ECONNREFUSED` crashes without resorting to unsafe global DNS overrides.
+
+### Changed
+
+- **JWT TTL Synchronization:** Aligned `JWT_REFRESH_EXPIRES_IN` in `.env` to 30 days and synchronized the HTTP-only cookie `maxAge` in `auth.controller.ts` to strictly match.
+- **AuthContext Memoization:** Wrapped the React `AuthContext` provider values in `useMemo` and functions in `useCallback` to drastically reduce unnecessary component re-renders.
+
+### Removed
+
+- **Firebase Dependency:** Fully uninstalled the legacy `firebase` package from `client/package.json`, shedding ~1.2MB of dead weight from the Vite build.
+
+### Fixed
+
+- **Sync Queue Race Condition:** Introduced atomic `status` (`pending`, `processing`, `failed`) and `retryCount` fields to IndexedDB offline queues to prevent the same request from being sent multiple times. Added a `resetStuckQueueItems` recovery mechanism on reconnect.
+- **Mutation Cache Invalidation:** Implemented dynamic prefix-based cache invalidation in `apiClient.ts`. Mutations (`POST`, `PUT`, `DELETE`) now correctly evict stale `GET` queries from IndexedDB.
+- **Production Stack Traces:** Hardened the global `errorHandler.ts` to strictly suppress sensitive stack traces unless `NODE_ENV !== "production"`.
+
+---
+
 ## [3.0.0] - 2026-06-10
 
 A massive architectural overhaul migrating the application from Firebase to a robust, custom Node.js, Express, and MongoDB backend (a monumental effort underway since early May 2026!), alongside restoring and upgrading full Progressive Web App (PWA) and Offline functionality.

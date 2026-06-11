@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Timestamp } from "firebase/firestore";
 import { IndianRupee, TrendingUp, X } from "lucide-react";
 import { addIncome } from "../../services/incomeService";
 import type { IncomeSource } from "../../types";
@@ -47,7 +46,7 @@ export default function AddIncomeForm({
             ...source,
             id: source.name,
             userId: user?._id ?? "default",
-            createdAt: Timestamp.now(),
+            createdAt: new Date().toISOString(),
           })),
     [sources, user?._id],
   );

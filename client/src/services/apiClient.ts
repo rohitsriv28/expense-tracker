@@ -1,6 +1,6 @@
 import axios from "axios";
 import type { AxiosInstance, InternalAxiosRequestConfig } from "axios";
-import { saveToCache, getFromCache, addToQueue } from "./offlineSync";
+import { saveToCache, getFromCache, addToQueue, invalidateCacheByPrefix } from "./offlineSync";
 
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
@@ -50,6 +50,13 @@ apiClient.interceptors.response.use(
         JSON.stringify(response.config.params || {});
       await saveToCache(cacheKey, response.data.data);
     }
+
+    if (["post", "put", "delete"].includes(response.config.method?.toLowerCase() || "")) {
+      const url = response.config.url || "";
+      const prefix = "/" + url.split("/").filter(Boolean)[0];
+      await invalidateCacheByPrefix(prefix);
+    }
+
     return response;
   },
   async (error) => {

@@ -20,6 +20,8 @@ export interface QueuedRequest {
   data: any;
   headers: any;
   timestamp: number;
+  status?: 'pending' | 'processing' | 'failed';
+  retryCount?: number;
 }
 
 export const saveToCache = async (url: string, data: any) => {
@@ -100,8 +102,16 @@ export async function evictStaleCacheEntries(): Promise<void> {
   }
 }
 
+export async function invalidateCacheByPrefix(prefix: string): Promise<void> {
+  const keys = await cacheStore.keys();
+  const matching = keys.filter((k) => k.startsWith(prefix));
+  await Promise.all(matching.map((k) => cacheStore.removeItem(k)));
+}
+
 export const addToQueue = async (request: QueuedRequest) => {
   try {
+    request.status = 'pending';
+    request.retryCount = 0;
     await queueStore.setItem(request.id, request);
     // Dispatch custom event to notify UI
     window.dispatchEvent(new CustomEvent("offline-queue-updated"));
@@ -132,6 +142,21 @@ export const removeFromQueue = async (id: string) => {
   }
 };
 
+export async function resetStuckQueueItems(): Promise<void> {
+  try {
+    const keys = await queueStore.keys();
+    for (const key of keys) {
+      const item = await queueStore.getItem<QueuedRequest>(key);
+      if (item?.status === 'processing') {
+        item.status = 'pending';
+        await queueStore.setItem(key, item);
+      }
+    }
+  } catch (err) {
+    console.error("Failed to reset stuck queue items", err);
+  }
+}
+
 export const processSyncQueue = async (apiClient: AxiosInstance) => {
   if (!navigator.onLine) return;
 
@@ -143,7 +168,15 @@ export const processSyncQueue = async (apiClient: AxiosInstance) => {
   const tempIdMap = new Map<string, string>();
 
   for (const req of queue) {
+    // Only process pending or failed (if not maxed out) items
+    if (req.status === 'processing' || (req.retryCount && req.retryCount >= 3)) {
+      continue;
+    }
+
     try {
+      req.status = 'processing';
+      await queueStore.setItem(req.id, req);
+
       let resolvedUrl = req.url;
       for (const [tempId, realId] of tempIdMap.entries()) {
         if (resolvedUrl.includes(tempId)) {
@@ -176,16 +209,19 @@ export const processSyncQueue = async (apiClient: AxiosInstance) => {
       await removeFromQueue(req.id);
     } catch (err: any) {
       // If it fails due to network, stop processing.
-      // If it fails due to 400/500, we probably should drop it or notify the user
       if (!err.response) {
         console.warn("Network still unavailable, stopping sync.");
+        req.status = 'pending';
+        await queueStore.setItem(req.id, req);
         break; // Network error
       } else {
         console.error(
-          `Failed to sync queued request ${req.id}, dropping it.`,
+          `Failed to sync queued request ${req.id}.`,
           err,
         );
-        await removeFromQueue(req.id);
+        req.status = 'failed';
+        req.retryCount = (req.retryCount || 0) + 1;
+        await queueStore.setItem(req.id, req);
       }
     }
   }
