@@ -71,15 +71,16 @@ export async function generatePDFReport(data: ReportData): Promise<void> {
           const filename = `cashflow-report-${data.period.label.toLowerCase().replace(/\s+/g, "-")}.pdf`;
           pdf.save(filename); // Downloads the file automatically
 
-          root.unmount();
-          document.body.removeChild(container);
           resolve();
         } catch (e) {
-          root.unmount();
-          if (document.body.contains(container)) {
+          reject(e);
+        } finally {
+          try {
+            if (root) root.unmount();
+          } catch (e) {}
+          if (container && document.body.contains(container)) {
             document.body.removeChild(container);
           }
-          reject(e);
         }
       }, 500); // 500ms delay to ensure all SVGs and fonts are rendered
     } catch (e) {

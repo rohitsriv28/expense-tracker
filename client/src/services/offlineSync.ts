@@ -13,6 +13,11 @@ export const queueStore = localforage.createInstance({
   storeName: "api_queue",
 });
 
+export const failedStore = localforage.createInstance({
+  name: "CashFlow",
+  storeName: "failed_queue",
+});
+
 export interface QueuedRequest {
   id: string; // The temporary ID assigned locally
   method: string;
@@ -157,15 +162,16 @@ export async function resetStuckQueueItems(): Promise<void> {
   }
 }
 
-export const processSyncQueue = async (apiClient: AxiosInstance) => {
-  if (!navigator.onLine) return;
+export const processSyncQueue = async (apiClient: AxiosInstance): Promise<{ synced: number, failed: number, failedItems: QueuedRequest[] } | void> => {
+  if (!navigator.onLine) return { synced: 0, failed: 0, failedItems: [] };
 
   const queue = await getQueue();
-  if (queue.length === 0) return;
+  if (queue.length === 0) return { synced: 0, failed: 0, failedItems: [] };
 
   console.log(`Processing ${queue.length} offline queued requests...`);
   
   const tempIdMap = new Map<string, string>();
+  let synced = 0;
 
   for (const req of queue) {
     // Only process pending or failed (if not maxed out) items
@@ -207,6 +213,7 @@ export const processSyncQueue = async (apiClient: AxiosInstance) => {
 
       // If successful, remove from queue
       await removeFromQueue(req.id);
+      synced++;
     } catch (err: any) {
       // If it fails due to network, stop processing.
       if (!err.response) {
@@ -226,7 +233,42 @@ export const processSyncQueue = async (apiClient: AxiosInstance) => {
     }
   }
 
+  const failedItems: QueuedRequest[] = [];
+  // After processing, find items that are permanently failed
+  for (const req of queue) {
+    const updatedReq = await queueStore.getItem<QueuedRequest>(req.id);
+    if (updatedReq && updatedReq.retryCount && updatedReq.retryCount >= 3 && updatedReq.status === 'failed') {
+      failedItems.push(updatedReq);
+      await failedStore.setItem(updatedReq.id, updatedReq);
+      await queueStore.removeItem(updatedReq.id);
+    }
+  }
+
   // Notify UI that sync is complete
   window.dispatchEvent(new CustomEvent("offline-sync-complete"));
   await pushFrequencyMapToServer();
+
+  return { synced, failed: failedItems.length, failedItems };
 };
+
+export async function getFailedQueueItems(): Promise<QueuedRequest[]> {
+  const items: QueuedRequest[] = [];
+  await failedStore.iterate((value: QueuedRequest) => {
+    items.push(value);
+  });
+  return items;
+}
+
+export async function retryFailedItems(): Promise<void> {
+  const items = await getFailedQueueItems();
+  for (const item of items) {
+    item.retryCount = 0;
+    item.status = 'pending';
+    await queueStore.setItem(item.id, item);
+    await failedStore.removeItem(item.id);
+  }
+}
+
+export async function clearFailedItems(): Promise<void> {
+  await failedStore.clear();
+}

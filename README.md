@@ -105,7 +105,7 @@ GOOGLE_CLIENT_ID=your_google_client_id
 ```
 
 > [!TIP]
-> **MongoDB Atlas Users:** If you experience `querySrv ECONNREFUSED` crashes during local development, your network or ISP may be blocking DNS SRV records. To bypass this, go to your Atlas dashboard -> Connect -> Drivers, select **Node.js version 2.2.12 or earlier**, and use the provided `mongodb://` standard connection string instead of the newer `mongodb+srv://` format.
+> **MongoDB Atlas Users:** If you experience `querySrv ECONNREFUSED` crashes during local development, your network or ISP may be blocking DNS SRV records. To bypass this, go to your Atlas dashboard -> Connect -> Drivers, toggle off **SRV Connection String**, and use the provided standard connection string.
 
 Start the server:
 ```bash

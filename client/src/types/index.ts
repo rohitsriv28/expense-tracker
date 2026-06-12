@@ -21,6 +21,12 @@ export interface Expense {
   userId: string;
   amount: number;
   remarks: string;
+  /**
+   * This field stores the human-readable category label string (e.g. "Food")
+   * NOT a MongoDB ObjectId reference.
+   * This is intentional: preserves expense readability if a category is later renamed or archived.
+   * Use dataMappers.resolveExpenseVisuals() to resolve full category object.
+   */
   category?: string;
   date: string;
   editCount: number;

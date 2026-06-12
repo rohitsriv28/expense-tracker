@@ -14,8 +14,9 @@ import NotFoundPage from "./components/layout/NotFoundPage";
 
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider } from "./contexts/AuthContext";
-import { processSyncQueue, evictStaleCacheEntries, resetStuckQueueItems } from "./services/offlineSync";
+import { processSyncQueue, evictStaleCacheEntries, resetStuckQueueItems, getFailedQueueItems, retryFailedItems, clearFailedItems, QueuedRequest } from "./services/offlineSync";
 import apiClient from "./services/apiClient";
+import FailedSyncModal from "./components/shared/FailedSyncModal";
 
 function App() {
   const isOffline = useOfflineStatus();
@@ -23,6 +24,8 @@ function App() {
   // Track previous offline status to detect changes
   // Initialize with current status to prevent toast on load
   const [wasOffline, setWasOffline] = useState(isOffline);
+  const [showFailedModal, setShowFailedModal] = useState(false);
+  const [failedItems, setFailedItems] = useState<QueuedRequest[]>([]);
 
   useEffect(() => {
     // Only show toast when status actually changes from previous state
@@ -33,7 +36,12 @@ function App() {
       // If we just came back online, process the offline queue!
       if (!isOffline && wasOffline) {
         resetStuckQueueItems().then(() => {
-          processSyncQueue(apiClient);
+          processSyncQueue(apiClient).then((summary) => {
+            if (summary && summary.failed > 0) {
+              setFailedItems(summary.failedItems);
+              setShowFailedModal(true);
+            }
+          });
         });
       }
 
@@ -49,7 +57,17 @@ function App() {
   useEffect(() => {
     // Run cache eviction once per session
     evictStaleCacheEntries();
-  }, []);
+
+    // Check for existing failed items on mount if online
+    if (!isOffline) {
+      getFailedQueueItems().then((items) => {
+        if (items && items.length > 0) {
+          setFailedItems(items);
+          setShowFailedModal(true);
+        }
+      });
+    }
+  }, [isOffline]);
 
   return (
     <ErrorBoundary
@@ -89,6 +107,23 @@ function App() {
               isOffline={isOffline}
               showToast={showNetworkToast}
               onDismissToast={() => setShowNetworkToast(false)}
+            />
+
+            {/* Failed Sync Modal */}
+            <FailedSyncModal
+              isOpen={showFailedModal}
+              onClose={() => setShowFailedModal(false)}
+              failedItems={failedItems}
+              onRetry={async () => {
+                await retryFailedItems();
+                processSyncQueue(apiClient).then((summary) => {
+                  if (summary && summary.failed > 0) {
+                    setFailedItems(summary.failedItems);
+                    setShowFailedModal(true);
+                  }
+                });
+              }}
+              onDiscard={clearFailedItems}
             />
 
             {/* PWA Install Prompt */}
