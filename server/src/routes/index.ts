@@ -9,8 +9,8 @@ import userRoutes from "./user.routes";
 
 const router = Router();
 
-// Uptime monitor ping route to prevent Render cold-starts
-router.get("/ping", (req, res) => {
+// Uptime monitor health endpoint to prevent Render cold-starts
+router.get("/health", (req, res) => {
   res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
 });
 

@@ -14,10 +14,19 @@ import NotFoundPage from "./components/layout/NotFoundPage";
 
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider } from "./contexts/AuthContext";
-import { processSyncQueue, evictStaleCacheEntries, resetStuckQueueItems, getFailedQueueItems, retryFailedItems, clearFailedItems, processRefreshQueue } from "./services/offlineSync";
+import {
+  processSyncQueue,
+  evictStaleCacheEntries,
+  resetStuckQueueItems,
+  getFailedQueueItems,
+  retryFailedItems,
+  clearFailedItems,
+  processRefreshQueue,
+} from "./services/offlineSync";
 import type { QueuedRequest } from "./services/offlineSync";
 import apiClient from "./services/apiClient";
 import FailedSyncModal from "./components/shared/FailedSyncModal";
+import { Analytics } from "@vercel/analytics/react";
 
 function App() {
   const isOffline = useOfflineStatus();
@@ -130,6 +139,9 @@ function App() {
 
             {/* PWA Install Prompt */}
             <InstallPrompt />
+
+            {/* Vercel Analytics */}
+            <Analytics />
           </div>
         </AuthProvider>
       </ThemeProvider>
