@@ -1,6 +1,6 @@
-import { ReportData } from '../services/pdfExport';
+import type { ReportData } from '../services/pdfExport';
 
-self.onmessage = async (e: MessageEvent<ReportData>) => {
+self.onmessage = async (_e: MessageEvent<ReportData>) => {
   try {
     // If we try to use html2canvas here, it will fail because there is no document
     // We post a failure so the main thread handles it gracefully as requested.

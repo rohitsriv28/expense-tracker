@@ -14,7 +14,8 @@ import NotFoundPage from "./components/layout/NotFoundPage";
 
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider } from "./contexts/AuthContext";
-import { processSyncQueue, evictStaleCacheEntries, resetStuckQueueItems, getFailedQueueItems, retryFailedItems, clearFailedItems, QueuedRequest, processRefreshQueue } from "./services/offlineSync";
+import { processSyncQueue, evictStaleCacheEntries, resetStuckQueueItems, getFailedQueueItems, retryFailedItems, clearFailedItems, processRefreshQueue } from "./services/offlineSync";
+import type { QueuedRequest } from "./services/offlineSync";
 import apiClient from "./services/apiClient";
 import FailedSyncModal from "./components/shared/FailedSyncModal";
 

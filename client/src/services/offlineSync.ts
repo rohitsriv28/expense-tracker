@@ -362,7 +362,7 @@ export async function deleteItemFromCache(urlPrefix: string, id: string): Promis
     const entry: any = await cacheStore.getItem(k);
     if (entry && typeof entry === 'object' && 'data' in entry) {
       if (Array.isArray(entry.data)) {
-        entry.data = entry.data.filter((item) => item._id !== id);
+        entry.data = entry.data.filter((item: any) => item._id !== id);
         entry.stale = true;
         await cacheStore.setItem(k, entry);
       } else if (entry.data && Array.isArray(entry.data.data)) {

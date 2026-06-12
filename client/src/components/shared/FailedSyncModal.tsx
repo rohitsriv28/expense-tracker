@@ -1,6 +1,5 @@
-import React from 'react';
 import { X, RefreshCcw, Trash2, AlertTriangle } from 'lucide-react';
-import { QueuedRequest } from '../../services/offlineSync';
+import type { QueuedRequest } from '../../services/offlineSync';
 
 export interface FailedSyncModalProps {
   isOpen: boolean;
