@@ -12,6 +12,7 @@ export interface GroupedTransaction {
   icon?: string;
   color: string;
   date: Date;
+  editCount?: number;
 }
 
 interface GroupedTransactionListProps {
@@ -114,6 +115,9 @@ const TransactionRow = memo(function TransactionRow({
             style={{ color: "var(--text-tertiary)" }}
           >
             {transaction.categoryName} · {timeLabel(transaction.date)}
+            {transaction.editCount && transaction.editCount > 0 ? (
+              <span className="italic ml-1 opacity-70">(edited)</span>
+            ) : null}
           </span>
         </span>
         <span

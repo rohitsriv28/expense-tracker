@@ -50,7 +50,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      await pushFrequencyMapToServer();
+      await Promise.race([
+        pushFrequencyMapToServer(),
+        new Promise((resolve) => setTimeout(resolve, 3000))
+      ]);
       await apiClient.post("/auth/logout");
     } finally {
       setAccessToken(null);
