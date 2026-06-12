@@ -135,6 +135,11 @@ npm run dev
 4. Open the app
    Visit `http://localhost:5173` in your browser.
 
+### Production Deployment & Uptime
+
+When deploying the backend to free-tier hosting services (like Render), the instance may sleep after 15 minutes of inactivity. To prevent cold-start delays, configure a free uptime monitor like `cron-job.org` to send a GET request to your `.../api/health` endpoint every 14 minutes (using the cron expression `*/14 * * * *`). This keeps the backend awake and ensures the application remains instantly responsive.
+
+
 ## Scripts
 
 You can run these scripts from within the respective `client` or `server` directories.

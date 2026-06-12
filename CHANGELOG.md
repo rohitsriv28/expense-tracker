@@ -9,6 +9,33 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [3.0.2] - 2026-06-12
+
+A major maintenance and optimization update focusing on background processing, cache safety, component memoization, and production analytics.
+
+### Added
+
+- **PDF Web Worker:** Offloaded the heavy HTML-to-PDF rendering engine to a dedicated background Web Worker, preventing main-thread freezing and improving application responsiveness during large exports.
+- **Web Analytics:** Integrated Vercel Web Analytics to track production frontend usage and page views.
+- **Uptime Health Endpoint:** Added a standard `/api/health` endpoint designed to be pinged by external cron services (e.g., cron-job.org via `*/14 * * * *`) to prevent Render free-tier backend cold starts.
+- **Failed Sync UI:** Introduced `FailedSyncModal` to explicitly notify users if any offline queue mutations permanently fail (HTTP 400), allowing them to retry or discard corrupted transactions.
+- **Distributed Cron Locks:** Implemented a MongoDB-backed distributed lock utilizing atomic `$lt` checks on a `_cron_locks` collection to prevent race conditions during the nightly data retention cron job across multiple scaling instances.
+
+### Changed
+
+- **Auth Memoization:** Wrapped all `AuthContext` provider values and functions with `useMemo` and `useCallback` to drastically reduce unnecessary cascading component re-renders.
+- **Rate Limiting:** Enforced a strict 10 requests per 15 minutes rate limit on all authentication routes (`/auth/google`, `/auth/refresh`, `/auth/logout`) via `express-rate-limit`.
+
+### Fixed
+
+- **Optimistic UI Cache Drift:** Fixed a pagination cache bug by injecting optimistic `stale` flags into local `localforage` GET caches when a mutation occurs offline, triggering a seamless background refresh when internet returns.
+- **PDF Memory Leak:** Resolved a critical DOM memory leak by ensuring the temporary hidden PDF container is forcefully destroyed within a `finally` block after generation.
+- **Logout Race Condition:** Placed the `pushFrequencyMapToServer()` synchronization call behind a 3-second `Promise.race` timeout during the logout flow so a slow server doesn't trap the user trying to sign out.
+- **TypeScript Strictness:** Resolved build errors by properly isolating types with `import type` due to `verbatimModuleSyntax` rules, and clearing out dead code.
+- **Environment Parity:** Configured `cross-env NODE_ENV=production` in the server's start script to guarantee correct runtime initialization.
+
+---
+
 ## [3.0.1] - 2026-06-11
 
 A crucial production-readiness patch addressing offline sync race conditions, memory optimization, caching, and server stability.
