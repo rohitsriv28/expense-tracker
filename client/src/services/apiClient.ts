@@ -1,6 +1,6 @@
 import axios from "axios";
 import type { AxiosInstance, InternalAxiosRequestConfig } from "axios";
-import { saveToCache, getFromCache, addToQueue, invalidateCacheByPrefix } from "./offlineSync";
+import { saveToCache, getFromCache, addToQueue, invalidateCacheByPrefix, injectOptimisticItemIntoCache, addToRefreshQueue, updateItemInCache, deleteItemFromCache } from "./offlineSync";
 
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
@@ -69,11 +69,11 @@ apiClient.interceptors.response.use(
       const cacheKey = url + JSON.stringify(original.params || {});
 
       if (method === "get") {
-        const cachedData = await getFromCache(cacheKey);
-        if (cachedData) {
+        const cachedResult = await getFromCache(cacheKey);
+        if (cachedResult) {
           // Mock successful response from cache
           return Promise.resolve({
-            data: { success: true, data: cachedData },
+            data: { success: true, data: cachedResult.data, isStale: cachedResult.isStale },
           });
         }
       } else if (["post", "put", "delete"].includes(method || "")) {
@@ -90,12 +90,24 @@ apiClient.interceptors.response.use(
           timestamp: Date.now(),
         });
 
+        const prefix = "/" + url.split("/").filter(Boolean)[0];
+        await invalidateCacheByPrefix(prefix, "stale");
+        await addToRefreshQueue(prefix);
+
         // Mock successful response for optimistic UI update
         const mockData = parsedData || {};
         if (method === "post") {
           mockData._id = tempId;
           mockData.createdAt = new Date().toISOString();
+          await injectOptimisticItemIntoCache(prefix, mockData);
+        } else if (method === "put") {
+          const id = url.split("/").pop();
+          if (id) await updateItemInCache(prefix, id, mockData);
+        } else if (method === "delete") {
+          const id = url.split("/").pop();
+          if (id) await deleteItemFromCache(prefix, id);
         }
+
         return Promise.resolve({ data: { success: true, data: mockData } });
       }
     }

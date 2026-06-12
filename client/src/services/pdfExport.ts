@@ -13,7 +13,53 @@ export interface ReportData {
   categories: any[];
 }
 
+export let isGenerating = false;
+
 export async function generatePDFReport(data: ReportData): Promise<void> {
+  isGenerating = true;
+  try {
+    if (window.Worker) {
+      try {
+        await new Promise<void>((resolve, reject) => {
+          const worker = new Worker(
+            new URL('../workers/pdfWorker.ts', import.meta.url),
+            { type: 'module' }
+          );
+          worker.onmessage = (e) => {
+            if (e.data.success) {
+              const blob = new Blob([e.data.pdfBytes], { type: 'application/pdf' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `cashflow-report-${data.period.label.toLowerCase().replace(/\s+/g, "-")}.pdf`;
+              a.click();
+              URL.revokeObjectURL(url);
+              worker.terminate();
+              resolve();
+            } else {
+              worker.terminate();
+              generatePDFReportSync(data).then(resolve).catch(reject);
+            }
+          };
+          worker.onerror = () => {
+            worker.terminate();
+            generatePDFReportSync(data).then(resolve).catch(reject);
+          };
+          worker.postMessage(data);
+        });
+        return;
+      } catch (err) {
+        await generatePDFReportSync(data);
+      }
+    } else {
+      await generatePDFReportSync(data);
+    }
+  } finally {
+    isGenerating = false;
+  }
+}
+
+async function generatePDFReportSync(data: ReportData): Promise<void> {
   return new Promise((resolve, reject) => {
     try {
       const container = document.createElement('div');

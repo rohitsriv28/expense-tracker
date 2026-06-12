@@ -12,8 +12,14 @@ const MONGODB_URI =
 
 mongoose
   .connect(MONGODB_URI)
-  .then(() => {
+  .then(async () => {
     logger.info("Connected to MongoDB");
+    try {
+      await mongoose.connection.db?.collection("_cron_locks").createIndex(
+        { lockedAt: 1 },
+        { expireAfterSeconds: 7200, background: true }
+      );
+    } catch (e) {}
     startDataRetentionJob();
     const server = app.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT}`);

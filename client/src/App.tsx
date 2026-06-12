@@ -14,7 +14,7 @@ import NotFoundPage from "./components/layout/NotFoundPage";
 
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider } from "./contexts/AuthContext";
-import { processSyncQueue, evictStaleCacheEntries, resetStuckQueueItems, getFailedQueueItems, retryFailedItems, clearFailedItems, QueuedRequest } from "./services/offlineSync";
+import { processSyncQueue, evictStaleCacheEntries, resetStuckQueueItems, getFailedQueueItems, retryFailedItems, clearFailedItems, QueuedRequest, processRefreshQueue } from "./services/offlineSync";
 import apiClient from "./services/apiClient";
 import FailedSyncModal from "./components/shared/FailedSyncModal";
 
@@ -33,7 +33,6 @@ function App() {
       setShowNetworkToast(true);
       setWasOffline(isOffline);
 
-      // If we just came back online, process the offline queue!
       if (!isOffline && wasOffline) {
         resetStuckQueueItems().then(() => {
           processSyncQueue(apiClient).then((summary) => {
@@ -41,6 +40,8 @@ function App() {
               setFailedItems(summary.failedItems);
               setShowFailedModal(true);
             }
+            // After sync queue, refresh stale cached GETs
+            processRefreshQueue((url) => apiClient.get(url));
           });
         });
       }

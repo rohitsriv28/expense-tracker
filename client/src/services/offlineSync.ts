@@ -34,7 +34,8 @@ export const saveToCache = async (url: string, data: any) => {
     const envelope = {
       data,
       cachedAt: Date.now(),
-      lastAccessed: Date.now()
+      lastAccessed: Date.now(),
+      stale: false
     };
     await cacheStore.setItem(url, envelope);
   } catch (err) {
@@ -50,10 +51,10 @@ export const getFromCache = async (url: string) => {
     if (typeof entry === 'object' && 'data' in entry) {
       entry.lastAccessed = Date.now();
       await cacheStore.setItem(url, entry);
-      return entry.data;
+      return { data: entry.data, isStale: !!entry.stale };
     } else {
       await saveToCache(url, entry);
-      return entry;
+      return { data: entry, isStale: false };
     }
   } catch (err) {
     console.error("Failed to get from cache", err);
@@ -107,10 +108,24 @@ export async function evictStaleCacheEntries(): Promise<void> {
   }
 }
 
-export async function invalidateCacheByPrefix(prefix: string): Promise<void> {
+export async function markCacheEntryStale(key: string): Promise<void> {
+  const entry: any = await cacheStore.getItem(key);
+  if (entry && typeof entry === 'object' && 'data' in entry) {
+    entry.stale = true;
+    await cacheStore.setItem(key, entry);
+  }
+}
+
+export async function invalidateCacheByPrefix(prefix: string, mode: 'delete' | 'stale' = 'delete'): Promise<void> {
   const keys = await cacheStore.keys();
   const matching = keys.filter((k) => k.startsWith(prefix));
-  await Promise.all(matching.map((k) => cacheStore.removeItem(k)));
+  await Promise.all(matching.map(async (k) => {
+    if (mode === 'stale') {
+      await markCacheEntryStale(k);
+    } else {
+      await cacheStore.removeItem(k);
+    }
+  }));
 }
 
 export const addToQueue = async (request: QueuedRequest) => {
@@ -271,4 +286,90 @@ export async function retryFailedItems(): Promise<void> {
 
 export async function clearFailedItems(): Promise<void> {
   await failedStore.clear();
+}
+
+export const refreshStore = localforage.createInstance({
+  name: "CashFlow",
+  storeName: "refresh_queue",
+});
+
+export async function addToRefreshQueue(url: string): Promise<void> {
+  await refreshStore.setItem(url, { timestamp: Date.now() });
+}
+
+export async function processRefreshQueue(fetchFn: (url: string) => Promise<any>): Promise<void> {
+  const keys = await refreshStore.keys();
+  for (const url of keys) {
+    try {
+      await fetchFn(url);
+      await refreshStore.removeItem(url);
+    } catch (err) {
+      console.error(`Failed to refresh url: ${url}`, err);
+    }
+  }
+}
+
+export async function injectOptimisticItemIntoCache(
+  urlPrefix: string,
+  item: Record<string, unknown>
+): Promise<void> {
+  const keys = await cacheStore.keys();
+  const matching = keys.filter((k) => k.startsWith(urlPrefix));
+  for (const k of matching) {
+    const entry: any = await cacheStore.getItem(k);
+    if (entry && typeof entry === 'object' && 'data' in entry) {
+      if (Array.isArray(entry.data)) {
+        entry.data = [item, ...entry.data];
+        entry.stale = true;
+        await cacheStore.setItem(k, entry);
+      } else if (entry.data && Array.isArray(entry.data.data)) {
+        entry.data.data = [item, ...entry.data.data];
+        entry.stale = true;
+        await cacheStore.setItem(k, entry);
+      }
+    }
+  }
+}
+
+export async function updateItemInCache(urlPrefix: string, id: string, updates: Record<string, unknown>): Promise<void> {
+  const keys = await cacheStore.keys();
+  const matching = keys.filter((k) => k.startsWith(urlPrefix));
+  for (const k of matching) {
+    const entry: any = await cacheStore.getItem(k);
+    if (entry && typeof entry === 'object' && 'data' in entry) {
+      const updateArray = (arr: any[]) => {
+        const idx = arr.findIndex((item) => item._id === id);
+        if (idx !== -1) arr[idx] = { ...arr[idx], ...updates };
+      };
+      
+      if (Array.isArray(entry.data)) {
+        updateArray(entry.data);
+        entry.stale = true;
+        await cacheStore.setItem(k, entry);
+      } else if (entry.data && Array.isArray(entry.data.data)) {
+        updateArray(entry.data.data);
+        entry.stale = true;
+        await cacheStore.setItem(k, entry);
+      }
+    }
+  }
+}
+
+export async function deleteItemFromCache(urlPrefix: string, id: string): Promise<void> {
+  const keys = await cacheStore.keys();
+  const matching = keys.filter((k) => k.startsWith(urlPrefix));
+  for (const k of matching) {
+    const entry: any = await cacheStore.getItem(k);
+    if (entry && typeof entry === 'object' && 'data' in entry) {
+      if (Array.isArray(entry.data)) {
+        entry.data = entry.data.filter((item) => item._id !== id);
+        entry.stale = true;
+        await cacheStore.setItem(k, entry);
+      } else if (entry.data && Array.isArray(entry.data.data)) {
+        entry.data.data = entry.data.data.filter((item: any) => item._id !== id);
+        entry.stale = true;
+        await cacheStore.setItem(k, entry);
+      }
+    }
+  }
 }
