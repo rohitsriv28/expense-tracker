@@ -31,6 +31,7 @@ import ExpenseFilters, {
 import SkeletonCard from "../components/ui/SkeletonCard";
 import SkeletonChart from "../components/ui/SkeletonChart";
 import SkeletonList from "../components/ui/SkeletonList";
+import { useAlert } from "../contexts/AlertContext";
 
 type Tab = "dashboard" | "expenses" | "income" | "budgets" | "reports";
 type Sheet = "expense" | "income" | null;
@@ -63,6 +64,7 @@ export default function Dashboard() {
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
+  const { showAlert } = useAlert();
 
   const showToast = useCallback(
     (message: string, tone: ToastState["tone"] = "success") => {
@@ -187,6 +189,14 @@ export default function Dashboard() {
           }}
           onViewBudgets={() => setActiveTab("budgets")}
           onTransactionClick={(transaction) => {
+            if (transaction.id.startsWith("temp-")) {
+              showAlert({
+                title: "Offline Restricted",
+                message: "You can edit this item once you are back online and it has synced.",
+                icon: "warning",
+              });
+              return;
+            }
             if (transaction.type !== "expense") return;
             const expense = expenses.find((item) => item._id === transaction.id);
             if (expense) openExpenseSheet(expense);
