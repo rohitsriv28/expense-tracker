@@ -143,22 +143,24 @@ export default function BudgetManager({
           message: (
             <>
               You've set your total spending envelope of{" "}
-              <strong>₹{promptBudget.amount.toLocaleString()}</strong> for {promptBudget.name}.
+              <strong>₹{promptBudget.amount.toLocaleString()}</strong> for{" "}
+              {promptBudget.name}.
               <br />
               <br />
-              Would you like to allocate portions of this budget to specific categories now?
+              Would you like to allocate portions of this budget to specific
+              categories now?
             </>
           ),
           primaryAction: {
             label: "Allocate now",
             onClick: () => {
               setAllocationSheetBudgetId(promptBudget._id!);
-            }
+            },
           },
           secondaryAction: {
             label: "Do this later",
-            onClick: () => {}
-          }
+            onClick: () => {},
+          },
         });
       }
     }
