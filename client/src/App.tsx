@@ -38,25 +38,6 @@ function App() {
   const [showFailedModal, setShowFailedModal] = useState(false);
   const [failedItems, setFailedItems] = useState<QueuedRequest[]>([]);
 
-  // Trigger sync on initial app load if online
-  useEffect(() => {
-    if (!isOffline) {
-      setTimeout(() => {
-        resetStuckQueueItems().then(() => {
-          processSyncQueue(apiClient).then((summary) => {
-            if (summary && summary.failed > 0) {
-              setFailedItems(summary.failedItems);
-              setShowFailedModal(true);
-            }
-            processRefreshQueue((url) => apiClient.get(url)).finally(() => {
-              window.dispatchEvent(new CustomEvent("offline-sync-complete"));
-            });
-          });
-        });
-      }, 1000);
-    }
-  }, []); // Run only once on mount
-
   useEffect(() => {
     // Only show toast when status actually changes from previous state
     if (isOffline !== wasOffline) {
@@ -72,9 +53,7 @@ function App() {
                 setShowFailedModal(true);
               }
               // After sync queue, refresh stale cached GETs
-              processRefreshQueue((url) => apiClient.get(url)).finally(() => {
-                window.dispatchEvent(new CustomEvent("offline-sync-complete"));
-              });
+              processRefreshQueue((url) => apiClient.get(url));
             });
           });
         }, 3000);

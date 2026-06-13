@@ -9,7 +9,6 @@ import {
   addToRefreshQueue,
   updateItemInCache,
   deleteItemFromCache,
-  reapplyPendingMutationsToCache,
 } from "./offlineSync";
 
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -33,17 +32,6 @@ apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
   }
-
-  // Natively intercept online mutations against offline temp- IDs and force them into the offline queue
-  const isSyncQueue = config.headers?.["x-is-sync-queue"];
-  if (!isSyncQueue && config.url?.includes("/temp-") && ["put", "delete"].includes(config.method?.toLowerCase() || "")) {
-    const error: any = new Error("Network Error");
-    error.code = "ERR_NETWORK";
-    error.config = config;
-    error.request = {};
-    return Promise.reject(error);
-  }
-
   return config;
 });
 
@@ -70,7 +58,6 @@ apiClient.interceptors.response.use(
         (response.config.url || "") +
         JSON.stringify(response.config.params || {});
       await saveToCache(cacheKey, response.data.data);
-      await reapplyPendingMutationsToCache(response.config.url!);
     }
 
     if (
@@ -89,13 +76,7 @@ apiClient.interceptors.response.use(
     const original = error.config;
 
     // Handle offline scenario (ERR_NETWORK usually means no internet connection when failing to fetch)
-    if (!navigator.onLine || error.code === "ERR_NETWORK") {
-      // If this is a background sync attempt, do NOT duplicate it. Let it fail back to the sync manager.
-      const isSyncQueue = original.headers?.["x-is-sync-queue"];
-      if (isSyncQueue) {
-        return Promise.reject(error);
-      }
-
+    if (!error.response && error.code === "ERR_NETWORK") {
       const method = original.method?.toLowerCase();
       const url = original.url || "";
       const cacheKey = url + JSON.stringify(original.params || {});
