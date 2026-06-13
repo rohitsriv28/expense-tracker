@@ -64,7 +64,7 @@ export default function AllocationSheet({
       onSaved?.("Allocations saved.");
       onClose();
     } catch {
-      onSaved?.("Failed to save allocations.");
+      onSaved?.("Unable to save allocations. Please try again.");
     } finally {
       setIsSaving(false);
     }

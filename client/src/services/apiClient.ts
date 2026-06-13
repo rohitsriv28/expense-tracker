@@ -32,6 +32,16 @@ apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
   }
+
+  // Natively intercept online mutations against offline temp- IDs and force them into the offline queue
+  if (config.url?.includes("/temp-") && ["put", "delete"].includes(config.method?.toLowerCase() || "")) {
+    const error: any = new Error("Network Error");
+    error.code = "ERR_NETWORK";
+    error.config = config;
+    error.request = {};
+    return Promise.reject(error);
+  }
+
   return config;
 });
 
@@ -164,7 +174,7 @@ apiClient.interceptors.response.use(
         processQueue(refreshError, null);
         setAccessToken(null);
         window.location.href = "/login";
-        return Promise.reject(refreshError);
+        return Promise.reject(new Error("Your session has expired. Please sign in again."));
       } finally {
         isRefreshing = false;
       }

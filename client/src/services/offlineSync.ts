@@ -260,8 +260,6 @@ export const processSyncQueue = async (apiClient: AxiosInstance): Promise<{ sync
     }
   }
 
-  // Notify UI that sync is complete
-  window.dispatchEvent(new CustomEvent("offline-sync-complete"));
   await pushFrequencyMapToServer();
 
   return { synced, failed: failedItems.length, failedItems };

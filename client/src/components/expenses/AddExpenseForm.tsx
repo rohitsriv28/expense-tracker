@@ -178,8 +178,9 @@ export default function AddExpenseForm({
           message: error.response?.data?.message || "Maximum edit limit (3) reached for this expense.",
           icon: "error",
         });
+        onClose?.();
       } else {
-        setErrors({ submit: error.response?.data?.message || "Failed to save expense. Please try again." });
+        setErrors({ submit: "Unable to save changes. Please try again." });
       }
     } finally {
       setIsSaving(false);
@@ -194,7 +195,7 @@ export default function AddExpenseForm({
       onSaved?.("Expense deleted.");
       onClose?.();
     } catch {
-      setErrors({ submit: "Failed to delete expense. Please try again." });
+      setErrors({ submit: "Unable to delete expense. Please try again." });
     } finally {
       setIsSaving(false);
     }

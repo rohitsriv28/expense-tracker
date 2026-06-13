@@ -53,7 +53,9 @@ function App() {
                 setShowFailedModal(true);
               }
               // After sync queue, refresh stale cached GETs
-              processRefreshQueue((url) => apiClient.get(url));
+              processRefreshQueue((url) => apiClient.get(url)).finally(() => {
+                window.dispatchEvent(new CustomEvent("offline-sync-complete"));
+              });
             });
           });
         }, 3000);

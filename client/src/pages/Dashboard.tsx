@@ -103,7 +103,16 @@ export default function Dashboard() {
     const unsubscribe = subscribeToBroadcast(() => {
       fetchData();
     });
-    return unsubscribe;
+
+    const handleOfflineSync = () => {
+      fetchData();
+    };
+    window.addEventListener("offline-sync-complete", handleOfflineSync);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener("offline-sync-complete", handleOfflineSync);
+    };
   }, [user, fetchData]);
 
   const handleFilterChange = useCallback((nextFilters: ExpenseFilterValue) => {

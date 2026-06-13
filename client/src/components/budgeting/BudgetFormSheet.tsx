@@ -44,7 +44,7 @@ export default function BudgetFormSheet({
       onSaved?.("Monthly budget created.", budgetId);
       onClose();
     } catch {
-      onSaved?.("Failed to create budget.");
+      onSaved?.("Unable to create budget. Please try again.");
     } finally {
       setIsSaving(false);
     }

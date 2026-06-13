@@ -115,7 +115,7 @@ export default function AddIncomeForm({
       onSaved?.("Income logged.");
       onClose?.();
     } catch {
-      setErrors({ submit: "Failed to save income. Please try again." });
+      setErrors({ submit: "Unable to save changes. Please try again." });
     } finally {
       setIsSaving(false);
     }

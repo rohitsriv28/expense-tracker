@@ -90,7 +90,7 @@ export default function CategoryManager({
       );
     } catch (err) {
       console.error("Error adding category:", err);
-      setError((err as Error).message);
+      setError("Unable to create category. Please try again.");
     } finally {
       setIsAdding(false);
     }
