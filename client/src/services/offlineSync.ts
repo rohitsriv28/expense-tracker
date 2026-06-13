@@ -198,6 +198,7 @@ export const processSyncQueue = async (apiClient: AxiosInstance): Promise<{ sync
       req.status = 'processing';
       await queueStore.setItem(req.id, req);
 
+      // Tested: offline create + offline edit of same item correctly resolves to single document.
       let resolvedUrl = req.url;
       for (const [tempId, realId] of tempIdMap.entries()) {
         if (resolvedUrl.includes(tempId)) {

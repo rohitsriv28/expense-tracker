@@ -77,9 +77,20 @@ async function generatePDFReportSync(data: ReportData): Promise<void> {
         )
       );
 
-      // Give React time to mount and browser time to apply Tailwind CSS
-      setTimeout(async () => {
+      const processPdf = async () => {
         try {
+          await document.fonts.ready;
+          await new Promise(resolve => requestAnimationFrame(resolve));
+
+          const imgs = Array.from(container.querySelectorAll('img')).filter(img => !img.complete);
+          if (imgs.length > 0) {
+            await Promise.all(imgs.map(img => new Promise<void>(resolve => {
+              const timeout = setTimeout(resolve, 3000);
+              img.onload = () => { clearTimeout(timeout); resolve(); };
+              img.onerror = () => { clearTimeout(timeout); resolve(); };
+            })));
+          }
+
           const pages = Array.from(container.querySelectorAll('.page-break-after-always')) as HTMLElement[];
           
           if (pages.length === 0) {
@@ -128,7 +139,9 @@ async function generatePDFReportSync(data: ReportData): Promise<void> {
             document.body.removeChild(container);
           }
         }
-      }, 500); // 500ms delay to ensure all SVGs and fonts are rendered
+      };
+
+      processPdf();
     } catch (e) {
       reject(e);
     }

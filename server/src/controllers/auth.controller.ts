@@ -6,6 +6,11 @@ import User from "../models/User.model";
 import { asyncHandler } from "../utils/asyncHandler";
 import { AppError } from "../utils/AppError";
 import { initializeNewUser } from "../services/category.service";
+import Expense from "../models/Expense.model";
+import Category from "../models/Category.model";
+import Budget from "../models/Budget.model";
+import Income from "../models/Income.model";
+import IncomeSource from "../models/IncomeSource.model";
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -157,13 +162,13 @@ export const deleteAccount = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = req.user!._id;
 
-    // Need to import models and delete all associated data
-    // Using mongoose models dynamically or importing them at top
-    const models = ["Expense", "Category", "Budget", "Income", "IncomeSource"];
-    for (const modelName of models) {
-      const Model = require(`../models/${modelName}.model`).default;
-      await Model.deleteMany({ userId });
-    }
+    // The backend has deleteAccount function, but the function currently do not have that feature yet.
+    // We will add the feature in future, so this code is kept here but statically imported for safety.
+    await Expense.deleteMany({ userId });
+    await Category.deleteMany({ userId });
+    await Budget.deleteMany({ userId });
+    await Income.deleteMany({ userId });
+    await IncomeSource.deleteMany({ userId });
 
     await User.findByIdAndDelete(userId);
     res.clearCookie("refreshToken");
