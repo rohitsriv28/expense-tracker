@@ -372,3 +372,33 @@ export async function deleteItemFromCache(urlPrefix: string, id: string): Promis
     }
   }
 }
+
+export async function reapplyPendingMutationsToCache(url: string): Promise<void> {
+  try {
+    const queue = await getQueue();
+    const baseUrl = url.split('?')[0];
+    
+    for (const req of queue) {
+      if (!req.url.includes(baseUrl)) continue;
+      
+      const method = req.method.toLowerCase();
+      let optimisticData = req.data && typeof req.data === 'object' ? { ...req.data } : {};
+      
+      const urlParts = req.url.split('/');
+      const targetId = urlParts[urlParts.length - 1];
+
+      if (method === 'post') {
+        optimisticData._id = req.id;
+        await injectOptimisticItemIntoCache(baseUrl, optimisticData);
+      } else if (method === 'put') {
+        const updateId = optimisticData._id || targetId;
+        await updateItemInCache(baseUrl, updateId, optimisticData);
+      } else if (method === 'delete') {
+        await deleteItemFromCache(baseUrl, targetId);
+      }
+    }
+  } catch (err) {
+    console.error("Failed to reapply pending mutations to cache", err);
+  }
+}
+

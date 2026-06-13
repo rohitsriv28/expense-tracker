@@ -9,6 +9,7 @@ import {
   addToRefreshQueue,
   updateItemInCache,
   deleteItemFromCache,
+  reapplyPendingMutationsToCache,
 } from "./offlineSync";
 
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
@@ -68,6 +69,7 @@ apiClient.interceptors.response.use(
         (response.config.url || "") +
         JSON.stringify(response.config.params || {});
       await saveToCache(cacheKey, response.data.data);
+      await reapplyPendingMutationsToCache(response.config.url!);
     }
 
     if (
