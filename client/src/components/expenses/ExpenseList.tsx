@@ -10,6 +10,7 @@ import type { Category } from "../../types";
 import { deleteExpense } from "../../services/expenseService";
 import { expenseDate, resolveExpenseVisuals } from "../../utils/dataMappers";
 import { formatCurrency } from "../../utils/formatters";
+import { useAlert } from "../../contexts/AlertContext";
 import GroupedTransactionList, {
   type GroupedTransaction,
 } from "./GroupedTransactionList";
@@ -114,6 +115,7 @@ export default function ExpenseList({
   onDeleted,
   searchQuery = "",
 }: ExpenseListProps) {
+  const { showAlert } = useAlert();
   const [sortMode, setSortMode] = useState<SortMode>("newest");
   const [page, setPage] = useState(1);
 
@@ -178,6 +180,14 @@ export default function ExpenseList({
   );
 
   const handleDelete = async (transaction: GroupedTransaction) => {
+    if (transaction.id.startsWith("temp-")) {
+      showAlert({
+        title: "Offline Restricted",
+        message: "You can delete this item once you are back online and it has synced.",
+        icon: "warning",
+      });
+      return;
+    }
     const expense = expenses.find((item) => item._id === transaction.id);
     if (!expense?._id) return;
     try {
@@ -226,6 +236,14 @@ export default function ExpenseList({
         emptyTitle="No expenses found"
         emptyDescription="Try clearing filters or adding a new expense."
         onTransactionClick={(transaction) => {
+          if (transaction.id.startsWith("temp-")) {
+            showAlert({
+              title: "Offline Restricted",
+              message: "You can edit this item once you are back online and it has synced.",
+              icon: "warning",
+            });
+            return;
+          }
           const expense = expenses.find((item) => item._id === transaction.id);
           if (expense) onEditExpense?.(expense);
         }}

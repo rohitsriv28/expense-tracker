@@ -14,6 +14,7 @@ import NotFoundPage from "./components/layout/NotFoundPage";
 
 import { ThemeProvider } from "./contexts/ThemeContext";
 import { AuthProvider } from "./contexts/AuthContext";
+import { AlertProvider } from "./contexts/AlertContext";
 import {
   processSyncQueue,
   evictStaleCacheEntries,
@@ -97,54 +98,56 @@ function App() {
     >
       <ThemeProvider>
         <AuthProvider>
-          <div className="min-h-[100dvh] bg-gray-100 dark:bg-slate-900 relative transition-colors duration-300">
-            <BrowserRouter>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/privacy" element={<PrivacyPolicy />} />
-                <Route path="/terms" element={<TermsOfService />} />
-                <Route
-                  path="/"
-                  element={
-                    <ProtectedRoute>
-                      <Dashboard />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="*" element={<NotFoundPage />} />
-              </Routes>
-            </BrowserRouter>
+          <AlertProvider>
+            <div className="min-h-[100dvh] bg-gray-100 dark:bg-slate-900 relative transition-colors duration-300">
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="/terms" element={<TermsOfService />} />
+                  <Route
+                    path="/"
+                    element={
+                      <ProtectedRoute>
+                        <Dashboard />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route path="*" element={<NotFoundPage />} />
+                </Routes>
+              </BrowserRouter>
 
-            {/* Network Status Manager */}
-            <NetworkStatusManager
-              isOffline={isOffline}
-              showToast={showNetworkToast}
-              onDismissToast={() => setShowNetworkToast(false)}
-            />
+              {/* Network Status Manager */}
+              <NetworkStatusManager
+                isOffline={isOffline}
+                showToast={showNetworkToast}
+                onDismissToast={() => setShowNetworkToast(false)}
+              />
 
-            {/* Failed Sync Modal */}
-            <FailedSyncModal
-              isOpen={showFailedModal}
-              onClose={() => setShowFailedModal(false)}
-              failedItems={failedItems}
-              onRetry={async () => {
-                await retryFailedItems();
-                processSyncQueue(apiClient).then((summary) => {
-                  if (summary && summary.failed > 0) {
-                    setFailedItems(summary.failedItems);
-                    setShowFailedModal(true);
-                  }
-                });
-              }}
-              onDiscard={clearFailedItems}
-            />
+              {/* Failed Sync Modal */}
+              <FailedSyncModal
+                isOpen={showFailedModal}
+                onClose={() => setShowFailedModal(false)}
+                failedItems={failedItems}
+                onRetry={async () => {
+                  await retryFailedItems();
+                  processSyncQueue(apiClient).then((summary) => {
+                    if (summary && summary.failed > 0) {
+                      setFailedItems(summary.failedItems);
+                      setShowFailedModal(true);
+                    }
+                  });
+                }}
+                onDiscard={clearFailedItems}
+              />
 
-            {/* PWA Install Prompt */}
-            <InstallPrompt />
+              {/* PWA Install Prompt */}
+              <InstallPrompt />
 
-            {/* Vercel Analytics */}
-            <Analytics />
-          </div>
+              {/* Vercel Analytics */}
+              <Analytics />
+            </div>
+          </AlertProvider>
         </AuthProvider>
       </ThemeProvider>
     </ErrorBoundary>

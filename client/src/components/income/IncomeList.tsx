@@ -6,6 +6,7 @@ import { incomeDate } from "../../utils/dataMappers";
 import { formatCurrency, formatShortDate } from "../../utils/formatters";
 import { getIcon } from "../../utils/iconMap";
 import { CHART_COLORS } from "../../utils/chartColors";
+import { useAlert } from "../../contexts/AlertContext";
 
 interface IncomeListProps {
   incomes: Income[];
@@ -18,6 +19,7 @@ export default function IncomeList({
   sources = [],
   onDeleted,
 }: IncomeListProps) {
+  const { showAlert } = useAlert();
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const totalAmount = incomes.reduce((sum, income) => sum + income.amount, 0);
@@ -58,7 +60,11 @@ export default function IncomeList({
 
   const handleDelete = async (id: string) => {
     if (id.startsWith("temp-")) {
-      alert("You can delete this item once you are back online.");
+      showAlert({
+        title: "Offline Restricted",
+        message: "You can delete this item once you are back online and it has synced.",
+        icon: "warning",
+      });
       return;
     }
     try {

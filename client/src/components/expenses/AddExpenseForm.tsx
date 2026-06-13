@@ -7,6 +7,7 @@ import {
   updateExpense,
 } from "../../services/expenseService";
 import { useAuth } from "../../contexts/AuthContext";
+import { useAlert } from "../../contexts/AlertContext";
 import DatePicker from "../ui/DatePicker";
 import { cn } from "../../utils/cn";
 import {
@@ -51,6 +52,7 @@ export default function AddExpenseForm({
   onManageCategories,
 }: AddExpenseFormProps) {
   const { user } = useAuth();
+  const { showAlert } = useAlert();
   const amountRef = useRef<HTMLInputElement>(null);
   const editing = Boolean(expense?._id);
   const [amount, setAmount] = useState("");
@@ -169,8 +171,16 @@ export default function AddExpenseForm({
         onSaved?.("Expense added.");
       }
       onClose?.();
-    } catch {
-      setErrors({ submit: "Failed to save expense. Please try again." });
+    } catch (error: any) {
+      if (error.response?.status === 403) {
+        showAlert({
+          title: "Edit Limit Reached",
+          message: error.response?.data?.message || "Maximum edit limit (3) reached for this expense.",
+          icon: "error",
+        });
+      } else {
+        setErrors({ submit: error.response?.data?.message || "Failed to save expense. Please try again." });
+      }
     } finally {
       setIsSaving(false);
     }

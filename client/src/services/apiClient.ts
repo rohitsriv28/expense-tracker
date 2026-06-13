@@ -1,6 +1,15 @@
 import axios from "axios";
 import type { AxiosInstance, InternalAxiosRequestConfig } from "axios";
-import { saveToCache, getFromCache, addToQueue, invalidateCacheByPrefix, injectOptimisticItemIntoCache, addToRefreshQueue, updateItemInCache, deleteItemFromCache } from "./offlineSync";
+import {
+  saveToCache,
+  getFromCache,
+  addToQueue,
+  invalidateCacheByPrefix,
+  injectOptimisticItemIntoCache,
+  addToRefreshQueue,
+  updateItemInCache,
+  deleteItemFromCache,
+} from "./offlineSync";
 
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
 
@@ -51,7 +60,11 @@ apiClient.interceptors.response.use(
       await saveToCache(cacheKey, response.data.data);
     }
 
-    if (["post", "put", "delete"].includes(response.config.method?.toLowerCase() || "")) {
+    if (
+      ["post", "put", "delete"].includes(
+        response.config.method?.toLowerCase() || "",
+      )
+    ) {
       const url = response.config.url || "";
       const prefix = "/" + url.split("/").filter(Boolean)[0];
       await invalidateCacheByPrefix(prefix);
@@ -73,10 +86,17 @@ apiClient.interceptors.response.use(
         if (cachedResult) {
           // Mock successful response from cache
           return Promise.resolve({
-            data: { success: true, data: cachedResult.data, isStale: cachedResult.isStale },
+            data: {
+              success: true,
+              data: cachedResult.data,
+              isStale: cachedResult.isStale,
+            },
           });
         }
-      } else if (["post", "put", "delete"].includes(method || "")) {
+      } else if (
+        ["post", "put", "delete"].includes(method || "") &&
+        !url.includes("/auth")
+      ) {
         // Queue the mutation
         const tempId = `temp-${Date.now()}`;
         const parsedData = original.data ? JSON.parse(original.data) : null;

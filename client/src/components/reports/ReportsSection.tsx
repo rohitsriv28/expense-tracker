@@ -41,6 +41,7 @@ import {
   formatShortDate,
 } from "../../utils/formatters";
 import { CHART_COLORS } from "../../utils/chartColors";
+import { useAlert } from "../../contexts/AlertContext";
 
 interface ReportsSectionProps {
   expenses: Expense[];
@@ -143,6 +144,7 @@ export default function ReportsSection({
   );
   const [customEnd, setCustomEnd] = useState(new Date());
   const [isExporting, setIsExporting] = useState(false);
+  const { showAlert, hideAlert } = useAlert();
 
   const range = useMemo(
     () => rangeFor(period, anchor, customStart, customEnd),
@@ -321,6 +323,11 @@ export default function ReportsSection({
 
   const handleExport = async () => {
     setIsExporting(true);
+    showAlert({
+      title: "Generating PDF Report",
+      message: "Please wait while we render your charts and compile the document. This may take a few seconds...",
+      icon: <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--text-brand)] border-t-transparent" />,
+    });
     try {
       const { generatePDFReport } = await import("../../services/pdfExport");
       await generatePDFReport({
@@ -331,8 +338,11 @@ export default function ReportsSection({
         userName,
         categories,
       });
+    } catch (err) {
+      console.error(err);
     } finally {
       setIsExporting(false);
+      hideAlert();
     }
   };
 

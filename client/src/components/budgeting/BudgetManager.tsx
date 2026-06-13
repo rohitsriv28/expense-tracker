@@ -13,8 +13,8 @@ import type { Expense } from "../../types";
 import type { Category } from "../../types";
 import MonthlyEnvelopeCard from "./MonthlyEnvelopeCard";
 import BudgetFormSheet from "./BudgetFormSheet";
-import AllocationPromptModal from "./AllocationPromptModal";
 import AllocationSheet from "./AllocationSheet";
+import { useAlert } from "../../contexts/AlertContext";
 
 interface BudgetManagerProps {
   budgets: Budget[];
@@ -44,6 +44,7 @@ export default function BudgetManager({
   >(null);
   const [expandedBudgetId, setExpandedBudgetId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const { showAlert } = useAlert();
 
   const normalizedBudgets = useMemo(
     () => budgets.map(convertLegacyBudget),
@@ -128,6 +129,40 @@ export default function BudgetManager({
       setAllocationPromptBudgetId(newId);
     }
   };
+
+  useEffect(() => {
+    if (allocationPromptBudgetId) {
+      const promptBudget = monthlyBudgets.find(
+        (b) => b._id === allocationPromptBudgetId,
+      );
+      if (promptBudget) {
+        setAllocationPromptBudgetId(null);
+        showAlert({
+          title: "Budget Created!",
+          icon: "target",
+          message: (
+            <>
+              You've set your total spending envelope of{" "}
+              <strong>₹{promptBudget.amount.toLocaleString()}</strong> for {promptBudget.name}.
+              <br />
+              <br />
+              Would you like to allocate portions of this budget to specific categories now?
+            </>
+          ),
+          primaryAction: {
+            label: "Allocate now",
+            onClick: () => {
+              setAllocationSheetBudgetId(promptBudget._id!);
+            }
+          },
+          secondaryAction: {
+            label: "Do this later",
+            onClick: () => {}
+          }
+        });
+      }
+    }
+  }, [allocationPromptBudgetId, monthlyBudgets, showAlert]);
 
   return (
     <div className="space-y-6 animate-enter">
@@ -214,24 +249,6 @@ export default function BudgetManager({
           onClose={() => setSheetOpen(false)}
         />
       )}
-
-      {allocationPromptBudgetId &&
-        (() => {
-          const promptBudget = monthlyBudgets.find(
-            (b) => b._id === allocationPromptBudgetId,
-          );
-          if (!promptBudget) return null;
-          return (
-            <AllocationPromptModal
-              budget={promptBudget}
-              onAllocateNow={() => {
-                setAllocationPromptBudgetId(null);
-                setAllocationSheetBudgetId(promptBudget._id!);
-              }}
-              onDoLater={() => setAllocationPromptBudgetId(null)}
-            />
-          );
-        })()}
 
       {allocationSheetBudgetId &&
         (() => {
