@@ -35,7 +35,8 @@ apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   }
 
   // Natively intercept online mutations against offline temp- IDs and force them into the offline queue
-  if (config.url?.includes("/temp-") && ["put", "delete"].includes(config.method?.toLowerCase() || "")) {
+  const isSyncQueue = config.headers?.["x-is-sync-queue"];
+  if (!isSyncQueue && config.url?.includes("/temp-") && ["put", "delete"].includes(config.method?.toLowerCase() || "")) {
     const error: any = new Error("Network Error");
     error.code = "ERR_NETWORK";
     error.config = config;
@@ -88,7 +89,13 @@ apiClient.interceptors.response.use(
     const original = error.config;
 
     // Handle offline scenario (ERR_NETWORK usually means no internet connection when failing to fetch)
-    if (!error.response && error.code === "ERR_NETWORK") {
+    if (!navigator.onLine || error.code === "ERR_NETWORK") {
+      // If this is a background sync attempt, do NOT duplicate it. Let it fail back to the sync manager.
+      const isSyncQueue = original.headers?.["x-is-sync-queue"];
+      if (isSyncQueue) {
+        return Promise.reject(error);
+      }
+
       const method = original.method?.toLowerCase();
       const url = original.url || "";
       const cacheKey = url + JSON.stringify(original.params || {});

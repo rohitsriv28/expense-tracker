@@ -220,6 +220,7 @@ export const processSyncQueue = async (apiClient: AxiosInstance): Promise<{ sync
         method: req.method,
         url: resolvedUrl,
         data: resolvedData,
+        headers: { "x-is-sync-queue": "true" }
       });
 
       // If successful POST, map the temporary ID to the new real database ID
