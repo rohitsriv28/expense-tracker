@@ -44,16 +44,18 @@ function App() {
       setWasOffline(isOffline);
 
       if (!isOffline && wasOffline) {
-        resetStuckQueueItems().then(() => {
-          processSyncQueue(apiClient).then((summary) => {
-            if (summary && summary.failed > 0) {
-              setFailedItems(summary.failedItems);
-              setShowFailedModal(true);
-            }
-            // After sync queue, refresh stale cached GETs
-            processRefreshQueue((url) => apiClient.get(url));
+        setTimeout(() => {
+          resetStuckQueueItems().then(() => {
+            processSyncQueue(apiClient).then((summary) => {
+              if (summary && summary.failed > 0) {
+                setFailedItems(summary.failedItems);
+                setShowFailedModal(true);
+              }
+              // After sync queue, refresh stale cached GETs
+              processRefreshQueue((url) => apiClient.get(url));
+            });
           });
-        });
+        }, 3000);
       }
 
       // Auto-dismiss toast after 3 seconds

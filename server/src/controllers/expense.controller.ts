@@ -85,12 +85,15 @@ export const createExpense = asyncHandler(
 
 export const updateExpense = asyncHandler(
   async (req: Request, res: Response) => {
-    const expense = await Expense.findOneAndUpdate(
-      { _id: req.params.id, userId: req.user!._id },
+    const current = await Expense.findOne({ _id: req.params.id, userId: req.user!._id });
+    if (!current) throw new AppError("Expense not found", 404);
+    if (current.editCount >= 3) throw new AppError("Maximum edit limit reached (3 times).", 403);
+
+    const expense = await Expense.findByIdAndUpdate(
+      current._id,
       { ...req.body, $inc: { editCount: 1 } },
       { new: true, runValidators: true },
     );
-    if (!expense) throw new AppError("Expense not found", 404);
     res.json({ success: true, data: expense });
   },
 );

@@ -178,10 +178,6 @@ export default function ExpenseList({
   );
 
   const handleDelete = async (transaction: GroupedTransaction) => {
-    if (transaction.id.startsWith("temp-")) {
-      alert("You can delete this item once you are back online.");
-      return;
-    }
     const expense = expenses.find((item) => item._id === transaction.id);
     if (!expense?._id) return;
     try {
@@ -230,10 +226,6 @@ export default function ExpenseList({
         emptyTitle="No expenses found"
         emptyDescription="Try clearing filters or adding a new expense."
         onTransactionClick={(transaction) => {
-          if (transaction.id.startsWith("temp-")) {
-            alert("You can edit this item once you are back online.");
-            return;
-          }
           const expense = expenses.find((item) => item._id === transaction.id);
           if (expense) onEditExpense?.(expense);
         }}

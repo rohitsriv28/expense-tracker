@@ -1,5 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
+import { flushSync } from 'react-dom';
 import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
 import PdfReportTemplate from '../components/pdf-preview/PdfReportTemplate';
@@ -71,11 +72,13 @@ async function generatePDFReportSync(data: ReportData): Promise<void> {
 
       const root = createRoot(container);
       
-      root.render(
-        React.createElement('div', { id: 'pdf-export-root' }, 
-          React.createElement(PdfReportTemplate, { data })
-        )
-      );
+      flushSync(() => {
+        root.render(
+          React.createElement('div', { id: 'pdf-export-root' }, 
+            React.createElement(PdfReportTemplate, { data })
+          )
+        );
+      });
 
       const processPdf = async () => {
         try {
