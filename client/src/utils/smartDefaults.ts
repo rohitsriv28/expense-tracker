@@ -18,7 +18,7 @@ function readMap(): FrequencyMap {
 
 function evictLowFrequencyEntries(
   map: FrequencyMap,
-  maxEntries: number = 200
+  maxEntries: number = 200,
 ): FrequencyMap {
   const keys = Object.keys(map);
   if (keys.length <= maxEntries) return map;
@@ -60,9 +60,9 @@ export function recordExpense(description: string, categoryId: string): void {
   let map = readMap();
   if (!map[normalized]) map[normalized] = {};
   map[normalized][categoryId] = (map[normalized][categoryId] || 0) + 1;
-  
+
   map = evictLowFrequencyEntries(map, 200);
-  
+
   localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
 }
 
@@ -70,7 +70,7 @@ export async function pushFrequencyMapToServer(): Promise<void> {
   try {
     const map = readMap();
     if (Object.keys(map).length === 0) return;
-    
+
     await apiClient.put("/users/me/frequency-map", { frequencyMap: map });
   } catch (error) {
     console.warn("Failed to push frequency map to server", error);
@@ -84,7 +84,7 @@ export async function pullFrequencyMapFromServer(): Promise<void> {
     if (!serverMap || Object.keys(serverMap).length === 0) return;
 
     let localMap = readMap();
-    
+
     // Merge server into local using Math.max
     for (const [desc, cats] of Object.entries(serverMap)) {
       if (!localMap[desc]) localMap[desc] = {};

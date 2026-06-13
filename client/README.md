@@ -21,11 +21,13 @@ This is the frontend application for CashFlow, a premium, offline-first personal
 ## Setup Instructions
 
 1. Install dependencies:
+
    ```bash
    npm install
    ```
 
 2. Create a `.env` file based on your environment:
+
    ```env
    VITE_API_URL=http://localhost:5000/api
    VITE_GOOGLE_CLIENT_ID=your_google_client_id

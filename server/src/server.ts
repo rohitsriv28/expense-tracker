@@ -15,10 +15,12 @@ mongoose
   .then(async () => {
     logger.info("Connected to MongoDB");
     try {
-      await mongoose.connection.db?.collection("_cron_locks").createIndex(
-        { lockedAt: 1 },
-        { expireAfterSeconds: 7200, background: true }
-      );
+      await mongoose.connection.db
+        ?.collection("_cron_locks")
+        .createIndex(
+          { lockedAt: 1 },
+          { expireAfterSeconds: 7200, background: true },
+        );
     } catch (e) {}
     startDataRetentionJob();
     const server = app.listen(PORT, () => {

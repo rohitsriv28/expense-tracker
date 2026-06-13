@@ -325,8 +325,11 @@ export default function ReportsSection({
     setIsExporting(true);
     showAlert({
       title: "Generating PDF Report",
-      message: "Please wait while we render your charts and compile the document. This may take a few seconds...",
-      icon: <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--text-brand)] border-t-transparent" />,
+      message:
+        "Please wait while we render your charts and compile the document. This may take a few seconds...",
+      icon: (
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-[var(--text-brand)] border-t-transparent" />
+      ),
     });
     try {
       const { generatePDFReport } = await import("../../services/pdfExport");

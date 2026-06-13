@@ -4,14 +4,9 @@ import { useAuth } from "../contexts/AuthContext";
 import type { Expense } from "../types";
 import { getAllExpenses } from "../services/expenseService";
 import type { Category } from "../types";
-import {
-  getCategories,
-  } from "../services/categoryService";
+import { getCategories } from "../services/categoryService";
 import type { Income, IncomeSource } from "../types";
-import {
-  getIncomeSources,
-  getIncomes,
-  } from "../services/incomeService";
+import { getIncomeSources, getIncomes } from "../services/incomeService";
 import type { Budget } from "../types";
 import { getBudgets } from "../services/budgetService";
 import { subscribeToBroadcast } from "../services/broadcastSync";
@@ -82,7 +77,7 @@ export default function Dashboard() {
         getAllExpenses(),
         getIncomes(),
         getBudgets(),
-        getIncomeSources()
+        getIncomeSources(),
       ]);
       setCategories(cats);
       setExpenses(exps);
@@ -99,7 +94,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (!user) return;
     fetchData();
-    
+
     const unsubscribe = subscribeToBroadcast(() => {
       fetchData();
     });
@@ -147,8 +142,7 @@ export default function Dashboard() {
       const start = filters.startDate.getTime();
       result = result.filter((expense) => {
         const d =
-          new Date(expense.date) ??
-          new Date(expense.date as unknown as string);
+          new Date(expense.date) ?? new Date(expense.date as unknown as string);
         return d.getTime() >= start;
       });
     }
@@ -157,8 +151,7 @@ export default function Dashboard() {
       end.setHours(23, 59, 59, 999);
       result = result.filter((expense) => {
         const d =
-          new Date(expense.date) ??
-          new Date(expense.date as unknown as string);
+          new Date(expense.date) ?? new Date(expense.date as unknown as string);
         return d.getTime() <= end.getTime();
       });
     }
@@ -201,13 +194,16 @@ export default function Dashboard() {
             if (transaction.id.startsWith("temp-")) {
               showAlert({
                 title: "Offline Restricted",
-                message: "You can edit this item once you are back online and it has synced.",
+                message:
+                  "You can edit this item once you are back online and it has synced.",
                 icon: "warning",
               });
               return;
             }
             if (transaction.type !== "expense") return;
-            const expense = expenses.find((item) => item._id === transaction.id);
+            const expense = expenses.find(
+              (item) => item._id === transaction.id,
+            );
             if (expense) openExpenseSheet(expense);
           }}
         />

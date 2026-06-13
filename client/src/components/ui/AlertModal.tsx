@@ -1,5 +1,11 @@
 import React from "react";
-import { CheckCircle, AlertTriangle, XCircle, Info, Target } from "lucide-react";
+import {
+  CheckCircle,
+  AlertTriangle,
+  XCircle,
+  Info,
+  Target,
+} from "lucide-react";
 
 export interface AlertAction {
   label: string;
@@ -49,7 +55,7 @@ export default function AlertModal({
 
   const getIconBackground = () => {
     if (React.isValidElement(icon)) return "bg-[var(--status-neutral-bg)]";
-    
+
     switch (icon) {
       case "success":
         return "bg-green-500/10";
@@ -75,7 +81,9 @@ export default function AlertModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="text-center p-4">
-          <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${getIconBackground()}`}>
+          <div
+            className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${getIconBackground()}`}
+          >
             {renderIcon()}
           </div>
           <h2 className="text-xl font-bold mb-2">{title}</h2>
@@ -96,7 +104,7 @@ export default function AlertModal({
                 {primaryAction.label}
               </button>
             )}
-            
+
             {secondaryAction ? (
               <button
                 type="button"

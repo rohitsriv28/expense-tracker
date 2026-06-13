@@ -41,19 +41,19 @@ export const addExpense = async (
   >,
 ) => {
   const res = await apiClient.post("/expenses", data);
-  broadcastDataChange({ type: 'EXPENSE_CREATED' });
+  broadcastDataChange({ type: "EXPENSE_CREATED" });
   return res.data.data as Expense;
 };
 
 export const updateExpense = async (id: string, data: Partial<Expense>) => {
   const res = await apiClient.put(`/expenses/${id}`, data);
-  broadcastDataChange({ type: 'EXPENSE_UPDATED' });
+  broadcastDataChange({ type: "EXPENSE_UPDATED" });
   return res.data.data as Expense;
 };
 
 export const deleteExpense = async (id: string) => {
   await apiClient.delete(`/expenses/${id}`);
-  broadcastDataChange({ type: 'EXPENSE_DELETED' });
+  broadcastDataChange({ type: "EXPENSE_DELETED" });
 };
 
 export const getExpenses = async (

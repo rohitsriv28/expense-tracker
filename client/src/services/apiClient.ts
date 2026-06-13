@@ -164,7 +164,9 @@ apiClient.interceptors.response.use(
         processQueue(refreshError, null);
         setAccessToken(null);
         window.location.href = "/login";
-        return Promise.reject(new Error("Your session has expired. Please sign in again."));
+        return Promise.reject(
+          new Error("Your session has expired. Please sign in again."),
+        );
       } finally {
         isRefreshing = false;
       }

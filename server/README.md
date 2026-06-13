@@ -18,11 +18,13 @@ This is the custom backend API for CashFlow, built to handle secure authenticati
 ## Setup Instructions
 
 1. Install dependencies:
+
    ```bash
    npm install
    ```
 
 2. Create a `.env` file based on your environment:
+
    ```env
    PORT=5000
    MONGODB_URI=mongodb://localhost:27017/expense-tracker

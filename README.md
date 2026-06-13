@@ -108,6 +108,7 @@ GOOGLE_CLIENT_ID=your_google_client_id
 > **MongoDB Atlas Users:** If you experience `querySrv ECONNREFUSED` crashes during local development, your network or ISP may be blocking DNS SRV records. To bypass this, go to your Atlas dashboard -> Connect -> Drivers, toggle off **SRV Connection String**, and use the provided standard connection string.
 
 Start the server:
+
 ```bash
 npm run dev
 ```
@@ -115,6 +116,7 @@ npm run dev
 3. Setup the Client
 
 Open a new terminal:
+
 ```bash
 cd client
 npm install
@@ -128,6 +130,7 @@ VITE_GOOGLE_CLIENT_ID=your_google_client_id
 ```
 
 Start the client:
+
 ```bash
 npm run dev
 ```
@@ -138,7 +141,6 @@ npm run dev
 ### Production Deployment & Uptime
 
 When deploying the backend to free-tier hosting services (like Render), the instance may sleep after 15 minutes of inactivity. To prevent cold-start delays, configure a free uptime monitor like `cron-job.org` to send a GET request to your `.../api/health` endpoint every 14 minutes (using the cron expression `*/14 * * * *`). This keeps the backend awake and ensures the application remains instantly responsive.
-
 
 ## Scripts
 

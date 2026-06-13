@@ -14,7 +14,7 @@ export const addCategory = async (
   >,
 ): Promise<Category> => {
   const res = await apiClient.post("/categories", category);
-  broadcastDataChange({ type: 'CATEGORY_UPDATED' });
+  broadcastDataChange({ type: "CATEGORY_UPDATED" });
   return res.data.data as Category;
 };
 
@@ -23,10 +23,10 @@ export const updateCategory = async (
   data: Partial<Category>,
 ): Promise<void> => {
   await apiClient.put(`/categories/${categoryId}`, data);
-  broadcastDataChange({ type: 'CATEGORY_UPDATED' });
+  broadcastDataChange({ type: "CATEGORY_UPDATED" });
 };
 
 export const deleteCategory = async (categoryId: string): Promise<void> => {
   await apiClient.delete(`/categories/${categoryId}`);
-  broadcastDataChange({ type: 'CATEGORY_UPDATED' });
+  broadcastDataChange({ type: "CATEGORY_UPDATED" });
 };

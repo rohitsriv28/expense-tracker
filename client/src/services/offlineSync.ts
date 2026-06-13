@@ -25,7 +25,7 @@ export interface QueuedRequest {
   data: any;
   headers: any;
   timestamp: number;
-  status?: 'pending' | 'processing' | 'failed';
+  status?: "pending" | "processing" | "failed";
   retryCount?: number;
 }
 
@@ -35,7 +35,7 @@ export const saveToCache = async (url: string, data: any) => {
       data,
       cachedAt: Date.now(),
       lastAccessed: Date.now(),
-      stale: false
+      stale: false,
     };
     await cacheStore.setItem(url, envelope);
   } catch (err) {
@@ -48,7 +48,7 @@ export const getFromCache = async (url: string) => {
     const entry: any = await cacheStore.getItem(url);
     if (!entry) return null;
 
-    if (typeof entry === 'object' && 'data' in entry) {
+    if (typeof entry === "object" && "data" in entry) {
       entry.lastAccessed = Date.now();
       await cacheStore.setItem(url, entry);
       return { data: entry.data, isStale: !!entry.stale };
@@ -66,21 +66,21 @@ export async function evictStaleCacheEntries(): Promise<void> {
   try {
     const keys = await cacheStore.keys();
     const entries: { key: string; entry: any }[] = [];
-    
+
     for (const key of keys) {
       const entry = await cacheStore.getItem(key);
-      if (entry && typeof entry === 'object' && 'cachedAt' in entry) {
+      if (entry && typeof entry === "object" && "cachedAt" in entry) {
         entries.push({ key, entry });
       }
     }
 
     const now = Date.now();
     const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-    
+
     // Rule A: Age limit
     const survivors: { key: string; entry: any }[] = [];
     let evictedCount = 0;
-    
+
     for (const item of entries) {
       if (now - item.entry.cachedAt > thirtyDaysMs) {
         await cacheStore.removeItem(item.key);
@@ -110,27 +110,32 @@ export async function evictStaleCacheEntries(): Promise<void> {
 
 export async function markCacheEntryStale(key: string): Promise<void> {
   const entry: any = await cacheStore.getItem(key);
-  if (entry && typeof entry === 'object' && 'data' in entry) {
+  if (entry && typeof entry === "object" && "data" in entry) {
     entry.stale = true;
     await cacheStore.setItem(key, entry);
   }
 }
 
-export async function invalidateCacheByPrefix(prefix: string, mode: 'delete' | 'stale' = 'delete'): Promise<void> {
+export async function invalidateCacheByPrefix(
+  prefix: string,
+  mode: "delete" | "stale" = "delete",
+): Promise<void> {
   const keys = await cacheStore.keys();
   const matching = keys.filter((k) => k.startsWith(prefix));
-  await Promise.all(matching.map(async (k) => {
-    if (mode === 'stale') {
-      await markCacheEntryStale(k);
-    } else {
-      await cacheStore.removeItem(k);
-    }
-  }));
+  await Promise.all(
+    matching.map(async (k) => {
+      if (mode === "stale") {
+        await markCacheEntryStale(k);
+      } else {
+        await cacheStore.removeItem(k);
+      }
+    }),
+  );
 }
 
 export const addToQueue = async (request: QueuedRequest) => {
   try {
-    request.status = 'pending';
+    request.status = "pending";
     request.retryCount = 0;
     await queueStore.setItem(request.id, request);
     // Dispatch custom event to notify UI
@@ -167,8 +172,8 @@ export async function resetStuckQueueItems(): Promise<void> {
     const keys = await queueStore.keys();
     for (const key of keys) {
       const item = await queueStore.getItem<QueuedRequest>(key);
-      if (item?.status === 'processing') {
-        item.status = 'pending';
+      if (item?.status === "processing") {
+        item.status = "pending";
         await queueStore.setItem(key, item);
       }
     }
@@ -177,25 +182,34 @@ export async function resetStuckQueueItems(): Promise<void> {
   }
 }
 
-export const processSyncQueue = async (apiClient: AxiosInstance): Promise<{ synced: number, failed: number, failedItems: QueuedRequest[] } | void> => {
+export const processSyncQueue = async (
+  apiClient: AxiosInstance,
+): Promise<{
+  synced: number;
+  failed: number;
+  failedItems: QueuedRequest[];
+} | void> => {
   if (!navigator.onLine) return { synced: 0, failed: 0, failedItems: [] };
 
   const queue = await getQueue();
   if (queue.length === 0) return { synced: 0, failed: 0, failedItems: [] };
 
   console.log(`Processing ${queue.length} offline queued requests...`);
-  
+
   const tempIdMap = new Map<string, string>();
   let synced = 0;
 
   for (const req of queue) {
     // Only process pending or failed (if not maxed out) items
-    if (req.status === 'processing' || (req.retryCount && req.retryCount >= 3)) {
+    if (
+      req.status === "processing" ||
+      (req.retryCount && req.retryCount >= 3)
+    ) {
       continue;
     }
 
     try {
-      req.status = 'processing';
+      req.status = "processing";
       await queueStore.setItem(req.id, req);
 
       // Tested: offline create + offline edit of same item correctly resolves to single document.
@@ -207,7 +221,7 @@ export const processSyncQueue = async (apiClient: AxiosInstance): Promise<{ sync
       }
 
       let resolvedData = req.data;
-      if (resolvedData && typeof resolvedData === 'object') {
+      if (resolvedData && typeof resolvedData === "object") {
         for (const [tempId, realId] of tempIdMap.entries()) {
           if (resolvedData._id === tempId) {
             resolvedData._id = realId;
@@ -223,7 +237,7 @@ export const processSyncQueue = async (apiClient: AxiosInstance): Promise<{ sync
       });
 
       // If successful POST, map the temporary ID to the new real database ID
-      if (req.method.toLowerCase() === 'post' && response.data?.data?._id) {
+      if (req.method.toLowerCase() === "post" && response.data?.data?._id) {
         tempIdMap.set(req.id, response.data.data._id);
       }
 
@@ -234,15 +248,12 @@ export const processSyncQueue = async (apiClient: AxiosInstance): Promise<{ sync
       // If it fails due to network, stop processing.
       if (!err.response) {
         console.warn("Network still unavailable, stopping sync.");
-        req.status = 'pending';
+        req.status = "pending";
         await queueStore.setItem(req.id, req);
         break; // Network error
       } else {
-        console.error(
-          `Failed to sync queued request ${req.id}.`,
-          err,
-        );
-        req.status = 'failed';
+        console.error(`Failed to sync queued request ${req.id}.`, err);
+        req.status = "failed";
         req.retryCount = (req.retryCount || 0) + 1;
         await queueStore.setItem(req.id, req);
       }
@@ -253,7 +264,12 @@ export const processSyncQueue = async (apiClient: AxiosInstance): Promise<{ sync
   // After processing, find items that are permanently failed
   for (const req of queue) {
     const updatedReq = await queueStore.getItem<QueuedRequest>(req.id);
-    if (updatedReq && updatedReq.retryCount && updatedReq.retryCount >= 3 && updatedReq.status === 'failed') {
+    if (
+      updatedReq &&
+      updatedReq.retryCount &&
+      updatedReq.retryCount >= 3 &&
+      updatedReq.status === "failed"
+    ) {
       failedItems.push(updatedReq);
       await failedStore.setItem(updatedReq.id, updatedReq);
       await queueStore.removeItem(updatedReq.id);
@@ -279,7 +295,7 @@ export async function retryFailedItems(): Promise<void> {
   const items = await getFailedQueueItems();
   for (const item of items) {
     item.retryCount = 0;
-    item.status = 'pending';
+    item.status = "pending";
     await queueStore.setItem(item.id, item);
     await failedStore.removeItem(item.id);
   }
@@ -298,7 +314,9 @@ export async function addToRefreshQueue(url: string): Promise<void> {
   await refreshStore.setItem(url, { timestamp: Date.now() });
 }
 
-export async function processRefreshQueue(fetchFn: (url: string) => Promise<any>): Promise<void> {
+export async function processRefreshQueue(
+  fetchFn: (url: string) => Promise<any>,
+): Promise<void> {
   const keys = await refreshStore.keys();
   for (const url of keys) {
     try {
@@ -312,13 +330,13 @@ export async function processRefreshQueue(fetchFn: (url: string) => Promise<any>
 
 export async function injectOptimisticItemIntoCache(
   urlPrefix: string,
-  item: Record<string, unknown>
+  item: Record<string, unknown>,
 ): Promise<void> {
   const keys = await cacheStore.keys();
   const matching = keys.filter((k) => k.startsWith(urlPrefix));
   for (const k of matching) {
     const entry: any = await cacheStore.getItem(k);
-    if (entry && typeof entry === 'object' && 'data' in entry) {
+    if (entry && typeof entry === "object" && "data" in entry) {
       if (Array.isArray(entry.data)) {
         entry.data = [item, ...entry.data];
         entry.stale = true;
@@ -332,17 +350,21 @@ export async function injectOptimisticItemIntoCache(
   }
 }
 
-export async function updateItemInCache(urlPrefix: string, id: string, updates: Record<string, unknown>): Promise<void> {
+export async function updateItemInCache(
+  urlPrefix: string,
+  id: string,
+  updates: Record<string, unknown>,
+): Promise<void> {
   const keys = await cacheStore.keys();
   const matching = keys.filter((k) => k.startsWith(urlPrefix));
   for (const k of matching) {
     const entry: any = await cacheStore.getItem(k);
-    if (entry && typeof entry === 'object' && 'data' in entry) {
+    if (entry && typeof entry === "object" && "data" in entry) {
       const updateArray = (arr: any[]) => {
         const idx = arr.findIndex((item) => item._id === id);
         if (idx !== -1) arr[idx] = { ...arr[idx], ...updates };
       };
-      
+
       if (Array.isArray(entry.data)) {
         updateArray(entry.data);
         entry.stale = true;
@@ -356,18 +378,23 @@ export async function updateItemInCache(urlPrefix: string, id: string, updates: 
   }
 }
 
-export async function deleteItemFromCache(urlPrefix: string, id: string): Promise<void> {
+export async function deleteItemFromCache(
+  urlPrefix: string,
+  id: string,
+): Promise<void> {
   const keys = await cacheStore.keys();
   const matching = keys.filter((k) => k.startsWith(urlPrefix));
   for (const k of matching) {
     const entry: any = await cacheStore.getItem(k);
-    if (entry && typeof entry === 'object' && 'data' in entry) {
+    if (entry && typeof entry === "object" && "data" in entry) {
       if (Array.isArray(entry.data)) {
         entry.data = entry.data.filter((item: any) => item._id !== id);
         entry.stale = true;
         await cacheStore.setItem(k, entry);
       } else if (entry.data && Array.isArray(entry.data.data)) {
-        entry.data.data = entry.data.data.filter((item: any) => item._id !== id);
+        entry.data.data = entry.data.data.filter(
+          (item: any) => item._id !== id,
+        );
         entry.stale = true;
         await cacheStore.setItem(k, entry);
       }

@@ -183,7 +183,8 @@ export default function ExpenseList({
     if (transaction.id.startsWith("temp-")) {
       showAlert({
         title: "Offline Restricted",
-        message: "You can delete this item once you are back online and it has synced.",
+        message:
+          "You can delete this item once you are back online and it has synced.",
         icon: "warning",
       });
       return;
@@ -239,7 +240,8 @@ export default function ExpenseList({
           if (transaction.id.startsWith("temp-")) {
             showAlert({
               title: "Offline Restricted",
-              message: "You can edit this item once you are back online and it has synced.",
+              message:
+                "You can edit this item once you are back online and it has synced.",
               icon: "warning",
             });
             return;

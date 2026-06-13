@@ -11,7 +11,7 @@ export const addBudget = async (
   budget: Omit<Budget, "userId" | "_id">,
 ): Promise<string> => {
   const res = await apiClient.post("/budgets", budget);
-  broadcastDataChange({ type: 'BUDGET_UPDATED' });
+  broadcastDataChange({ type: "BUDGET_UPDATED" });
   return res.data.data._id;
 };
 
@@ -20,12 +20,12 @@ export const updateBudget = async (
   data: Partial<Budget>,
 ): Promise<void> => {
   await apiClient.put(`/budgets/${id}`, data);
-  broadcastDataChange({ type: 'BUDGET_UPDATED' });
+  broadcastDataChange({ type: "BUDGET_UPDATED" });
 };
 
 export const deleteBudget = async (id: string): Promise<void> => {
   await apiClient.delete(`/budgets/${id}`);
-  broadcastDataChange({ type: 'BUDGET_UPDATED' });
+  broadcastDataChange({ type: "BUDGET_UPDATED" });
 };
 
 export const getBudgets = async (): Promise<Budget[]> => {

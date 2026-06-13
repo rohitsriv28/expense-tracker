@@ -62,7 +62,8 @@ export default function IncomeList({
     if (id.startsWith("temp-")) {
       showAlert({
         title: "Offline Restricted",
-        message: "You can delete this item once you are back online and it has synced.",
+        message:
+          "You can delete this item once you are back online and it has synced.",
         icon: "warning",
       });
       return;

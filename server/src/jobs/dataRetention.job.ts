@@ -11,14 +11,16 @@ async function acquireLock(lockKey: string): Promise<boolean> {
   try {
     const db = mongoose.connection.db;
     if (!db) return false;
-    
+
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
-    
-    await db.collection("_cron_locks").findOneAndUpdate(
-      { _id: lockKey as any, lockedAt: { $lt: twoHoursAgo } },
-      { $set: { lockedAt: new Date(), instanceId } },
-      { upsert: true }
-    );
+
+    await db
+      .collection("_cron_locks")
+      .findOneAndUpdate(
+        { _id: lockKey as any, lockedAt: { $lt: twoHoursAgo } },
+        { $set: { lockedAt: new Date(), instanceId } },
+        { upsert: true },
+      );
     return true;
   } catch (error: any) {
     if (error.code === 11000) {
@@ -32,7 +34,9 @@ async function releaseLock(lockKey: string): Promise<void> {
   try {
     const db = mongoose.connection.db;
     if (!db) return;
-    await db.collection("_cron_locks").deleteOne({ _id: lockKey as any, instanceId });
+    await db
+      .collection("_cron_locks")
+      .deleteOne({ _id: lockKey as any, instanceId });
   } catch (err) {}
 }
 
@@ -45,7 +49,9 @@ export function startDataRetentionJob() {
       logger.debug(`[DataRetention] Lock not acquired. Skipping run.`);
       return;
     }
-    logger.info(`[DataRetention] Lock acquired by instance ${instanceId}. Starting scheduled cleanup...`);
+    logger.info(
+      `[DataRetention] Lock acquired by instance ${instanceId}. Starting scheduled cleanup...`,
+    );
     let totalDeleted = 0;
 
     try {

@@ -1,8 +1,18 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
 import type { ReactNode } from "react";
 import apiClient, { setAccessToken } from "../services/apiClient";
 
-import { pullFrequencyMapFromServer, pushFrequencyMapToServer } from "../utils/smartDefaults";
+import {
+  pullFrequencyMapFromServer,
+  pushFrequencyMapToServer,
+} from "../utils/smartDefaults";
 
 interface User {
   _id: string;
@@ -52,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await Promise.race([
         pushFrequencyMapToServer(),
-        new Promise((resolve) => setTimeout(resolve, 3000))
+        new Promise((resolve) => setTimeout(resolve, 3000)),
       ]);
       await apiClient.post("/auth/logout");
     } finally {
@@ -63,13 +73,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const contextValue = useMemo(
     () => ({ user, loading, loginWithToken, logout }),
-    [user, loading, loginWithToken, logout]
+    [user, loading, loginWithToken, logout],
   );
 
   return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
   );
 }
 

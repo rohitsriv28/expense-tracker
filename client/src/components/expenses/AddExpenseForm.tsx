@@ -175,7 +175,9 @@ export default function AddExpenseForm({
       if (error.response?.status === 403) {
         showAlert({
           title: "Edit Limit Reached",
-          message: error.response?.data?.message || "Maximum edit limit (3) reached for this expense.",
+          message:
+            error.response?.data?.message ||
+            "Maximum edit limit (3) reached for this expense.",
           icon: "error",
         });
         onClose?.();

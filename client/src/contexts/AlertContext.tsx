@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  type ReactNode,
+} from "react";
 import AlertModal, { type AlertModalProps } from "../components/ui/AlertModal";
 
 type ShowAlertOptions = Omit<AlertModalProps, "isOpen" | "onClose">;
@@ -11,7 +17,9 @@ interface AlertContextType {
 const AlertContext = createContext<AlertContextType | undefined>(undefined);
 
 export function AlertProvider({ children }: { children: ReactNode }) {
-  const [alertOptions, setAlertOptions] = useState<ShowAlertOptions | null>(null);
+  const [alertOptions, setAlertOptions] = useState<ShowAlertOptions | null>(
+    null,
+  );
 
   const hideAlert = useCallback(() => {
     setAlertOptions(null);
@@ -56,7 +64,10 @@ export function AlertProvider({ children }: { children: ReactNode }) {
           }
           secondaryAction={
             alertOptions.secondaryAction
-              ? { ...alertOptions.secondaryAction, onClick: handleSecondaryClick }
+              ? {
+                  ...alertOptions.secondaryAction,
+                  onClick: handleSecondaryClick,
+                }
               : undefined
           }
         />

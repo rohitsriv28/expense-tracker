@@ -11,7 +11,7 @@ export const addIncome = async (
   income: Omit<Income, "_id" | "createdAt" | "userId">,
 ): Promise<string> => {
   const res = await apiClient.post("/income", income);
-  broadcastDataChange({ type: 'INCOME_CREATED' });
+  broadcastDataChange({ type: "INCOME_CREATED" });
   return res.data.data._id;
 };
 
@@ -20,12 +20,12 @@ export const updateIncome = async (
   data: Partial<Income>,
 ): Promise<void> => {
   await apiClient.put(`/income/${id}`, data);
-  broadcastDataChange({ type: 'INCOME_UPDATED' });
+  broadcastDataChange({ type: "INCOME_UPDATED" });
 };
 
 export const deleteIncome = async (id: string): Promise<void> => {
   await apiClient.delete(`/income/${id}`);
-  broadcastDataChange({ type: 'INCOME_DELETED' });
+  broadcastDataChange({ type: "INCOME_DELETED" });
 };
 
 export const getIncomeSources = async (): Promise<IncomeSource[]> => {
