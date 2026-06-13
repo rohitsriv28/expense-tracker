@@ -9,6 +9,21 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [3.0.3] - 2026-06-13
+
+A critical patch release resolving offline synchronization edge cases, cache evaporation bugs, and UX error sanitization.
+
+### Fixed
+
+- **Offline Cache Evaporation:** Addressed a critical regression where valid offline items vanished from the UI by fully reverting bloated network interceptors and strictly relying on the original, lightweight event-driven sync model.
+- **Background Sync Infinite Loop:** Fixed a bug where aggressive `ERR_NETWORK` Axios interceptors were inadvertently trapping the background sync worker's own requests, resulting in infinite loops and blocked database writes.
+- **Offline Edit Locks:** Enforced strict UI interaction locks in `Dashboard.tsx` to prevent users from firing invalid `PUT` mutations against `temp-` IDs while waiting for background sync reconciliation.
+- **ID Reconciliation Flow:** Ensured `Dashboard.tsx` listens natively for `offline-sync-complete` events to seamlessly re-fetch true database `ObjectIDs` in the background after a successful offline sync without dropping the UI state.
+- **UX Error Sanitization:** Scrutinized error handlers and modals (including `FailedSyncModal`) to strictly extract user-friendly fallback descriptions, completely eliminating the leakage of internal API endpoints (e.g., `/api/income`) or stack traces directly to the user.
+- **General Stability:** Addressed various audit report findings across PDF rendering flows and database connection target logic.
+
+---
+
 ## [3.0.2] - 2026-06-12
 
 A major maintenance and optimization update focusing on background processing, cache safety, component memoization, and production analytics.
