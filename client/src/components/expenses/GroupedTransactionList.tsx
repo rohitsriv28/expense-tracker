@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from "react";
+import { memo, useMemo } from "react";
 
 import { formatCurrency } from "../../utils/formatters";
 import { getIcon } from "../../utils/iconMap";

@@ -244,13 +244,6 @@ export default function Dashboard() {
               currentPage={1}
               isFirstPage={true}
               onEditExpense={openExpenseSheet}
-              onDeleted={(message) => {
-                showToast(
-                  message,
-                  message.startsWith("Failed") ? "error" : "success",
-                );
-                if (!message.startsWith("Failed")) fetchData();
-              }}
               searchQuery={filters.query}
             />
           )}

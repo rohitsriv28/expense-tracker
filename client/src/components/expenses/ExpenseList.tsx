@@ -26,7 +26,6 @@ interface ExpenseListProps {
   currentPage: number;
   isFirstPage: boolean;
   onEditExpense?: (expense: Expense) => void;
-  onDeleted?: (message: string) => void;
   searchQuery?: string;
 }
 
@@ -111,7 +110,6 @@ export default function ExpenseList({
   expenses,
   categories = [],
   onEditExpense,
-  onDeleted,
   searchQuery = "",
 }: ExpenseListProps) {
   const { showAlert } = useAlert();
