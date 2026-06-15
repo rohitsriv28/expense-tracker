@@ -17,6 +17,9 @@ export default function Footer() {
             <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
               Premium personal wealth companion. Take control of your balance.
             </p>
+            <p className="text-[10px] text-gray-400 dark:text-gray-500 font-bold mt-1 uppercase tracking-wider">
+              Developed by Rohit Raj Srivastava
+            </p>
           </div>
 
           {/* Made with Love credit with beating heart */}

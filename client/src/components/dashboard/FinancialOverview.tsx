@@ -206,6 +206,7 @@ export default function FinancialOverview({
         icon: "",
         color: visuals.color,
         date: expenseDate(expense),
+        notes: expense.notes,
       };
     });
 

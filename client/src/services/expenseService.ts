@@ -51,11 +51,6 @@ export const updateExpense = async (id: string, data: Partial<Expense>) => {
   return res.data.data as Expense;
 };
 
-export const deleteExpense = async (id: string) => {
-  await apiClient.delete(`/expenses/${id}`);
-  broadcastDataChange({ type: "EXPENSE_DELETED" });
-};
-
 export const getExpenses = async (
   filters?: ExpenseFilters,
   page = 1,

@@ -1,5 +1,5 @@
 import { memo, useMemo, useState } from "react";
-import { Trash2 } from "lucide-react";
+
 import { formatCurrency } from "../../utils/formatters";
 import { getIcon } from "../../utils/iconMap";
 
@@ -13,6 +13,7 @@ export interface GroupedTransaction {
   color: string;
   date: Date;
   editCount?: number;
+  notes?: string;
 }
 
 interface GroupedTransactionListProps {
@@ -20,7 +21,6 @@ interface GroupedTransactionListProps {
   emptyTitle?: string;
   emptyDescription?: string;
   onTransactionClick?: (transaction: GroupedTransaction) => void;
-  onDelete?: (transaction: GroupedTransaction) => void;
 }
 
 function groupLabel(date: Date): string {
@@ -48,50 +48,21 @@ function timeLabel(date: Date): string {
 const TransactionRow = memo(function TransactionRow({
   transaction,
   onClick,
-  onDelete,
 }: {
   transaction: GroupedTransaction;
   onClick?: (transaction: GroupedTransaction) => void;
-  onDelete?: (transaction: GroupedTransaction) => void;
 }) {
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [offset, setOffset] = useState(0);
   const Icon = getIcon(transaction.icon);
   const isExpense = transaction.type === "expense";
 
   return (
     <div className="relative overflow-hidden">
-      {onDelete && isExpense && (
-        <button
-          type="button"
-          aria-label={`Delete ${transaction.description}`}
-          onClick={() => onDelete(transaction)}
-          className="absolute inset-y-0 right-0 flex w-20 items-center justify-center text-white"
-          style={{ background: "var(--interactive-danger)" }}
-        >
-          <Trash2 className="h-5 w-5" />
-        </button>
-      )}
       <button
         type="button"
         onClick={() => onClick?.(transaction)}
-        onTouchStart={(event) =>
-          setTouchStart(event.touches[0]?.clientX ?? null)
-        }
-        onTouchMove={(event) => {
-          if (touchStart === null || !onDelete || !isExpense) return;
-          const delta = Math.min(0, event.touches[0].clientX - touchStart);
-          setOffset(Math.max(delta, -84));
-        }}
-        onTouchEnd={() => {
-          if (offset < -72) onDelete?.(transaction);
-          setOffset(0);
-          setTouchStart(null);
-        }}
         className="grid w-full grid-cols-[auto_1fr_auto] items-center gap-3 px-4 py-3 text-left transition hover:[background:var(--status-neutral-bg)]"
         style={{
           background: "var(--bg-card)",
-          transform: `translateX(${offset}px)`,
         }}
       >
         <span
@@ -119,6 +90,14 @@ const TransactionRow = memo(function TransactionRow({
               <span className="italic ml-1 opacity-70">(edited)</span>
             ) : null}
           </span>
+          {transaction.notes && (
+            <span
+              className="block truncate text-xs mt-0.5 italic"
+              style={{ color: "var(--text-secondary)" }}
+            >
+              <span className="font-semibold not-italic opacity-70">Notes:</span> {transaction.notes}
+            </span>
+          )}
         </span>
         <span
           className={isExpense ? "amount-negative" : "amount-positive"}
@@ -137,7 +116,6 @@ export default function GroupedTransactionList({
   emptyTitle = "No transactions yet",
   emptyDescription = "Add a transaction to start building your financial timeline.",
   onTransactionClick,
-  onDelete,
 }: GroupedTransactionListProps) {
   const grouped = useMemo(() => {
     const sorted = [...transactions].sort(
@@ -205,7 +183,6 @@ export default function GroupedTransactionList({
                 key={`${transaction.type}-${transaction.id}`}
                 transaction={transaction}
                 onClick={onTransactionClick}
-                onDelete={onDelete}
               />
             ))}
           </div>

@@ -1,11 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FileText, IndianRupee, Receipt, Trash2, X } from "lucide-react";
+import { FileText, IndianRupee, Receipt, X } from "lucide-react";
 import type { Expense, Category } from "../../types";
-import {
-  addExpense,
-  deleteExpense,
-  updateExpense,
-} from "../../services/expenseService";
+import { addExpense, updateExpense } from "../../services/expenseService";
 import { useAuth } from "../../contexts/AuthContext";
 import { useAlert } from "../../contexts/AlertContext";
 import DatePicker from "../ui/DatePicker";
@@ -63,7 +59,6 @@ export default function AddExpenseForm({
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<ExpenseFormErrors>({});
-  const [deleteConfirm, setDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (!isOpen && isOpen !== undefined) return;
@@ -87,7 +82,6 @@ export default function AddExpenseForm({
       setNotes("");
       setNotesOpen(false);
       setSelectedCategoryId("");
-      setDeleteConfirm(false);
       setErrors({});
     }
   }, [categories, expense, isOpen]);
@@ -184,20 +178,6 @@ export default function AddExpenseForm({
       } else {
         setErrors({ submit: "Unable to save changes. Please try again." });
       }
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!expense?._id) return;
-    setIsSaving(true);
-    try {
-      await deleteExpense(expense._id);
-      onSaved?.("Expense deleted.");
-      onClose?.();
-    } catch {
-      setErrors({ submit: "Unable to delete expense. Please try again." });
     } finally {
       setIsSaving(false);
     }
@@ -312,12 +292,25 @@ export default function AddExpenseForm({
       </section>
 
       <section>
-        <label
-          className="mb-2 block text-sm font-semibold"
-          style={{ color: "var(--text-primary)" }}
-        >
-          Amount
-        </label>
+        <div className="mb-2 flex items-center justify-between">
+          <label
+            className="block text-sm font-semibold"
+            style={{ color: "var(--text-primary)" }}
+          >
+            Amount
+          </label>
+          {editing && (
+            <span className="text-xs opacity-80" style={{ color: "var(--text-secondary)" }}>
+              {(expense?.editCount ?? 0) >= 3 ? (
+                <span style={{ color: "var(--interactive-danger)" }}>
+                  Max edits reached
+                </span>
+              ) : (
+                `${3 - (expense?.editCount ?? 0)} edit${3 - (expense?.editCount ?? 0) === 1 ? "" : "s"} left`
+              )}
+            </span>
+          )}
+        </div>
         <div
           className="flex items-center rounded-xl border px-4 py-2"
           style={{
@@ -447,7 +440,9 @@ export default function AddExpenseForm({
       <button
         type="submit"
         className="btn btn-primary btn-lg w-full animate-scale-in"
-        disabled={!user || isSaving}
+        disabled={
+          !user || isSaving || (editing && (expense?.editCount ?? 0) >= 3)
+        }
       >
         {isSaving ? (
           <>
@@ -462,41 +457,6 @@ export default function AddExpenseForm({
         )}
       </button>
 
-      {editing && (
-        <div className="text-center">
-          {deleteConfirm ? (
-            <div className="flex items-center justify-center gap-2 text-sm">
-              <span style={{ color: "var(--text-secondary)" }}>
-                Delete this expense?
-              </span>
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                onClick={() => setDeleteConfirm(false)}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="btn btn-danger btn-sm"
-                onClick={handleDelete}
-                disabled={isSaving}
-              >
-                Delete
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm"
-              style={{ color: "var(--text-expense)" }}
-              onClick={() => setDeleteConfirm(true)}
-            >
-              <Trash2 className="h-4 w-4" /> Delete expense
-            </button>
-          )}
-        </div>
-      )}
     </form>
   );
 

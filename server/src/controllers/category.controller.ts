@@ -75,7 +75,7 @@ export const deleteCategory = asyncHandler(
     const category = await Category.findOneAndDelete({
       _id: req.params.id,
       userId: req.user!._id,
-      isDefault: false, // Prevent deleting default categories
+      type: "custom", // Prevent deleting default categories
     });
 
     if (!category) {

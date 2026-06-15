@@ -2049,13 +2049,25 @@ function BudgetPerformancePage({ data }: { data: ReportData }) {
 
 // ─── Main Template ────────────────────────────────────────────────────────────
 
-export default function PdfReportTemplate({ data }: { data: ReportData }) {
+export default function PdfReportTemplate({ data, pageIndex }: { data: ReportData; pageIndex?: number }) {
+  const pages = [
+    <ReportCoverPage key="cover" data={data} />,
+    <SpendingByCategoryPage key="spending" data={data} />,
+    <TransactionLogPage key="transactions" data={data} />,
+    <BudgetPerformancePage key="budget" data={data} />
+  ];
+
+  if (pageIndex !== undefined && pageIndex >= 0 && pageIndex < pages.length) {
+    return (
+      <div style={{ width: 794, background: "#f1f5f9" }}>
+        {pages[pageIndex]}
+      </div>
+    );
+  }
+
   return (
     <div style={{ width: 794, background: "#f1f5f9" }}>
-      <ReportCoverPage data={data} />
-      <SpendingByCategoryPage data={data} />
-      <TransactionLogPage data={data} />
-      <BudgetPerformancePage data={data} />
+      {pages}
     </div>
   );
 }

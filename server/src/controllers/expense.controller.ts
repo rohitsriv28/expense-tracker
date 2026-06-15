@@ -101,14 +101,3 @@ export const updateExpense = asyncHandler(
     res.json({ success: true, data: expense });
   },
 );
-
-export const deleteExpense = asyncHandler(
-  async (req: Request, res: Response) => {
-    const expense = await Expense.findOneAndDelete({
-      _id: req.params.id,
-      userId: req.user!._id,
-    });
-    if (!expense) throw new AppError("Expense not found", 404);
-    res.json({ success: true, message: "Expense deleted" });
-  },
-);

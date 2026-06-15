@@ -7,7 +7,6 @@ import {
 } from "lucide-react";
 import type { Expense } from "../../types";
 import type { Category } from "../../types";
-import { deleteExpense } from "../../services/expenseService";
 import { expenseDate, resolveExpenseVisuals } from "../../utils/dataMappers";
 import { formatCurrency } from "../../utils/formatters";
 import { useAlert } from "../../contexts/AlertContext";
@@ -169,6 +168,7 @@ export default function ExpenseList({
           icon: visuals.icon,
           color: visuals.color,
           date: expenseDate(expense),
+          notes: expense.notes,
         };
       }),
     [categories, paginatedExpenses],
@@ -178,26 +178,6 @@ export default function ExpenseList({
     (sum, expense) => sum + expense.amount,
     0,
   );
-
-  const handleDelete = async (transaction: GroupedTransaction) => {
-    if (transaction.id.startsWith("temp-")) {
-      showAlert({
-        title: "Offline Restricted",
-        message:
-          "You can delete this item once you are back online and it has synced.",
-        icon: "warning",
-      });
-      return;
-    }
-    const expense = expenses.find((item) => item._id === transaction.id);
-    if (!expense?._id) return;
-    try {
-      await deleteExpense(expense._id);
-      onDeleted?.("Expense deleted.");
-    } catch {
-      onDeleted?.("Failed to delete expense. Please try again.");
-    }
-  };
 
   return (
     <section className="space-y-4">
@@ -249,7 +229,6 @@ export default function ExpenseList({
           const expense = expenses.find((item) => item._id === transaction.id);
           if (expense) onEditExpense?.(expense);
         }}
-        onDelete={handleDelete}
       />
 
       {/* Pagination Controls */}

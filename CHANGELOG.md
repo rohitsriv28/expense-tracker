@@ -9,6 +9,47 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [3.0.5] - 2026-06-15
+
+A focused update enforcing stricter ledger integrity and improving transaction transparency.
+
+### Added
+
+- **Expense Notes Display:** Notes added while logging expenses are now elegantly displayed in italics below the transaction category and date across the Dashboard and Expenses tabs.
+- **Edit Limit Visibility:** Added a clear, dynamic indicator next to the "Amount" field in the Add Expense form to show the remaining number of edits (up to a maximum of 3) for each transaction.
+
+### Changed
+
+- **Expense Deletion Removed:** Completely removed the ability to delete expenses. Expenses can now only be edited (up to 3 times) to ensure strict financial record integrity and prevent accidental data loss.
+- **Developer Attribution:** Updated the application footer to include a clear, professional "DEVELOPED BY ROHIT RAJ SRIVASTAVA" attribution.
+
+### Fixed
+
+- **Offline Status Import:** Fixed a minor named import bug (`useOfflineStatus`) in the `ProtectedRoute` component.
+
+---
+
+## [3.0.4] - 2026-06-14
+
+A major quality and stability update introducing comprehensive automated testing suites and fixing hidden backend bugs.
+
+### Added
+
+- **Comprehensive Backend Testing:** Introduced a robust Jest, Supertest, and MongoMemoryServer testing suite covering all API endpoints, controllers, services, middlewares, and strict database validations (72 total tests).
+- **Comprehensive Frontend Testing:** Introduced Vitest with JSDOM and fake-indexeddb to rigorously test client-side logic, offline sync queues, data mappers, mathematical parsers, and caching strategies (85 total tests).
+- **Testing Documentation:** Added `docs/testing.md` to guide developers on running and maintaining test suites.
+
+### Changed
+
+- **Premium UI Overhaul:** Completely redesigned the `ProtectedRoute` Loading Screen into a modern, glassmorphic UI. Features include ambient background glows, a sleek spinning ring animation, a dynamic simulated progress bar, and messaging updated to reflect the new custom backend architecture instead of legacy Firebase.
+
+### Fixed
+
+- **Category Deletion Bug:** Fixed a hidden backend issue where `deleteCategory` was querying by an invalid schema property (`isDefault: false`), which caused the API to silently fail with a `404 Not Found` when trying to delete custom categories.
+- **Income Source Creation Bug:** Fixed an oversight in the backend `createIncomeSource` controller where the `frequency` parameter sent from the client was being ignored, leading to Mongoose validation errors during creation.
+
+---
+
 ## [3.0.3] - 2026-06-13
 
 A critical patch release resolving offline synchronization edge cases, cache evaporation bugs, and UX error sanitization.

@@ -4,7 +4,6 @@ import {
   getAllExpenses,
   createExpense,
   updateExpense,
-  deleteExpense,
 } from "../controllers/expense.controller";
 import { authenticate } from "../middleware/authenticate";
 import { ownershipGuard } from "../middleware/ownership";
@@ -28,6 +27,5 @@ router.put(
   validate(updateExpenseSchema),
   updateExpense,
 );
-router.delete("/:id", ownershipGuard(Expense), deleteExpense);
 
 export default router;

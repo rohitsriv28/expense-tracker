@@ -310,7 +310,7 @@ export default function Login() {
                 className="w-3.5 h-3.5 flex-shrink-0"
                 aria-hidden="true"
               />
-              <span>Secured by Google Firebase Authentication</span>
+              <span>Secured by Google OAuth & JWT</span>
             </div>
           </div>
 

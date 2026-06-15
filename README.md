@@ -142,6 +142,41 @@ npm run dev
 
 When deploying the backend to free-tier hosting services (like Render), the instance may sleep after 15 minutes of inactivity. To prevent cold-start delays, configure a free uptime monitor like `cron-job.org` to send a GET request to your `.../api/health` endpoint every 14 minutes (using the cron expression `*/14 * * * *`). This keeps the backend awake and ensures the application remains instantly responsive.
 
+## Automated Testing
+
+CashFlow includes comprehensive automated testing across both frontend and backend systems.
+
+### Backend Testing
+
+* Jest + Supertest + MongoDB Memory Server
+* 72 tests across 8 test suites
+* Authentication and JWT validation
+* Expense and Income CRUD operations
+* Budget validation and unique constraints
+* Ownership isolation and access control
+* Category and Income Source protections
+* Error handling and middleware validation
+
+### Frontend Testing
+
+* Vitest + JSDOM + Fake IndexedDB
+* 85 tests across 5 test suites
+* Offline synchronization engine
+* Cache management and eviction logic
+* Queue reconciliation and temporary ID mapping
+* Budget calculations and health scoring
+* Utility functions, formatters, and data mappers
+
+### Results
+
+* 157 automated tests passing
+* 13 test suites passing
+
+### Bugs Discovered Through Testing
+
+* Fixed incorrect category deletion logic (`isDefault: false` → `type: 'custom'`)
+* Fixed income source creation ignoring the `frequency` field
+
 ## Scripts
 
 You can run these scripts from within the respective `client` or `server` directories.
@@ -149,6 +184,7 @@ You can run these scripts from within the respective `client` or `server` direct
 - `npm run dev` – Starts the development server
 - `npm run build` – Type-checks and builds the app for production
 - `npm run lint` – Runs ESLint for code quality checks
+- `npm run test` – Runs the comprehensive automated test suites
 
 ## Project Structure
 

@@ -1,161 +1,433 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { Loader2, Shield, Wifi, WifiOff } from "lucide-react";
+import useOfflineStatus from "../../hooks/useOfflineStatus";
 import type { ReactElement } from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface ProtectedRouteProps {
   children: ReactElement;
   fallback?: ReactElement;
 }
 
-// Loading skeleton component
-function LoadingSkeleton() {
-  return (
-    <div className="min-h-screen bg-slate-100">
-      <div className="animate-pulse">
-        {/* Header skeleton */}
-        <div className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center py-4">
-              <div className="flex items-center">
-                <div className="w-10 h-10 bg-gray-200 rounded-xl"></div>
-                <div className="ml-3">
-                  <div className="h-6 bg-gray-200 rounded w-24 mb-1"></div>
-                  <div className="h-3 bg-gray-200 rounded w-20"></div>
-                </div>
-              </div>
-              <div className="flex items-center space-x-4">
-                <div className="h-8 bg-gray-200 rounded w-24"></div>
-                <div className="h-8 bg-gray-200 rounded w-20"></div>
-              </div>
-            </div>
-          </div>
-        </div>
+// ─── Loading Screen ───────────────────────────────────────────────────────────
+//
+// Shown while AuthContext is resolving the session on mount.
+// Design intent: calm, branded, progress-aware. The animated SVG ring
+// gives a sense of intentional progress rather than indefinite waiting.
+// Transitions to content smoothly via opacity fade.
 
-        {/* Content skeleton */}
-        <div className="container mx-auto px-4 py-8 max-w-6xl">
-          <div className="space-y-6">
-            {/* Cards skeleton */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-white rounded-2xl p-6 shadow-lg">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="w-12 h-12 bg-gray-200 rounded-xl"></div>
-                    <div className="w-16 h-4 bg-gray-200 rounded"></div>
-                  </div>
-                  <div className="w-24 h-8 bg-gray-200 rounded mb-2"></div>
-                  <div className="w-32 h-4 bg-gray-200 rounded"></div>
-                </div>
-              ))}
-            </div>
-
-            {/* Form skeleton */}
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <div className="w-48 h-6 bg-gray-200 rounded mb-4"></div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="space-y-2">
-                    <div className="w-16 h-4 bg-gray-200 rounded"></div>
-                    <div className="w-full h-12 bg-gray-200 rounded-lg"></div>
-                  </div>
-                ))}
-              </div>
-              <div className="w-32 h-12 bg-gray-200 rounded-lg"></div>
-            </div>
-
-            {/* List skeleton */}
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-white rounded-xl shadow-md p-5">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="w-24 h-8 bg-gray-200 rounded mb-2"></div>
-                      <div className="w-48 h-5 bg-gray-200 rounded"></div>
-                    </div>
-                    <div className="text-right">
-                      <div className="w-20 h-4 bg-gray-200 rounded mb-2"></div>
-                      <div className="w-16 h-3 bg-gray-200 rounded"></div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Enhanced loading component with connection status
 function LoadingScreen() {
-  const [dots, setDots] = useState("");
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const isOffline = useOfflineStatus();
+
+  // Animate the progress ring from 0% to ~80% over 1.5s, then hold.
+  // We never reach 100% until auth actually resolves — avoids the
+  // misleading "complete" state when the check is still in flight.
+  const [progress, setProgress] = useState(0);
+  const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setDots((prev) => (prev.length >= 3 ? "" : prev + "."));
-    }, 500);
-
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
+    // Ramp up quickly at first, then slow to a crawl approaching 80
+    progressRef.current = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 80) {
+          if (progressRef.current) clearInterval(progressRef.current);
+          return 80;
+        }
+        // Decelerate as we approach the ceiling
+        const remaining = 80 - prev;
+        const step = Math.max(0.3, remaining * 0.06);
+        return prev + step;
+      });
+    }, 40);
 
     return () => {
-      clearInterval(interval);
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
+      if (progressRef.current) clearInterval(progressRef.current);
     };
   }, []);
 
+  // SVG ring parameters
+  const SIZE = 80;
+  const STROKE = 3;
+  const RADIUS = (SIZE - STROKE) / 2;
+  const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+  const dashOffset = CIRCUMFERENCE - (progress / 100) * CIRCUMFERENCE;
+
   return (
-    <div className="min-h-screen bg-slate-100 flex items-center justify-center px-4">
-      <div className="text-center max-w-md">
-        {/* Loading animation */}
-        <div className="relative mb-8">
-          <div className="w-20 h-20 bg-red-600 rounded-2xl flex items-center justify-center shadow-2xl mx-auto">
-            <Shield className="w-10 h-10 text-white" />
+    <div
+      className="min-h-screen flex items-center justify-center px-4"
+      style={{ background: "var(--bg-app)" }}
+      role="status"
+      aria-label="Loading your dashboard"
+      aria-live="polite"
+    >
+      <div className="flex flex-col items-center gap-8 text-center max-w-xs">
+        {/* ── Logo + progress ring ── */}
+        <div className="relative flex items-center justify-center">
+          {/* Animated SVG ring — the signature element */}
+          <svg
+            width={SIZE}
+            height={SIZE}
+            viewBox={`0 0 ${SIZE} ${SIZE}`}
+            fill="none"
+            aria-hidden="true"
+            style={{ transform: "rotate(-90deg)" }}
+          >
+            {/* Track */}
+            <circle
+              cx={SIZE / 2}
+              cy={SIZE / 2}
+              r={RADIUS}
+              strokeWidth={STROKE}
+              stroke="var(--border)"
+            />
+            {/* Fill */}
+            <circle
+              cx={SIZE / 2}
+              cy={SIZE / 2}
+              r={RADIUS}
+              strokeWidth={STROKE}
+              stroke="var(--interactive)"
+              strokeLinecap="round"
+              strokeDasharray={CIRCUMFERENCE}
+              strokeDashoffset={dashOffset}
+              style={{ transition: "stroke-dashoffset 80ms linear" }}
+            />
+          </svg>
+
+          {/* CashFlow logomark — centered inside the ring */}
+          <div
+            className="absolute inset-0 flex items-center justify-center"
+            aria-hidden="true"
+          >
+            <svg
+              width="28"
+              height="28"
+              viewBox="0 0 28 28"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              {/* Stylised bar-chart / cash-flow mark */}
+              <rect
+                x="3"
+                y="16"
+                width="5"
+                height="9"
+                rx="1.5"
+                fill="var(--interactive)"
+                opacity="0.4"
+              />
+              <rect
+                x="11.5"
+                y="10"
+                width="5"
+                height="15"
+                rx="1.5"
+                fill="var(--interactive)"
+                opacity="0.7"
+              />
+              <rect
+                x="20"
+                y="3"
+                width="5"
+                height="22"
+                rx="1.5"
+                fill="var(--interactive)"
+              />
+            </svg>
           </div>
         </div>
 
-        {/* Loading text */}
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          Securing your session{dots}
-        </h2>
-        <p className="text-gray-600 mb-6">
-          Please wait while we verify your credentials
-        </p>
-
-        {/* Animated loader */}
-        <div className="flex items-center justify-center mb-6">
-          <Loader2 className="w-8 h-8 text-red-600 animate-spin" />
+        {/* ── Text ── */}
+        <div className="space-y-1.5">
+          <p
+            className="font-semibold tracking-tight"
+            style={{
+              fontSize: "var(--text-lg)",
+              color: "var(--text-primary)",
+              letterSpacing: "-0.01em",
+            }}
+          >
+            Opening CashFlow
+          </p>
+          <p
+            style={{
+              fontSize: "var(--text-sm)",
+              color: "var(--text-secondary)",
+              lineHeight: 1.5,
+            }}
+          >
+            {isOffline
+              ? "You're offline — loading from cache"
+              : "Verifying your session"}
+          </p>
         </div>
 
-        {/* Connection status */}
-        <div className="flex items-center justify-center space-x-2 text-sm">
-          {isOnline ? (
-            <>
-              <Wifi className="w-4 h-4 text-green-500" />
-              <span className="text-green-600 font-medium">Connected</span>
-            </>
-          ) : (
-            <>
-              <WifiOff className="w-4 h-4 text-amber-500" />
-              <span className="text-amber-600 font-medium">Connecting...</span>
-            </>
-          )}
+        {/* ── Offline indicator ── */}
+        {isOffline && (
+          <div
+            className="flex items-center gap-2 px-3 py-2 rounded-full"
+            style={{
+              background: "var(--status-warning-bg)",
+              border: "1px solid var(--status-warning-bdr)",
+            }}
+          >
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full"
+              style={{ background: "var(--status-warning-text)" }}
+              aria-hidden="true"
+            />
+            <span
+              className="font-medium"
+              style={{
+                fontSize: "var(--text-xs)",
+                color: "var(--status-warning-text)",
+              }}
+            >
+              No internet connection
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+//
+// Shown after 2.5s if auth is still resolving — communicates the app's layout
+// so the transition into the real dashboard feels continuous rather than jarring.
+// Uses the design system's .skeleton shimmer class and CSS variable tokens.
+
+function LoadingSkeleton() {
+  return (
+    <div
+      className="min-h-screen"
+      style={{ background: "var(--bg-app)" }}
+      aria-hidden="true"
+    >
+      {/* Header */}
+      <div
+        className="sticky top-0 z-40 border-b"
+        style={{
+          background: "var(--bg-header)",
+          borderColor: "var(--border)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+        }}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-[var(--header-h,3.75rem)]">
+            {/* Logo area */}
+            <div className="flex items-center gap-3">
+              <div
+                className="skeleton w-9 h-9 rounded-xl"
+                style={{ background: "var(--bg-skeleton)" }}
+              />
+              <div className="space-y-1.5">
+                <div
+                  className="skeleton h-4 w-20 rounded"
+                  style={{ background: "var(--bg-skeleton)" }}
+                />
+                <div
+                  className="skeleton h-2.5 w-14 rounded"
+                  style={{ background: "var(--bg-skeleton)" }}
+                />
+              </div>
+            </div>
+            {/* Nav actions */}
+            <div className="flex items-center gap-3">
+              <div
+                className="skeleton h-8 w-8 rounded-lg"
+                style={{ background: "var(--bg-skeleton)" }}
+              />
+              <div
+                className="skeleton h-8 w-8 rounded-full"
+                style={{ background: "var(--bg-skeleton)" }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Page body */}
+      <div className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+        {/* Stat cards row */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {[72, 88, 60, 80].map((w, i) => (
+            <div
+              key={i}
+              className="rounded-xl p-5 space-y-3"
+              style={{
+                background: "var(--bg-card)",
+                border: "var(--card-border)",
+                boxShadow: "var(--card-shadow)",
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <div
+                  className="skeleton h-3 rounded"
+                  style={{
+                    width: `${w}%`,
+                    background: "var(--bg-skeleton)",
+                  }}
+                />
+                <div
+                  className="skeleton w-7 h-7 rounded-lg"
+                  style={{ background: "var(--bg-skeleton)" }}
+                />
+              </div>
+              <div
+                className="skeleton h-7 w-28 rounded"
+                style={{ background: "var(--bg-skeleton)" }}
+              />
+              <div
+                className="skeleton h-2.5 w-20 rounded"
+                style={{ background: "var(--bg-skeleton)" }}
+              />
+            </div>
+          ))}
         </div>
 
-        <div className="mt-6 w-full bg-gray-200 rounded-full h-2">
-          <div className="bg-red-600 h-2 rounded-full animate-pulse w-2/3"></div>
+        {/* Main content split */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Chart area — 2 cols */}
+          <div
+            className="lg:col-span-2 rounded-xl p-5 space-y-4"
+            style={{
+              background: "var(--bg-card)",
+              border: "var(--card-border)",
+              boxShadow: "var(--card-shadow)",
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <div
+                className="skeleton h-4 w-32 rounded"
+                style={{ background: "var(--bg-skeleton)" }}
+              />
+              <div
+                className="skeleton h-7 w-24 rounded-full"
+                style={{ background: "var(--bg-skeleton)" }}
+              />
+            </div>
+            {/* Chart bars */}
+            <div className="flex items-end gap-2 pt-2 h-32">
+              {[55, 80, 45, 90, 60, 75, 40, 85, 65, 70].map((h, i) => (
+                <div
+                  key={i}
+                  className="skeleton flex-1 rounded-t"
+                  style={{
+                    height: `${h}%`,
+                    background: "var(--bg-skeleton)",
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Budget panel — 1 col */}
+          <div
+            className="rounded-xl p-5 space-y-3"
+            style={{
+              background: "var(--bg-card)",
+              border: "var(--card-border)",
+              boxShadow: "var(--card-shadow)",
+            }}
+          >
+            <div
+              className="skeleton h-4 w-28 rounded"
+              style={{ background: "var(--bg-skeleton)" }}
+            />
+            {[65, 80, 45].map((pct, i) => (
+              <div key={i} className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <div
+                    className="skeleton h-3 w-20 rounded"
+                    style={{ background: "var(--bg-skeleton)" }}
+                  />
+                  <div
+                    className="skeleton h-3 w-10 rounded"
+                    style={{ background: "var(--bg-skeleton)" }}
+                  />
+                </div>
+                {/* Progress track */}
+                <div
+                  className="h-1.5 w-full rounded-full"
+                  style={{ background: "var(--status-neutral-bg)" }}
+                >
+                  <div
+                    className="skeleton h-1.5 rounded-full"
+                    style={{
+                      width: `${pct}%`,
+                      background: "var(--bg-skeleton)",
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Transaction list */}
+        <div
+          className="rounded-xl overflow-hidden"
+          style={{
+            background: "var(--bg-card)",
+            border: "var(--card-border)",
+            boxShadow: "var(--card-shadow)",
+          }}
+        >
+          <div
+            className="px-5 py-4 border-b flex items-center justify-between"
+            style={{ borderColor: "var(--border)" }}
+          >
+            <div
+              className="skeleton h-4 w-36 rounded"
+              style={{ background: "var(--bg-skeleton)" }}
+            />
+            <div
+              className="skeleton h-7 w-16 rounded-full"
+              style={{ background: "var(--bg-skeleton)" }}
+            />
+          </div>
+          <div
+            className="divide-y"
+            style={{ borderColor: "var(--border-subtle)" }}
+          >
+            {[1, 2, 3, 4, 5].map((_, i) => (
+              <div key={i} className="px-5 py-3.5 flex items-center gap-4">
+                <div
+                  className="skeleton w-9 h-9 rounded-xl flex-shrink-0"
+                  style={{ background: "var(--bg-skeleton)" }}
+                />
+                <div className="flex-1 space-y-1.5">
+                  <div
+                    className="skeleton h-3.5 rounded"
+                    style={{
+                      width: `${[55, 70, 45, 65, 50][i]}%`,
+                      background: "var(--bg-skeleton)",
+                    }}
+                  />
+                  <div
+                    className="skeleton h-2.5 w-20 rounded"
+                    style={{ background: "var(--bg-skeleton)" }}
+                  />
+                </div>
+                <div
+                  className="skeleton h-4 w-16 rounded flex-shrink-0"
+                  style={{ background: "var(--bg-skeleton)" }}
+                />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
+// ─── ProtectedRoute ───────────────────────────────────────────────────────────
 
 export default function ProtectedRoute({
   children,
@@ -163,33 +435,46 @@ export default function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { user, loading } = useAuth();
   const [showSkeleton, setShowSkeleton] = useState(false);
+  const [fadeIn, setFadeIn] = useState(false);
 
+  // Show skeleton after 2.5s — slightly longer than before so the
+  // loading screen has time to establish before the transition
   useEffect(() => {
-    // Show skeleton after 2 seconds of loading for better UX
-    const timer = setTimeout(() => {
-      if (loading) {
-        setShowSkeleton(true);
-      }
-    }, 2000);
-
+    if (!loading) return;
+    const timer = setTimeout(() => setShowSkeleton(true), 2500);
     return () => clearTimeout(timer);
   }, [loading]);
 
-  // Show custom fallback if provided
-  if (loading && fallback) {
-    return fallback;
-  }
+  // Fade in when auth resolves to avoid a hard cut to content
+  useEffect(() => {
+    if (!loading) {
+      const raf = requestAnimationFrame(() => setFadeIn(true));
+      return () => cancelAnimationFrame(raf);
+    }
+  }, [loading]);
 
-  // Show loading screen initially, then skeleton if taking too long
+  // Custom fallback takes priority
+  if (loading && fallback) return fallback;
+
+  // Loading states
   if (loading) {
     return showSkeleton ? <LoadingSkeleton /> : <LoadingScreen />;
   }
 
-  // Redirect to login if not authenticated
+  // Redirect unauthenticated users
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  // Render protected content
-  return children;
+  // Render protected content with a subtle fade-in
+  return (
+    <div
+      style={{
+        opacity: fadeIn ? 1 : 0,
+        transition: "opacity 180ms ease",
+      }}
+    >
+      {children}
+    </div>
+  );
 }
