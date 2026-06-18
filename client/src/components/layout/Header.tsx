@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 import { LogOut, User, Menu, X } from "lucide-react";
 import lightLogo from "../../assets/cashflow-light.png";
 import darkLogo from "../../assets/cashflow-dark.png";

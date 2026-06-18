@@ -6,7 +6,7 @@ import {
   deleteCategory,
 } from "../../services/categoryService";
 import type { Category } from "../../types";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 import { ICON_MAP, getIcon } from "../../utils/iconMap";
 
 interface CategoryManagerProps {

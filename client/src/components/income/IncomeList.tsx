@@ -6,7 +6,7 @@ import { incomeDate } from "../../utils/dataMappers";
 import { formatCurrency, formatShortDate } from "../../utils/formatters";
 import { getIcon } from "../../utils/iconMap";
 import { CHART_COLORS } from "../../utils/chartColors";
-import { useAlert } from "../../contexts/AlertContext";
+import { useAlert } from "../../hooks/useAlert";
 
 interface IncomeListProps {
   incomes: Income[];

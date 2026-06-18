@@ -1,20 +1,12 @@
 import {
-  createContext,
-  useContext,
   useState,
   useCallback,
   type ReactNode,
 } from "react";
-import AlertModal, { type AlertModalProps } from "../components/ui/AlertModal";
+import { AlertContext, type ShowAlertOptions } from "../hooks/useAlert";
+import AlertModal from "../components/ui/AlertModal";
 
-type ShowAlertOptions = Omit<AlertModalProps, "isOpen" | "onClose">;
 
-interface AlertContextType {
-  showAlert: (options: ShowAlertOptions) => void;
-  hideAlert: () => void;
-}
-
-const AlertContext = createContext<AlertContextType | undefined>(undefined);
 
 export function AlertProvider({ children }: { children: ReactNode }) {
   const [alertOptions, setAlertOptions] = useState<ShowAlertOptions | null>(
@@ -76,10 +68,4 @@ export function AlertProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useAlert() {
-  const context = useContext(AlertContext);
-  if (context === undefined) {
-    throw new Error("useAlert must be used within an AlertProvider");
-  }
-  return context;
-}
+

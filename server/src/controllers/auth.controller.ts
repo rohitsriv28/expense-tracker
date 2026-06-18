@@ -14,6 +14,13 @@ import IncomeSource from "../models/IncomeSource.model";
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+const COOKIE_CLEAR_OPTIONS = {
+  httpOnly: true,
+  secure: true,
+  sameSite: "none" as const,
+  path: "/",
+};
+
 const generateTokens = (userId: string) => {
   const accessToken = jwt.sign(
     { userId },
@@ -139,7 +146,7 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
     );
   }
 
-  res.clearCookie("refreshToken");
+  res.clearCookie("refreshToken", COOKIE_CLEAR_OPTIONS);
   res.json({ success: true, message: "Logged out successfully" });
 });
 
@@ -171,7 +178,7 @@ export const deleteAccount = asyncHandler(
     await IncomeSource.deleteMany({ userId });
 
     await User.findByIdAndDelete(userId);
-    res.clearCookie("refreshToken");
+    res.clearCookie("refreshToken", COOKIE_CLEAR_OPTIONS);
     res.json({ success: true, message: "Account deleted" });
   },
 );

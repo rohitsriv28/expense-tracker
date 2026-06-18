@@ -263,32 +263,7 @@ describe('Expense Controller', () => {
     });
   });
 
-  // ─── DELETE /api/expenses/:id ─────────────────────────────────────────────────
 
-  describe('DELETE /api/expenses/:id', () => {
-    it('should delete an expense successfully', async () => {
-      const expense = await Expense.create({ ...validExpense, userId, editCount: 0 });
-
-      const res = await request(app)
-        .delete(`/api/expenses/${expense._id}`)
-        .set('Authorization', `Bearer ${token}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.success).toBe(true);
-
-      const deleted = await Expense.findById(expense._id);
-      expect(deleted).toBeNull();
-    });
-
-    it('should return 404 when deleting non-existent expense', async () => {
-      const fakeId = new (require('mongoose').Types.ObjectId)();
-      const res = await request(app)
-        .delete(`/api/expenses/${fakeId}`)
-        .set('Authorization', `Bearer ${token}`);
-
-      expect(res.status).toBe(404);
-    });
-  });
 
   // ─── Ownership isolation ──────────────────────────────────────────────────────
 
@@ -309,20 +284,7 @@ describe('Expense Controller', () => {
       expect(res.status).toBe(403);
     });
 
-    it('should not allow a user to delete another user\'s expense', async () => {
-      const other = await createTestUser({ googleId: 'other2_google', email: 'other2@example.com' });
-      const expense = await Expense.create({
-        ...validExpense,
-        userId: other.user._id,
-        editCount: 0,
-      });
 
-      const res = await request(app)
-        .delete(`/api/expenses/${expense._id}`)
-        .set('Authorization', `Bearer ${token}`);
-
-      expect(res.status).toBe(403);
-    });
 
     it('should not return other user\'s expenses in GET listing', async () => {
       const other = await createTestUser({ googleId: 'other3_google', email: 'other3@example.com' });

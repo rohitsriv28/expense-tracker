@@ -1,5 +1,5 @@
 import express from "express";
-import { authenticate } from "../middleware/authenticate";
+import { authenticateLean } from "../middleware/authenticate";
 import {
   getCategories,
   createCategory,
@@ -9,7 +9,7 @@ import {
 
 const router = express.Router();
 
-router.use(authenticate);
+router.use(authenticateLean);
 
 router.route("/").get(getCategories).post(createCategory);
 

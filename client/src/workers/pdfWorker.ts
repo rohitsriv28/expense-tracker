@@ -1,23 +1,35 @@
-import type { ReportData } from "../services/pdfExport";
+import { jsPDF } from "jspdf";
 
-self.onmessage = async (_e: MessageEvent<ReportData>) => {
+interface WorkerInput {
+  images: string[];
+  pdfWidth: number;
+  pdfHeight: number;
+}
+
+self.onmessage = async (e: MessageEvent<WorkerInput>) => {
   try {
-    // If we try to use html2canvas here, it will fail because there is no document
-    // We post a failure so the main thread handles it gracefully as requested.
-    if (typeof document === "undefined") {
-      self.postMessage({
-        success: false,
-        error: "DOM not available in worker. Falling back to main thread.",
-      });
-      return;
+    const { images, pdfWidth, pdfHeight } = e.data;
+
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "pt",
+      format: "a4",
+    });
+
+    for (let i = 0; i < images.length; i++) {
+      if (i > 0) {
+        pdf.addPage();
+      }
+      pdf.addImage(images[i], "JPEG", 0, 0, pdfWidth, pdfHeight);
     }
 
-    // The rest of the implementation if somehow DOM was available
-    self.postMessage({ success: false, error: "Not implemented in worker" });
+    const pdfBytes = pdf.output("arraybuffer");
+
+    self.postMessage({ success: true, pdfBytes }, [pdfBytes]);
   } catch (error: any) {
     self.postMessage({
       success: false,
-      error: error.message || "Worker failed",
+      error: error.message || "Failed to compile PDF in worker",
     });
   }
 };

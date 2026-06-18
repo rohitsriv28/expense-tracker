@@ -33,13 +33,6 @@ export const getBudgets = async (): Promise<Budget[]> => {
   return res.data.data;
 };
 
-export const getBudgetSummary = async (
-  id: string,
-): Promise<MonthlyEnvelopeSummary> => {
-  const res = await apiClient.get(`/budgets/${id}/summary`);
-  return res.data.data;
-};
-
 export function isMonthlyEnvelopeBudget(
   budget: Budget,
 ): budget is MonthlyEnvelopeBudget {

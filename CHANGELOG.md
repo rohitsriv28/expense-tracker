@@ -9,6 +9,30 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [3.0.6] - 2026-06-18
+
+A comprehensive optimization, security, and PWA stability update addressing Google OAuth restrictions, PDF export bottlenecks, and database performance issues.
+
+### Added
+
+- **Zod Route Validation:** Integrated request body validation using Zod schemas for budget, income, and income source endpoints.
+- **PWA Redirect Google OAuth Flow:** Implemented a standalone PWA mode detector that automatically triggers Google OAuth redirects instead of popups, securely passing the access token through URL hashes to bypass security restrictions on isolated webviews.
+
+### Changed
+
+- **PDF Generation Web Worker:** Restructured PDF export to capture page snapshots on the main thread and offload compilation (`jsPDF` binary assembly) to a background ES Web Worker, resolving main-thread blocking while preserving correct HTML rendering.
+- **Optimized Server Authentication:** Replaced regular database user queries with a lightweight `authenticateLean` helper on CRUD endpoints to skip redundant user lookups.
+- **Data Retention Pagination:** Updated the nightly database retention job to stream user records via a cursor stream in parallel batches of 10.
+- **Express Request Cache:** Cached fetched documents in the Express request context (`req.doc`) inside the ownership guard to eliminate duplicate database fetches in update controllers.
+
+### Fixed
+
+- **Archived Category Duplicate Index:** Replaced the compound unique index on categories with a partial unique index (`isArchived: false`), allowing users to reuse names of archived categories.
+- **Largest Expense Label:** Resolved the largest expense category ID into its human-readable category name in the reports dashboard.
+- **Token Verification Tests:** Fixed a failing mock authentication test by directing requests to the user settings endpoint which utilizes full database user lookup verification.
+
+---
+
 ## [3.0.5] - 2026-06-15
 
 A focused update enforcing stricter ledger integrity and improving transaction transparency.

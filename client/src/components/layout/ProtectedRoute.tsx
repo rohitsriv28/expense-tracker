@@ -1,5 +1,5 @@
 import { Navigate } from "react-router-dom";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 import useOfflineStatus from "../../hooks/useOfflineStatus";
 import type { ReactElement } from "react";
 import { useState, useEffect, useRef } from "react";

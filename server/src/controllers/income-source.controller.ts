@@ -15,7 +15,7 @@ export const getIncomeSources = asyncHandler(
 
 export const createIncomeSource = asyncHandler(
   async (req: Request, res: Response) => {
-    const { name, icon, color, frequency, expectedAmount, isDefault } = req.body;
+    const { name, icon, color, frequency, expectedAmount, isDefault, type } = req.body;
 
     if (!name || !icon || !color || !frequency) {
       throw new AppError("Missing required fields", 400);
@@ -28,7 +28,7 @@ export const createIncomeSource = asyncHandler(
       color,
       frequency,
       expectedAmount,
-      isDefault: isDefault || false,
+      isDefault: false, // Force false to prevent user creation of default sources
     });
 
     res.status(201).json({ success: true, data: source });
@@ -37,9 +37,10 @@ export const createIncomeSource = asyncHandler(
 
 export const updateIncomeSource = asyncHandler(
   async (req: Request, res: Response) => {
+    const { isDefault, type, userId, ...bodyData } = req.body;
     const source = await IncomeSource.findOneAndUpdate(
       { _id: req.params.id, userId: req.user!._id },
-      req.body,
+      bodyData,
       { new: true, runValidators: true },
     );
 

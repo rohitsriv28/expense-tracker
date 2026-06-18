@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BarChart3, Home, Receipt, Target, TrendingUp, X } from "lucide-react";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import type { Expense } from "../types";
 import { getAllExpenses } from "../services/expenseService";
 import type { Category } from "../types";
@@ -26,7 +26,7 @@ import ExpenseFilters, {
 import SkeletonCard from "../components/ui/SkeletonCard";
 import SkeletonChart from "../components/ui/SkeletonChart";
 import SkeletonList from "../components/ui/SkeletonList";
-import { useAlert } from "../contexts/AlertContext";
+import { useAlert } from "../hooks/useAlert";
 
 type Tab = "dashboard" | "expenses" | "income" | "budgets" | "reports";
 type Sheet = "expense" | "income" | null;
@@ -141,8 +141,7 @@ export default function Dashboard() {
     if (filters.startDate) {
       const start = filters.startDate.getTime();
       result = result.filter((expense) => {
-        const d =
-          new Date(expense.date) ?? new Date(expense.date as unknown as string);
+        const d = new Date(expense.date);
         return d.getTime() >= start;
       });
     }
@@ -150,8 +149,7 @@ export default function Dashboard() {
       const end = new Date(filters.endDate);
       end.setHours(23, 59, 59, 999);
       result = result.filter((expense) => {
-        const d =
-          new Date(expense.date) ?? new Date(expense.date as unknown as string);
+        const d = new Date(expense.date);
         return d.getTime() <= end.getTime();
       });
     }

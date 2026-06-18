@@ -2,8 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { FileText, IndianRupee, Receipt, X } from "lucide-react";
 import type { Expense, Category } from "../../types";
 import { addExpense, updateExpense } from "../../services/expenseService";
-import { useAuth } from "../../contexts/AuthContext";
-import { useAlert } from "../../contexts/AlertContext";
+import { useAuth } from "../../hooks/useAuth";
+import { useAlert } from "../../hooks/useAlert";
 import DatePicker from "../ui/DatePicker";
 import { cn } from "../../utils/cn";
 import {
@@ -182,6 +182,8 @@ export default function AddExpenseForm({
       setIsSaving(false);
     }
   };
+
+
 
   if (isOpen === false) return null;
 
@@ -437,25 +439,29 @@ export default function AddExpenseForm({
         )}
       </section>
 
-      <button
-        type="submit"
-        className="btn btn-primary btn-lg w-full animate-scale-in"
-        disabled={
-          !user || isSaving || (editing && (expense?.editCount ?? 0) >= 3)
-        }
-      >
-        {isSaving ? (
-          <>
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-            Saving...
-          </>
-        ) : (
-          <>
-            <Receipt className="h-4 w-4" />
-            {editing ? "Save Changes" : "Add Expense"}
-          </>
-        )}
-      </button>
+      <div className="flex flex-col gap-2">
+        <button
+          type="submit"
+          className="btn btn-primary btn-lg w-full animate-scale-in"
+          disabled={
+            !user || isSaving || (editing && (expense?.editCount ?? 0) >= 3)
+          }
+        >
+          {isSaving ? (
+            <>
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              Saving...
+            </>
+          ) : (
+            <>
+              <Receipt className="h-4 w-4" />
+              {editing ? "Save Changes" : "Add Expense"}
+            </>
+          )}
+        </button>
+
+
+      </div>
 
     </form>
   );

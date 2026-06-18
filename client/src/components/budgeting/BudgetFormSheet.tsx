@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { addBudget } from "../../services/budgetService";
 import type { MonthlyEnvelopeBudget } from "../../types";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 
 interface BudgetFormSheetProps {
   onSaved?: (message: string, newBudgetId?: string) => void;

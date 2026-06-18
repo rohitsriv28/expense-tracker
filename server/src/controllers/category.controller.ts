@@ -26,7 +26,7 @@ export const getCategories = asyncHandler(
 
 export const createCategory = asyncHandler(
   async (req: Request, res: Response) => {
-    const { name, icon, color, isDefault } = req.body;
+    const { name, icon, color } = req.body;
 
     if (!name || !icon || !color) {
       throw new AppError("Missing required fields", 400);
@@ -37,7 +37,7 @@ export const createCategory = asyncHandler(
       label: name,
       icon,
       color,
-      type: isDefault ? "default" : "custom",
+      type: "custom", // Force custom type
     });
 
     res.status(201).json({ success: true, data: mapCategory(category) });
@@ -46,14 +46,11 @@ export const createCategory = asyncHandler(
 
 export const updateCategory = asyncHandler(
   async (req: Request, res: Response) => {
-    const updateData: any = { ...req.body };
+    const { isDefault, type, ...bodyData } = req.body;
+    const updateData: any = { ...bodyData };
     if (updateData.name) {
       updateData.label = updateData.name;
       delete updateData.name;
-    }
-    if (updateData.isDefault !== undefined) {
-      updateData.type = updateData.isDefault ? "default" : "custom";
-      delete updateData.isDefault;
     }
 
     const category = await Category.findOneAndUpdate(

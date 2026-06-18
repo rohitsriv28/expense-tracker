@@ -41,7 +41,7 @@ import {
   formatShortDate,
 } from "../../utils/formatters";
 import { CHART_COLORS } from "../../utils/chartColors";
-import { useAlert } from "../../contexts/AlertContext";
+import { useAlert } from "../../hooks/useAlert";
 
 interface ReportsSectionProps {
   expenses: Expense[];
@@ -452,7 +452,11 @@ export default function ReportsSection({
         <Metric
           label="Largest Expense"
           value={formatCurrency(largestExpense?.amount ?? 0)}
-          detail={largestExpense?.category ?? "None"}
+          detail={
+            largestExpense
+              ? resolveExpenseVisuals(categories, largestExpense.category ?? "").categoryName
+              : "None"
+          }
         />
         <Metric label="This Week" value={formatCurrency(rolling.week)} />
         <Metric label="This Month" value={formatCurrency(rolling.month)} />

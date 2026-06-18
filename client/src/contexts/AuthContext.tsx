@@ -1,11 +1,10 @@
 import {
-  createContext,
-  useContext,
   useState,
   useEffect,
   useCallback,
   useMemo,
 } from "react";
+import { AuthContext } from "../hooks/useAuth";
 import type { ReactNode } from "react";
 import apiClient, { setAccessToken } from "../services/apiClient";
 
@@ -21,14 +20,8 @@ interface User {
   photoURL?: string;
 }
 
-interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-  loginWithToken: (accessToken: string) => Promise<void>;
-  logout: () => Promise<void>;
-}
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -81,8 +74,3 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error("useAuth must be used within AuthProvider");
-  return context;
-};

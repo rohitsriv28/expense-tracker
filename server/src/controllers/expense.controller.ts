@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import Expense from "../models/Expense.model";
+import Expense, { IExpense } from "../models/Expense.model";
 import { asyncHandler } from "../utils/asyncHandler";
 import { AppError } from "../utils/AppError";
 
@@ -85,10 +85,11 @@ export const createExpense = asyncHandler(
 
 export const updateExpense = asyncHandler(
   async (req: Request, res: Response) => {
-    const current = await Expense.findOne({
+    const current = (req.doc || await Expense.findOne({
       _id: req.params.id,
       userId: req.user!._id,
-    });
+    })) as IExpense | null;
+
     if (!current) throw new AppError("Expense not found", 404);
     if (current.editCount >= 3)
       throw new AppError("Maximum edit limit reached (3 times).", 403);
@@ -101,3 +102,4 @@ export const updateExpense = asyncHandler(
     res.json({ success: true, data: expense });
   },
 );
+

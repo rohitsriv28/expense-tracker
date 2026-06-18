@@ -14,7 +14,7 @@ import type { Category } from "../../types";
 import MonthlyEnvelopeCard from "./MonthlyEnvelopeCard";
 import BudgetFormSheet from "./BudgetFormSheet";
 import AllocationSheet from "./AllocationSheet";
-import { useAlert } from "../../contexts/AlertContext";
+import { useAlert } from "../../hooks/useAlert";
 
 interface BudgetManagerProps {
   budgets: Budget[];

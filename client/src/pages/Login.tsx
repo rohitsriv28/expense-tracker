@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import { useGoogleLogin } from "@react-oauth/google";
 import {
   Shield,
@@ -147,6 +147,43 @@ export default function Login() {
     }
   }, [user, navigate]);
 
+  // Detect standalone PWA mode
+  const isStandalone = useMemo(() => {
+    return (
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true
+    );
+  }, []);
+
+  // Handle callback if redirected back with token in URL hash (PWA standalone mode)
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash) {
+      const params = new URLSearchParams(hash.substring(1)); // Remove the leading '#'
+      const accessToken = params.get("access_token");
+      if (accessToken) {
+        // Strip hash parameters from location so they don't linger in URL
+        window.history.replaceState(
+          null,
+          "",
+          window.location.pathname + window.location.search,
+        );
+
+        const performLogin = async () => {
+          try {
+            setIsLoading(true);
+            await loginWithToken(accessToken);
+          } catch (error) {
+            console.error("Redirect login failed:", error);
+            setErrorMessage(getErrorMessage(error));
+            setIsLoading(false);
+          }
+        };
+        performLogin();
+      }
+    }
+  }, [loginWithToken]);
+
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
@@ -164,6 +201,18 @@ export default function Login() {
       setIsLoading(false);
     },
   });
+
+  const handleLoginClick = () => {
+    if (isStandalone) {
+      const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+      const redirectUri = encodeURIComponent(`${window.location.origin}/login`);
+      const scope = encodeURIComponent("openid profile email");
+      const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=token&scope=${scope}`;
+      window.location.href = url;
+    } else {
+      handleGoogleLogin();
+    }
+  };
 
   return (
     <div className="min-h-[100dvh] flex bg-white dark:bg-slate-900 transition-colors">
@@ -269,7 +318,7 @@ export default function Login() {
               Reference: https://developers.google.com/identity/branding-guidelines
             */}
             <button
-              onClick={() => handleGoogleLogin()}
+              onClick={handleLoginClick}
               disabled={isLoading}
               aria-busy={isLoading}
               className="

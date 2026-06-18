@@ -5,7 +5,7 @@ import {
   createExpense,
   updateExpense,
 } from "../controllers/expense.controller";
-import { authenticate } from "../middleware/authenticate";
+import { authenticateLean } from "../middleware/authenticate";
 import { ownershipGuard } from "../middleware/ownership";
 import { validate } from "../middleware/validate";
 import {
@@ -16,7 +16,7 @@ import Expense from "../models/Expense.model";
 
 const router = Router();
 
-router.use(authenticate);
+router.use(authenticateLean);
 
 router.get("/", getExpenses);
 router.get("/all", getAllExpenses);

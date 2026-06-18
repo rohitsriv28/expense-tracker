@@ -55,22 +55,35 @@ export function startDataRetentionJob() {
     let totalDeleted = 0;
 
     try {
+      const cursor = User.find({}, "_id settings").cursor();
       const batchSize = 10;
-      let skip = 0;
-      let hasMore = true;
+      let usersBatch = [];
+      let doc;
 
-      while (hasMore) {
-        const users = await User.find({}, "_id settings")
-          .skip(skip)
-          .limit(batchSize)
-          .lean();
+      while ((doc = await cursor.next())) {
+        usersBatch.push(doc);
+        if (usersBatch.length === batchSize) {
+          const deletePromises = usersBatch.map(async (user) => {
+            const retentionMonths = user.settings?.dataRetentionMonths ?? 12;
+            const cutoff = new Date();
+            cutoff.setMonth(cutoff.getMonth() - retentionMonths);
 
-        if (users.length === 0) {
-          hasMore = false;
-          break;
+            const result = await Expense.deleteMany({
+              userId: user._id,
+              date: { $lt: cutoff },
+            });
+
+            return result.deletedCount;
+          });
+
+          const counts = await Promise.all(deletePromises);
+          totalDeleted += counts.reduce((acc, count) => acc + count, 0);
+          usersBatch = [];
         }
+      }
 
-        const deletePromises = users.map(async (user) => {
+      if (usersBatch.length > 0) {
+        const deletePromises = usersBatch.map(async (user) => {
           const retentionMonths = user.settings?.dataRetentionMonths ?? 12;
           const cutoff = new Date();
           cutoff.setMonth(cutoff.getMonth() - retentionMonths);
@@ -85,8 +98,6 @@ export function startDataRetentionJob() {
 
         const counts = await Promise.all(deletePromises);
         totalDeleted += counts.reduce((acc, count) => acc + count, 0);
-
-        skip += batchSize;
       }
 
       logger.info(

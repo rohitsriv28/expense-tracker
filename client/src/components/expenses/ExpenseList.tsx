@@ -9,7 +9,7 @@ import type { Expense } from "../../types";
 import type { Category } from "../../types";
 import { expenseDate, resolveExpenseVisuals } from "../../utils/dataMappers";
 import { formatCurrency } from "../../utils/formatters";
-import { useAlert } from "../../contexts/AlertContext";
+import { useAlert } from "../../hooks/useAlert";
 import GroupedTransactionList, {
   type GroupedTransaction,
 } from "./GroupedTransactionList";

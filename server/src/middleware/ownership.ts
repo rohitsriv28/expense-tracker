@@ -17,6 +17,7 @@ export const ownershipGuard =
       if (doc.userId.toString() !== req.user!._id.toString()) {
         throw new AppError("Forbidden", 403);
       }
+      req.doc = doc;
       next();
     } catch (error) {
       next(error);

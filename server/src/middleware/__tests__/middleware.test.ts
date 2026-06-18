@@ -18,14 +18,14 @@ describe('Middleware', () => {
 
   describe('authenticate', () => {
     it('should reject request without Authorization header', async () => {
-      const res = await request(app).get('/api/expenses');
+      const res = await request(app).get('/api/auth/me');
       expect(res.status).toBe(401);
       expect(res.body.message).toMatch(/authentication required/i);
     });
 
     it('should reject malformed Authorization header (no Bearer prefix)', async () => {
       const res = await request(app)
-        .get('/api/expenses')
+        .get('/api/auth/me')
         .set('Authorization', 'NotBearer sometoken');
       expect(res.status).toBe(401);
     });
@@ -38,7 +38,7 @@ describe('Middleware', () => {
       );
 
       const res = await request(app)
-        .get('/api/expenses')
+        .get('/api/auth/me')
         .set('Authorization', `Bearer ${expired}`);
 
       expect(res.status).toBe(401);
@@ -53,7 +53,7 @@ describe('Middleware', () => {
       );
 
       const res = await request(app)
-        .get('/api/expenses')
+        .get('/api/auth/me')
         .set('Authorization', `Bearer ${orphan}`);
 
       expect(res.status).toBe(401);
@@ -62,7 +62,7 @@ describe('Middleware', () => {
     it('should accept valid token', async () => {
       const { token } = await createTestUser({ googleId: 'auth_valid', email: 'auth_valid@ex.com' });
       const res = await request(app)
-        .get('/api/expenses')
+        .get('/api/auth/me')
         .set('Authorization', `Bearer ${token}`);
 
       expect(res.status).toBe(200);

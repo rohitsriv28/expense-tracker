@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { IndianRupee, TrendingUp, X } from "lucide-react";
 import { addIncome } from "../../services/incomeService";
 import type { IncomeSource } from "../../types";
-import { useAuth } from "../../contexts/AuthContext";
+import { useAuth } from "../../hooks/useAuth";
 import DatePicker from "../ui/DatePicker";
 import { cn } from "../../utils/cn";
 import { getIcon } from "../../utils/iconMap";
