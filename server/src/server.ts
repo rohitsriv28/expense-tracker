@@ -1,7 +1,12 @@
 import dotenv from "dotenv";
 dotenv.config();
 
-const REQUIRED_ENV_VARS = ["MONGODB_URI", "JWT_SECRET", "JWT_REFRESH_SECRET", "GOOGLE_CLIENT_ID"];
+const REQUIRED_ENV_VARS = [
+  "MONGODB_URI",
+  "JWT_SECRET",
+  "JWT_REFRESH_SECRET",
+  "GOOGLE_CLIENT_ID",
+];
 for (const envVar of REQUIRED_ENV_VARS) {
   if (!process.env[envVar]) {
     console.error(`Error: Missing required environment variable: ${envVar}`);

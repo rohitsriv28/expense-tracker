@@ -7,6 +7,15 @@ All notable changes to this project will be documented in this file.
 - **Debt & Borrow Tracker:** A dedicated module to keep track of what you owe and what others owe you, seamlessly integrated into your expense history.
 - **Shared Expenses & Group Splits:** Collaborative expense tracking for groups to easily share bills and manage settlements.
 
+## [3.0.7] - 2026-06-24
+
+A critical reliability patch addressing cross-origin database routing in deployed environments and PWA session persistence on iOS.
+
+### Fixed
+
+- **Programmatic Database Enforcement:** Restored the explicit `{ dbName: "cashflow" }` option to the Mongoose connection options in the backend, preventing environments with connection strings that omit the database path (such as Atlas SRV URIs in Render) from falling back to default databases.
+- **PWA iOS Session Retention:** Implemented a hybrid refresh token persistence mechanism. The client now securely caches the rotated refresh token in local storage, passing it via request payload on `/auth/refresh` and `/auth/logout` as a fallback to bypass WebKit's aggressive cross-origin third-party cookie blocking (Intelligent Tracking Prevention) in standalone iOS PWAs.
+
 ---
 
 ## [3.0.6] - 2026-06-24

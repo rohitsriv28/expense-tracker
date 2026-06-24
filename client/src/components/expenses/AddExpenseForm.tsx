@@ -177,8 +177,6 @@ export default function AddExpenseForm({
     }
   };
 
-
-
   if (isOpen === false) return null;
 
   const form = (
@@ -296,7 +294,10 @@ export default function AddExpenseForm({
             Amount
           </label>
           {editing && (
-            <span className="text-xs opacity-80" style={{ color: "var(--text-secondary)" }}>
+            <span
+              className="text-xs opacity-80"
+              style={{ color: "var(--text-secondary)" }}
+            >
               {(expense?.editCount ?? 0) >= 3 ? (
                 <span style={{ color: "var(--interactive-danger)" }}>
                   Max edits reached
@@ -453,10 +454,7 @@ export default function AddExpenseForm({
             </>
           )}
         </button>
-
-
       </div>
-
     </form>
   );
 

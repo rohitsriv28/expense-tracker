@@ -11,9 +11,9 @@ This is the custom backend API for CashFlow, built to handle secure authenticati
 
 ## Key Features
 
-- **JWT Authentication:** Secure `httpOnly` cookie-based authentication via Google OAuth.
-- **Data Isolation:** Strict Mongoose schemas with user-bound queries for multi-tenant security.
-- **Security Middlewares:** Preconfigured with Helmet, CORS, and Rate Limiting for production readiness.
+- **JWT Authentication & PWA Fallbacks:** Secure token rotation via HTTP-only cookies, combined with request-body JSON fallback validation for cross-origin PWA clients (such as standalone WebKit on iOS).
+- **Mongoose Database Schema & Connection Safety:** Enforces strict user-bound document isolation, lean queries on high-frequency CRUD endpoints, and programmatic `dbName` routing to prevent default database overrides in deployed hostings (e.g. Render Atlas SRV).
+- **Security & Optimization Middlewares:** Preconfigured with Helmet, CORS configuration supporting custom arrays, trust proxy headers, and environment pre-flight startup validations.
 
 ## Setup Instructions
 

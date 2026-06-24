@@ -6,15 +6,7 @@ import { expenseQuerySchema } from "../validation/expense.validation";
 
 export const getExpenses = asyncHandler(async (req: Request, res: Response) => {
   const query = expenseQuerySchema.parse(req.query);
-  const {
-    page,
-    limit,
-    startDate,
-    endDate,
-    category,
-    sortBy,
-    sortDir,
-  } = query;
+  const { page, limit, startDate, endDate, category, sortBy, sortDir } = query;
   const userId = req.user!._id;
 
   const filter: Record<string, any> = { userId };
@@ -67,7 +59,10 @@ export const getAllExpenses = asyncHandler(
       if (endDate) filter.date.$lte = new Date(endDate as string);
     }
 
-    const expenses = await Expense.find(filter).sort({ date: -1 }).limit(1000).lean();
+    const expenses = await Expense.find(filter)
+      .sort({ date: -1 })
+      .limit(1000)
+      .lean();
     res.json({ success: true, data: expenses });
   },
 );
@@ -85,10 +80,11 @@ export const createExpense = asyncHandler(
 
 export const updateExpense = asyncHandler(
   async (req: Request, res: Response) => {
-    const current = (req.doc || await Expense.findOne({
-      _id: req.params.id,
-      userId: req.user!._id,
-    })) as IExpense | null;
+    const current = (req.doc ||
+      (await Expense.findOne({
+        _id: req.params.id,
+        userId: req.user!._id,
+      }))) as IExpense | null;
 
     if (!current) throw new AppError("Expense not found", 404);
     if (current.editCount >= 3)
@@ -102,4 +98,3 @@ export const updateExpense = asyncHandler(
     res.json({ success: true, data: expense });
   },
 );
-

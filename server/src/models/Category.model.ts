@@ -33,7 +33,7 @@ const CategorySchema = new Schema<ICategory>(
 CategorySchema.index({ userId: 1, isArchived: 1 });
 CategorySchema.index(
   { userId: 1, label: 1 },
-  { unique: true, partialFilterExpression: { isArchived: false } }
+  { unique: true, partialFilterExpression: { isArchived: false } },
 );
 
 export default mongoose.model<ICategory>("Category", CategorySchema);

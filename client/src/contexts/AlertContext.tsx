@@ -1,12 +1,6 @@
-import {
-  useState,
-  useCallback,
-  type ReactNode,
-} from "react";
+import { useState, useCallback, type ReactNode } from "react";
 import { AlertContext, type ShowAlertOptions } from "../hooks/useAlert";
 import AlertModal from "../components/ui/AlertModal";
-
-
 
 export function AlertProvider({ children }: { children: ReactNode }) {
   const [alertOptions, setAlertOptions] = useState<ShowAlertOptions | null>(
@@ -67,5 +61,3 @@ export function AlertProvider({ children }: { children: ReactNode }) {
     </AlertContext.Provider>
   );
 }
-
-

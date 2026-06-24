@@ -8,7 +8,9 @@ export interface AlertContextType {
   hideAlert: () => void;
 }
 
-export const AlertContext = createContext<AlertContextType | undefined>(undefined);
+export const AlertContext = createContext<AlertContextType | undefined>(
+  undefined,
+);
 
 export function useAlert() {
   const context = useContext(AlertContext);

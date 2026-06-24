@@ -1,9 +1,4 @@
-import {
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-} from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { AuthContext, type User } from "../hooks/useAuth";
 import { useTheme } from "../hooks/useTheme";
 import type { ReactNode } from "react";
@@ -22,8 +17,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const initAuth = async () => {
       try {
-        const { data } = await apiClient.post("/auth/refresh");
+        const localRefreshToken = localStorage.getItem("refreshToken");
+        const { data } = await apiClient.post("/auth/refresh", {
+          refreshToken: localRefreshToken,
+        });
         setAccessToken(data.data.accessToken);
+        if (data.data.refreshToken) {
+          localStorage.setItem("refreshToken", data.data.refreshToken);
+        }
         const meRes = await apiClient.get("/auth/me");
         const userData = meRes.data.data;
         setUser(userData);
@@ -32,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         await pullFrequencyMapFromServer();
       } catch {
+        localStorage.removeItem("refreshToken");
         setUser(null);
       } finally {
         setLoading(false);
@@ -40,16 +42,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initAuth();
   }, [setTheme]);
 
-  const loginWithToken = useCallback(async (token: string) => {
-    const { data } = await apiClient.post("/auth/google", { idToken: token });
-    setAccessToken(data.data.accessToken);
-    const userData = data.data.user;
-    setUser(userData);
-    if (userData?.settings?.theme) {
-      setTheme(userData.settings.theme);
-    }
-    await pullFrequencyMapFromServer();
-  }, [setTheme]);
+  const loginWithToken = useCallback(
+    async (token: string) => {
+      const { data } = await apiClient.post("/auth/google", { idToken: token });
+      setAccessToken(data.data.accessToken);
+      if (data.data.refreshToken) {
+        localStorage.setItem("refreshToken", data.data.refreshToken);
+      }
+      const userData = data.data.user;
+      setUser(userData);
+      if (userData?.settings?.theme) {
+        setTheme(userData.settings.theme);
+      }
+      await pullFrequencyMapFromServer();
+    },
+    [setTheme],
+  );
 
   const logout = useCallback(async () => {
     try {
@@ -57,8 +65,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         pushFrequencyMapToServer(),
         new Promise((resolve) => setTimeout(resolve, 3000)),
       ]);
-      await apiClient.post("/auth/logout");
+      const localRefreshToken = localStorage.getItem("refreshToken");
+      await apiClient.post("/auth/logout", { refreshToken: localRefreshToken });
     } finally {
+      localStorage.removeItem("refreshToken");
       setAccessToken(null);
       setUser(null);
     }
@@ -73,4 +83,3 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
   );
 }
-

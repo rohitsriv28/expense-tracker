@@ -58,7 +58,9 @@ function App() {
                     setShowFailedModal(true);
                   }
                   // After sync queue, refresh stale cached GETs
-                  processRefreshQueue((url) => apiClient.get(url)).catch(console.error);
+                  processRefreshQueue((url) => apiClient.get(url)).catch(
+                    console.error,
+                  );
                 })
                 .catch(console.error);
             })

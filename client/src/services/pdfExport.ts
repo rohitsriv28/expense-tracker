@@ -3,10 +3,17 @@ import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
 import html2canvas from "html2canvas-pro";
 import { jsPDF } from "jspdf";
-import PdfReportTemplate, { TOTAL_PAGES } from "../components/pdf-preview/PdfReportTemplate";
+import PdfReportTemplate, {
+  TOTAL_PAGES,
+} from "../components/pdf-preview/PdfReportTemplate";
 import PDFWorker from "../workers/pdfWorker?worker";
 
-import type { Income, Expense, Category, MonthlyEnvelopeSummary } from "../types";
+import type {
+  Income,
+  Expense,
+  Category,
+  MonthlyEnvelopeSummary,
+} from "../types";
 
 export interface ReportData {
   period: { start: Date; end: Date; label: string };
@@ -77,7 +84,9 @@ export async function generatePDFReport(data: ReportData): Promise<void> {
         );
       }
 
-      const pageElement = container.querySelector(".page-break-after-always") as HTMLElement;
+      const pageElement = container.querySelector(
+        ".page-break-after-always",
+      ) as HTMLElement;
       if (!pageElement) {
         throw new Error(`Page ${i + 1} did not render properly.`);
       }
@@ -128,7 +137,10 @@ export async function generatePDFReport(data: ReportData): Promise<void> {
         });
         return;
       } catch (err) {
-        console.warn("Worker assembly failed, falling back to sync assembly:", err);
+        console.warn(
+          "Worker assembly failed, falling back to sync assembly:",
+          err,
+        );
       }
     }
 
@@ -146,7 +158,6 @@ export async function generatePDFReport(data: ReportData): Promise<void> {
     }
     const filename = `cashflow-report-${data.period.label.toLowerCase().replace(/\s+/g, "-")}.pdf`;
     pdf.save(filename);
-
   } finally {
     isGenerating = false;
     try {

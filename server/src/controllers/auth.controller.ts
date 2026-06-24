@@ -42,8 +42,7 @@ const generateTokens = (userId: string) => {
 
 export const googleAuth = asyncHandler(async (req: Request, res: Response) => {
   const { idToken } = req.body;
-  if (!idToken)
-    throw new AppError("Google ID token is required", 400);
+  if (!idToken) throw new AppError("Google ID token is required", 400);
 
   let ticket;
   try {
@@ -56,7 +55,8 @@ export const googleAuth = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const payload = ticket.getPayload();
-  if (!payload) throw new AppError("Incomplete profile information from Google", 400);
+  if (!payload)
+    throw new AppError("Incomplete profile information from Google", 400);
 
   const {
     sub: googleId,
@@ -116,12 +116,12 @@ export const googleAuth = asyncHandler(async (req: Request, res: Response) => {
 
   res.json({
     success: true,
-    data: { accessToken, user },
+    data: { accessToken, refreshToken, user },
   });
 });
 
 export const refresh = asyncHandler(async (req: Request, res: Response) => {
-  const refreshToken = req.cookies.refreshToken;
+  const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
   if (!refreshToken) throw new AppError("Refresh token required", 401);
 
   try {
@@ -163,7 +163,10 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
 
     res.json({
       success: true,
-      data: { accessToken: tokens.accessToken },
+      data: {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      },
     });
   } catch (err) {
     throw new AppError("Invalid or expired refresh token", 401);
@@ -171,7 +174,7 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const logout = asyncHandler(async (req: Request, res: Response) => {
-  const refreshToken = req.cookies.refreshToken;
+  const refreshToken = req.cookies.refreshToken || req.body.refreshToken;
   if (refreshToken) {
     await User.findOneAndUpdate(
       { refreshTokens: refreshToken },
@@ -197,9 +200,12 @@ export const updateSettings = asyncHandler(
   async (req: Request, res: Response) => {
     const validated = updateSettingsSchema.parse(req.body);
     const updates: Record<string, any> = {};
-    if (validated.dataRetentionMonths !== undefined) updates["settings.dataRetentionMonths"] = validated.dataRetentionMonths;
-    if (validated.currency !== undefined) updates["settings.currency"] = validated.currency;
-    if (validated.theme !== undefined) updates["settings.theme"] = validated.theme;
+    if (validated.dataRetentionMonths !== undefined)
+      updates["settings.dataRetentionMonths"] = validated.dataRetentionMonths;
+    if (validated.currency !== undefined)
+      updates["settings.currency"] = validated.currency;
+    if (validated.theme !== undefined)
+      updates["settings.theme"] = validated.theme;
 
     const user = await User.findByIdAndUpdate(
       req.user!._id,

@@ -13,10 +13,10 @@ This is the frontend application for CashFlow, a premium, offline-first personal
 
 ## Key Features
 
-- **Progressive Web App (PWA):** Fully installable with offline caching and background sync queueing for mutations.
-- **Premium UI:** Glassmorphic design, dynamic dark mode, and mobile-first responsiveness.
-- **Data Visualization:** Interactive charts and graphs for budgeting and reports.
-- **PDF Export Engine:** On-demand professional report generation powered by dynamic React components (`html2canvas-pro` + `jsPDF`).
+- **Progressive Web App (PWA):** Fully installable standalone application with offline view caching, background database synchronization, and fallback auth-state persistence via LocalStorage to circumvent WebKit's third-party cookie restrictions on iOS devices.
+- **Premium UI:** Glassmorphic layout structure, system-aware dark mode adaptation, and mobile-first responsive views.
+- **Data Visualization:** Interactive graphs and multi-tab comparison charts built with Recharts.
+- **PDF Export Engine:** Thread-safe PDF export offloading compilation to background Web Workers to prevent main-thread locking.
 
 ## Setup Instructions
 

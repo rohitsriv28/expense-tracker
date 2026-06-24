@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { ThemeContext, type Theme } from "../hooks/useTheme";
 
-
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
     const localTheme = localStorage.getItem("theme") as Theme | null;
@@ -55,5 +53,3 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     </ThemeContext.Provider>
   );
 }
-
-

@@ -16,7 +16,9 @@ function getUserIdFromToken(): string | null {
 
 function getStorageKey(): string {
   const userId = getUserIdFromToken();
-  return userId ? `expense_frequency_map_${userId}` : "expense_frequency_map_anonymous";
+  return userId
+    ? `expense_frequency_map_${userId}`
+    : "expense_frequency_map_anonymous";
 }
 
 type FrequencyMap = Record<string, Record<string, number>>;

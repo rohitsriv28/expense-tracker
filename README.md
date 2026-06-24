@@ -17,7 +17,7 @@ CashFlow is a premium, feature-rich expense tracking application built with mode
   Built with a mobile-first approach using Tailwind CSS v4, featuring glassmorphism, smooth transitions, and a premium aesthetic.
 
 - **Secure authentication**
-  Google OAuth integration for secure access, utilizing HTTP-only cookies and robust JWT refresh token flows housed in a premium dual-panel login interface.
+  Google OAuth integration for secure access. Employs a robust JWT refresh token rotation scheme via HTTP-only cookies, paired with a secure local storage fallback to bypass Safari/iOS WebKit third-party cookie blocking (ITP) in standalone PWA installations.
 
 - **Interactive dashboard**
   Real-time overview of spending, total incomes, wallet balance, active budget depletion, and charts using Recharts.
@@ -148,34 +148,34 @@ CashFlow includes comprehensive automated testing across both frontend and backe
 
 ### Backend Testing
 
-* Jest + Supertest + MongoDB Memory Server
-* 69 tests across 8 test suites
-* Authentication and JWT validation
-* Expense and Income CRUD operations
-* Budget validation and unique constraints
-* Ownership isolation and access control
-* Category and Income Source protections
-* Error handling and middleware validation
+- Jest + Supertest + MongoDB Memory Server
+- 69 tests across 8 test suites
+- Authentication and JWT validation
+- Expense and Income CRUD operations
+- Budget validation and unique constraints
+- Ownership isolation and access control
+- Category and Income Source protections
+- Error handling and middleware validation
 
 ### Frontend Testing
 
-* Vitest + JSDOM + Fake IndexedDB
-* 85 tests across 5 test suites
-* Offline synchronization engine
-* Cache management and eviction logic
-* Queue reconciliation and temporary ID mapping
-* Budget calculations and health scoring
-* Utility functions, formatters, and data mappers
+- Vitest + JSDOM + Fake IndexedDB
+- 85 tests across 5 test suites
+- Offline synchronization engine
+- Cache management and eviction logic
+- Queue reconciliation and temporary ID mapping
+- Budget calculations and health scoring
+- Utility functions, formatters, and data mappers
 
 ### Results
 
-* 154 automated tests passing
-* 13 test suites passing
+- 154 automated tests passing
+- 13 test suites passing
 
 ### Bugs Discovered Through Testing
 
-* Fixed incorrect category deletion logic (`isDefault: false` → `type: 'custom'`)
-* Fixed income source creation ignoring the `frequency` field
+- Fixed incorrect category deletion logic (`isDefault: false` → `type: 'custom'`)
+- Fixed income source creation ignoring the `frequency` field
 
 ## Scripts
 

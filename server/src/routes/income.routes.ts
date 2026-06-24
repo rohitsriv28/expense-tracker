@@ -16,11 +16,13 @@ const router = express.Router();
 
 router.use(authenticateLean);
 
-router.route("/")
+router
+  .route("/")
   .get(getIncome)
   .post(validate(createIncomeSchema), createIncome);
 
-router.route("/:id")
+router
+  .route("/:id")
   .put(validate(updateIncomeSchema), updateIncome)
   .delete(deleteIncome);
 

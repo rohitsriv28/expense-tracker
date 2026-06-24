@@ -47,7 +47,9 @@ const processQueue = (error: any, token: string | null) => {
   failedQueue = [];
 };
 
-const sortParams = (params: Record<string, any> | undefined): Record<string, any> | undefined => {
+const sortParams = (
+  params: Record<string, any> | undefined,
+): Record<string, any> | undefined => {
   if (!params) return undefined;
   const sorted: Record<string, any> = {};
   Object.keys(params)
@@ -111,7 +113,9 @@ apiClient.interceptors.response.use(
         // Queue the mutation
         const tempId = `temp-${Date.now()}`;
         const parsedData = original.data ? JSON.parse(original.data) : null;
-        const queuedData = parsedData ? JSON.parse(JSON.stringify(parsedData)) : null;
+        const queuedData = parsedData
+          ? JSON.parse(JSON.stringify(parsedData))
+          : null;
 
         const headersToSend = { ...original.headers };
         if (typeof headersToSend.delete === "function") {

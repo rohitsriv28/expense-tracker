@@ -24,3 +24,9 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Temporary and local workspace files
+commit_msg.txt
+coverage/
+.eslintcache
+

@@ -16,11 +16,13 @@ const router = express.Router();
 
 router.use(authenticateLean);
 
-router.route("/")
+router
+  .route("/")
   .get(getCategories)
   .post(validate(createCategorySchema), createCategory);
 
-router.route("/:id")
+router
+  .route("/:id")
   .put(validate(updateCategorySchema), updateCategory)
   .delete(deleteCategory);
 

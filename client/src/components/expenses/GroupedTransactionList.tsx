@@ -95,7 +95,10 @@ const TransactionRow = memo(function TransactionRow({
               className="block truncate text-xs mt-0.5 italic"
               style={{ color: "var(--text-secondary)" }}
             >
-              <span className="font-semibold not-italic opacity-70">Notes:</span> {transaction.notes}
+              <span className="font-semibold not-italic opacity-70">
+                Notes:
+              </span>{" "}
+              {transaction.notes}
             </span>
           )}
         </span>

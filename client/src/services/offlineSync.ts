@@ -67,11 +67,20 @@ export async function evictStaleCacheEntries(): Promise<void> {
       keys.map(async (key) => {
         const entry = await cacheStore.getItem(key);
         return { key, entry };
-      })
+      }),
     );
     const entries = items.filter(
-      (item): item is { key: string; entry: { cachedAt: number; data: any; stale?: boolean } } =>
-        !!(item.entry && typeof item.entry === "object" && "cachedAt" in item.entry)
+      (
+        item,
+      ): item is {
+        key: string;
+        entry: { cachedAt: number; data: any; stale?: boolean };
+      } =>
+        !!(
+          item.entry &&
+          typeof item.entry === "object" &&
+          "cachedAt" in item.entry
+        ),
     );
 
     const now = Date.now();
@@ -103,7 +112,9 @@ export async function evictStaleCacheEntries(): Promise<void> {
       for (let i = 0; i < toEvict; i++) {
         fifoKeysToRemove.push(survivors[i].key);
       }
-      await Promise.all(fifoKeysToRemove.map((key) => cacheStore.removeItem(key)));
+      await Promise.all(
+        fifoKeysToRemove.map((key) => cacheStore.removeItem(key)),
+      );
       evictedCount += fifoKeysToRemove.length;
     }
 
@@ -208,93 +219,96 @@ export const processSyncQueue = async (
 
     console.log(`Processing ${queue.length} offline queued requests...`);
 
-  const tempIdMap = new Map<string, string>();
-  let synced = 0;
+    const tempIdMap = new Map<string, string>();
+    let synced = 0;
 
-  for (const req of queue) {
-    // Only process pending or failed (if not maxed out) items
-    if (
-      req.status === "processing" ||
-      (req.retryCount && req.retryCount >= 3)
-    ) {
-      continue;
-    }
-
-    try {
-      req.status = "processing";
-      await queueStore.setItem(req.id, req);
-
-      // Tested: offline create + offline edit of same item correctly resolves to single document.
-      let resolvedUrl = req.url;
-      for (const [tempId, realId] of tempIdMap.entries()) {
-        if (resolvedUrl.includes(tempId)) {
-          resolvedUrl = resolvedUrl.replace(tempId, realId);
-        }
-      }
-
-      // If the DELETE request still contains a "temp-" ID, it means the corresponding POST failed or was skipped.
-      // We can skip replaying this DELETE request on the server.
-      if (req.method.toLowerCase() === "delete" && resolvedUrl.includes("temp-")) {
-        await removeFromQueue(req.id);
-        synced++;
+    for (const req of queue) {
+      // Only process pending or failed (if not maxed out) items
+      if (
+        req.status === "processing" ||
+        (req.retryCount && req.retryCount >= 3)
+      ) {
         continue;
       }
 
-      let resolvedData = req.data;
-      if (resolvedData && typeof resolvedData === "object") {
+      try {
+        req.status = "processing";
+        await queueStore.setItem(req.id, req);
+
+        // Tested: offline create + offline edit of same item correctly resolves to single document.
+        let resolvedUrl = req.url;
         for (const [tempId, realId] of tempIdMap.entries()) {
-          if (resolvedData._id === tempId) {
-            resolvedData._id = realId;
+          if (resolvedUrl.includes(tempId)) {
+            resolvedUrl = resolvedUrl.replace(tempId, realId);
           }
         }
-      }
 
-      // Replay the request
-      const response = await apiClient.request({
-        method: req.method,
-        url: resolvedUrl,
-        data: resolvedData,
-      });
+        // If the DELETE request still contains a "temp-" ID, it means the corresponding POST failed or was skipped.
+        // We can skip replaying this DELETE request on the server.
+        if (
+          req.method.toLowerCase() === "delete" &&
+          resolvedUrl.includes("temp-")
+        ) {
+          await removeFromQueue(req.id);
+          synced++;
+          continue;
+        }
 
-      // If successful POST, map the temporary ID to the new real database ID
-      if (req.method.toLowerCase() === "post" && response.data?.data?._id) {
-        tempIdMap.set(req.id, response.data.data._id);
-      }
+        let resolvedData = req.data;
+        if (resolvedData && typeof resolvedData === "object") {
+          for (const [tempId, realId] of tempIdMap.entries()) {
+            if (resolvedData._id === tempId) {
+              resolvedData._id = realId;
+            }
+          }
+        }
 
-      // If successful, remove from queue
-      await removeFromQueue(req.id);
-      synced++;
-    } catch (err: any) {
-      // If it fails due to network, stop processing.
-      if (!err.response) {
-        console.warn("Network still unavailable, stopping sync.");
-        req.status = "pending";
-        await queueStore.setItem(req.id, req);
-        break; // Network error
-      } else {
-        console.error(`Failed to sync queued request ${req.id}.`, err);
-        req.status = "failed";
-        req.retryCount = (req.retryCount || 0) + 1;
-        await queueStore.setItem(req.id, req);
+        // Replay the request
+        const response = await apiClient.request({
+          method: req.method,
+          url: resolvedUrl,
+          data: resolvedData,
+        });
+
+        // If successful POST, map the temporary ID to the new real database ID
+        if (req.method.toLowerCase() === "post" && response.data?.data?._id) {
+          tempIdMap.set(req.id, response.data.data._id);
+        }
+
+        // If successful, remove from queue
+        await removeFromQueue(req.id);
+        synced++;
+      } catch (err: any) {
+        // If it fails due to network, stop processing.
+        if (!err.response) {
+          console.warn("Network still unavailable, stopping sync.");
+          req.status = "pending";
+          await queueStore.setItem(req.id, req);
+          break; // Network error
+        } else {
+          console.error(`Failed to sync queued request ${req.id}.`, err);
+          req.status = "failed";
+          req.retryCount = (req.retryCount || 0) + 1;
+          await queueStore.setItem(req.id, req);
+        }
       }
     }
-  }
 
-  const failedItems: QueuedRequest[] = [];
-  // After processing, find items that are permanently failed
-  for (const req of queue) {
-    const updatedReq = await queueStore.getItem<QueuedRequest>(req.id);
-    if (
-      updatedReq &&
-      updatedReq.retryCount &&
-      updatedReq.retryCount >= 3 &&
-      updatedReq.status === "failed"
-    ) {
-      failedItems.push(updatedReq);
-      await failedStore.setItem(updatedReq.id, updatedReq);
-      await queueStore.removeItem(updatedReq.id);
+    const failedItems: QueuedRequest[] = [];
+    // After processing, find items that are permanently failed
+    for (const req of queue) {
+      const updatedReq = await queueStore.getItem<QueuedRequest>(req.id);
+      if (
+        updatedReq &&
+        updatedReq.retryCount &&
+        updatedReq.retryCount >= 3 &&
+        updatedReq.status === "failed"
+      ) {
+        failedItems.push(updatedReq);
+        await failedStore.setItem(updatedReq.id, updatedReq);
+        await queueStore.removeItem(updatedReq.id);
+      }
     }
-  }
 
     // Notify UI that sync is complete
     window.dispatchEvent(new CustomEvent("offline-sync-complete"));

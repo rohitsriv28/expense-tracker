@@ -16,11 +16,13 @@ const router = express.Router();
 
 router.use(authenticateLean);
 
-router.route("/")
+router
+  .route("/")
   .get(getBudgets)
   .post(validate(createBudgetSchema), createBudget);
 
-router.route("/:id")
+router
+  .route("/:id")
   .put(validate(updateBudgetSchema), updateBudget)
   .delete(deleteBudget);
 

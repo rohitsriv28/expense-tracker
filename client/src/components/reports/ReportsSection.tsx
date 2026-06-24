@@ -454,7 +454,8 @@ export default function ReportsSection({
           value={formatCurrency(largestExpense?.amount ?? 0)}
           detail={
             largestExpense
-              ? resolveExpenseVisuals(categories, largestExpense.category ?? "").categoryName
+              ? resolveExpenseVisuals(categories, largestExpense.category ?? "")
+                  .categoryName
               : "None"
           }
         />
