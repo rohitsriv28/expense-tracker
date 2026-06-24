@@ -19,7 +19,7 @@ const MONGODB_URI =
   process.env.MONGODB_URI || "mongodb://localhost:27017/cashflow";
 
 mongoose
-  .connect(MONGODB_URI)
+  .connect(MONGODB_URI, { dbName: "cashflow" })
   .then(async () => {
     logger.info("Connected to MongoDB");
     try {
