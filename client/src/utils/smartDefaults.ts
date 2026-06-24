@@ -1,15 +1,30 @@
 import type { Category } from "../types";
 
-import apiClient from "../services/apiClient";
+import apiClient, { getAccessToken } from "../services/apiClient";
 
-const STORAGE_KEY = "expense_frequency_map";
+function getUserIdFromToken(): string | null {
+  const token = getAccessToken();
+  if (!token) return null;
+  try {
+    const payload = token.split(".")[1];
+    const decoded = JSON.parse(atob(payload));
+    return decoded.userId || null;
+  } catch {
+    return null;
+  }
+}
+
+function getStorageKey(): string {
+  const userId = getUserIdFromToken();
+  return userId ? `expense_frequency_map_${userId}` : "expense_frequency_map_anonymous";
+}
 
 type FrequencyMap = Record<string, Record<string, number>>;
 
 function readMap(): FrequencyMap {
   try {
     return JSON.parse(
-      localStorage.getItem(STORAGE_KEY) || "{}",
+      localStorage.getItem(getStorageKey()) || "{}",
     ) as FrequencyMap;
   } catch {
     return {};
@@ -63,7 +78,7 @@ export function recordExpense(description: string, categoryId: string): void {
 
   map = evictLowFrequencyEntries(map, 200);
 
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
+  localStorage.setItem(getStorageKey(), JSON.stringify(map));
 }
 
 export async function pushFrequencyMapToServer(): Promise<void> {
@@ -94,7 +109,7 @@ export async function pullFrequencyMapFromServer(): Promise<void> {
     }
 
     localMap = evictLowFrequencyEntries(localMap, 200);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(localMap));
+    localStorage.setItem(getStorageKey(), JSON.stringify(localMap));
   } catch (error) {
     console.warn("Failed to pull frequency map from server", error);
   }

@@ -89,7 +89,7 @@ const DEFAULT_INCOME_SOURCES = [
 export async function seedDefaultCategories(
   userId: Types.ObjectId,
 ): Promise<void> {
-  const existing = await Category.countDocuments({ userId, isArchived: false });
+  const existing = await Category.countDocuments({ userId });
   if (existing > 0) return;
 
   await Category.insertMany(

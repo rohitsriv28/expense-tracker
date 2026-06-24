@@ -11,6 +11,9 @@ import { logger } from "./utils/logger";
 
 const app = express();
 
+// Trust proxy for rate limiting behind reverse proxies (Render, Vercel, etc.)
+app.set("trust proxy", 1);
+
 // Security headers
 app.use(
   helmet({
@@ -19,9 +22,12 @@ app.use(
 );
 
 // CORS — allow only your frontend origin
+const clientUrls = process.env.CLIENT_URL || "http://localhost:5173";
+const allowedOrigins = clientUrls.split(",").map((url) => url.trim());
+
 app.use(
   cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    origin: allowedOrigins,
     credentials: true, // Required for httpOnly cookies
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -30,7 +36,7 @@ app.use(
 
 app.use(compression());
 app.use(express.json({ limit: "10kb" })); // Prevent payload bombs
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 app.use(cookieParser());
 
 // HTTP request logging
@@ -39,7 +45,7 @@ app.use(
 );
 
 // Rate limiting: 100 requests per 15 minutes per IP
-app.use("/api/", rateLimiter);
+app.use("/api", rateLimiter);
 
 // All API routes
 app.use("/api", routes);

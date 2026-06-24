@@ -4,9 +4,9 @@ import Income from "../models/Income.model";
 import { AppError } from "../utils/AppError";
 
 export const getIncome = asyncHandler(async (req: Request, res: Response) => {
-  const income = await Income.find({ userId: req.user!._id }).sort({
-    date: -1,
-  });
+  const income = await Income.find({ userId: req.user!._id })
+    .sort({ date: -1 })
+    .limit(1000);
   res.json({ success: true, data: income });
 });
 
@@ -20,10 +20,6 @@ export const createIncome = asyncHandler(
       isRecurring,
       recurringFrequency,
     } = req.body;
-
-    if (!amount || !source || !date) {
-      throw new AppError("Missing required fields", 400);
-    }
 
     const income = await Income.create({
       userId: req.user!._id,

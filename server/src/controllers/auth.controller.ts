@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
 import { OAuth2Client } from "google-auth-library";
 import jwt from "jsonwebtoken";
-import axios from "axios";
+import mongoose from "mongoose";
+import { z } from "zod";
 import User from "../models/User.model";
 import { asyncHandler } from "../utils/asyncHandler";
 import { AppError } from "../utils/AppError";
@@ -40,23 +41,29 @@ const generateTokens = (userId: string) => {
 };
 
 export const googleAuth = asyncHandler(async (req: Request, res: Response) => {
-  const { accessToken: googleAccessToken } = req.body;
-  if (!googleAccessToken)
-    throw new AppError("Google access token is required", 400);
+  const { idToken } = req.body;
+  if (!idToken)
+    throw new AppError("Google ID token is required", 400);
 
-  const googleResponse = await axios.get(
-    "https://www.googleapis.com/oauth2/v3/userinfo",
-    {
-      headers: { Authorization: `Bearer ${googleAccessToken}` },
-    },
-  );
+  let ticket;
+  try {
+    ticket = await client.verifyIdToken({
+      idToken,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+  } catch (err: any) {
+    throw new AppError("Invalid Google ID token", 400);
+  }
+
+  const payload = ticket.getPayload();
+  if (!payload) throw new AppError("Incomplete profile information from Google", 400);
 
   const {
     sub: googleId,
     email,
     name: displayName,
     picture: photoURL,
-  } = googleResponse.data;
+  } = payload;
   if (!email || !displayName)
     throw new AppError("Incomplete profile information", 400);
 
@@ -76,7 +83,20 @@ export const googleAuth = asyncHandler(async (req: Request, res: Response) => {
     (user._id as any).toString(),
   );
 
-  if (!user.refreshTokens) user.refreshTokens = [];
+  // Prune expired refresh tokens
+  if (user.refreshTokens) {
+    user.refreshTokens = user.refreshTokens.filter((token) => {
+      try {
+        jwt.verify(token, process.env.JWT_REFRESH_SECRET!);
+        return true;
+      } catch {
+        return false;
+      }
+    });
+  } else {
+    user.refreshTokens = [];
+  }
+
   user.refreshTokens.push(refreshToken);
   if (user.refreshTokens.length > 5) {
     user.refreshTokens.shift();
@@ -116,9 +136,22 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
 
     if (!user) throw new AppError("Invalid refresh token", 401);
 
+    // Prune expired refresh tokens
+    user.refreshTokens = (user.refreshTokens || []).filter((token) => {
+      try {
+        jwt.verify(token, process.env.JWT_REFRESH_SECRET!);
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
     const tokens = generateTokens((user._id as any).toString());
     user.refreshTokens = user.refreshTokens!.filter((t) => t !== refreshToken);
     user.refreshTokens.push(tokens.refreshToken);
+    if (user.refreshTokens.length > 5) {
+      user.refreshTokens.shift();
+    }
     await user.save();
 
     res.cookie("refreshToken", tokens.refreshToken, {
@@ -154,11 +187,23 @@ export const getMe = asyncHandler(async (req: Request, res: Response) => {
   res.json({ success: true, data: req.user });
 });
 
+const updateSettingsSchema = z.object({
+  dataRetentionMonths: z.number().int().min(1).max(120).optional(),
+  currency: z.string().min(1).max(10).optional(),
+  theme: z.enum(["light", "dark", "system"]).optional(),
+});
+
 export const updateSettings = asyncHandler(
   async (req: Request, res: Response) => {
+    const validated = updateSettingsSchema.parse(req.body);
+    const updates: Record<string, any> = {};
+    if (validated.dataRetentionMonths !== undefined) updates["settings.dataRetentionMonths"] = validated.dataRetentionMonths;
+    if (validated.currency !== undefined) updates["settings.currency"] = validated.currency;
+    if (validated.theme !== undefined) updates["settings.theme"] = validated.theme;
+
     const user = await User.findByIdAndUpdate(
       req.user!._id,
-      { $set: { settings: { ...req.user!.settings, ...req.body } } },
+      { $set: updates },
       { new: true },
     );
     res.json({ success: true, data: user });
@@ -169,15 +214,19 @@ export const deleteAccount = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = req.user!._id;
 
-    // The backend has deleteAccount function, but the function currently do not have that feature yet.
-    // We will add the feature in future, so this code is kept here but statically imported for safety.
-    await Expense.deleteMany({ userId });
-    await Category.deleteMany({ userId });
-    await Budget.deleteMany({ userId });
-    await Income.deleteMany({ userId });
-    await IncomeSource.deleteMany({ userId });
+    const session = await mongoose.startSession();
+    await session.withTransaction(async () => {
+      await Promise.all([
+        Expense.deleteMany({ userId }, { session }),
+        Category.deleteMany({ userId }, { session }),
+        Budget.deleteMany({ userId }, { session }),
+        Income.deleteMany({ userId }, { session }),
+        IncomeSource.deleteMany({ userId }, { session }),
+      ]);
+      await User.findByIdAndDelete(userId, { session });
+    });
+    session.endSession();
 
-    await User.findByIdAndDelete(userId);
     res.clearCookie("refreshToken", COOKIE_CLEAR_OPTIONS);
     res.json({ success: true, message: "Account deleted" });
   },

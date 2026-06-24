@@ -6,15 +6,28 @@ export type SyncEvent =
   | { type: "BUDGET_UPDATED" }
   | { type: "CATEGORY_UPDATED" };
 
-export function broadcastDataChange(event: SyncEvent): void {
+let globalChannel: BroadcastChannel | null = null;
+
+const getChannel = (): BroadcastChannel | null => {
   if (typeof BroadcastChannel === "undefined") {
-    return;
+    return null;
   }
+  if (!globalChannel) {
+    try {
+      globalChannel = new BroadcastChannel(CHANNEL_NAME);
+    } catch (error) {
+      console.warn("Failed to create BroadcastChannel", error);
+    }
+  }
+  return globalChannel;
+};
+
+export function broadcastDataChange(event: SyncEvent): void {
+  const channel = getChannel();
+  if (!channel) return;
 
   try {
-    const channel = new BroadcastChannel(CHANNEL_NAME);
     channel.postMessage(event);
-    channel.close();
   } catch (error) {
     console.warn("Broadcast failed", error);
   }
@@ -23,18 +36,17 @@ export function broadcastDataChange(event: SyncEvent): void {
 export function subscribeToBroadcast(
   handler: (event: SyncEvent) => void,
 ): () => void {
-  if (typeof BroadcastChannel === "undefined") {
-    return () => {};
-  }
+  const channel = getChannel();
+  if (!channel) return () => {};
+
+  const listener = (event: MessageEvent) => {
+    handler(event.data);
+  };
 
   try {
-    const channel = new BroadcastChannel(CHANNEL_NAME);
-    channel.onmessage = (event) => {
-      handler(event.data);
-    };
-
+    channel.addEventListener("message", listener);
     return () => {
-      channel.close();
+      channel.removeEventListener("message", listener);
     };
   } catch (error) {
     console.warn("Failed to subscribe to broadcast", error);

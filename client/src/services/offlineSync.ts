@@ -49,8 +49,6 @@ export const getFromCache = async (url: string) => {
     if (!entry) return null;
 
     if (typeof entry === "object" && "data" in entry) {
-      entry.lastAccessed = Date.now();
-      await cacheStore.setItem(url, entry);
       return { data: entry.data, isStale: !!entry.stale };
     } else {
       await saveToCache(url, entry);
@@ -65,39 +63,48 @@ export const getFromCache = async (url: string) => {
 export async function evictStaleCacheEntries(): Promise<void> {
   try {
     const keys = await cacheStore.keys();
-    const entries: { key: string; entry: any }[] = [];
-
-    for (const key of keys) {
-      const entry = await cacheStore.getItem(key);
-      if (entry && typeof entry === "object" && "cachedAt" in entry) {
-        entries.push({ key, entry });
-      }
-    }
+    const items = await Promise.all(
+      keys.map(async (key) => {
+        const entry = await cacheStore.getItem(key);
+        return { key, entry };
+      })
+    );
+    const entries = items.filter(
+      (item): item is { key: string; entry: { cachedAt: number; data: any; stale?: boolean } } =>
+        !!(item.entry && typeof item.entry === "object" && "cachedAt" in item.entry)
+    );
 
     const now = Date.now();
     const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
 
     // Rule A: Age limit
     const survivors: { key: string; entry: any }[] = [];
+    const keysToRemove: string[] = [];
     let evictedCount = 0;
 
     for (const item of entries) {
       if (now - item.entry.cachedAt > thirtyDaysMs) {
-        await cacheStore.removeItem(item.key);
-        evictedCount++;
+        keysToRemove.push(item.key);
       } else {
         survivors.push(item);
       }
     }
 
-    // Rule B: LRU limit (100)
+    if (keysToRemove.length > 0) {
+      await Promise.all(keysToRemove.map((key) => cacheStore.removeItem(key)));
+      evictedCount += keysToRemove.length;
+    }
+
+    // Rule B: FIFO limit (100)
     if (survivors.length > 100) {
-      survivors.sort((a, b) => a.entry.lastAccessed - b.entry.lastAccessed);
+      survivors.sort((a, b) => a.entry.cachedAt - b.entry.cachedAt);
       const toEvict = survivors.length - 100;
+      const fifoKeysToRemove: string[] = [];
       for (let i = 0; i < toEvict; i++) {
-        await cacheStore.removeItem(survivors[i].key);
-        evictedCount++;
+        fifoKeysToRemove.push(survivors[i].key);
       }
+      await Promise.all(fifoKeysToRemove.map((key) => cacheStore.removeItem(key)));
+      evictedCount += fifoKeysToRemove.length;
     }
 
     if (evictedCount > 0) {
@@ -182,6 +189,8 @@ export async function resetStuckQueueItems(): Promise<void> {
   }
 }
 
+let isSyncing = false;
+
 export const processSyncQueue = async (
   apiClient: AxiosInstance,
 ): Promise<{
@@ -189,12 +198,15 @@ export const processSyncQueue = async (
   failed: number;
   failedItems: QueuedRequest[];
 } | void> => {
+  if (isSyncing) return;
   if (!navigator.onLine) return { synced: 0, failed: 0, failedItems: [] };
 
-  const queue = await getQueue();
-  if (queue.length === 0) return { synced: 0, failed: 0, failedItems: [] };
+  isSyncing = true;
+  try {
+    const queue = await getQueue();
+    if (queue.length === 0) return { synced: 0, failed: 0, failedItems: [] };
 
-  console.log(`Processing ${queue.length} offline queued requests...`);
+    console.log(`Processing ${queue.length} offline queued requests...`);
 
   const tempIdMap = new Map<string, string>();
   let synced = 0;
@@ -218,6 +230,14 @@ export const processSyncQueue = async (
         if (resolvedUrl.includes(tempId)) {
           resolvedUrl = resolvedUrl.replace(tempId, realId);
         }
+      }
+
+      // If the DELETE request still contains a "temp-" ID, it means the corresponding POST failed or was skipped.
+      // We can skip replaying this DELETE request on the server.
+      if (req.method.toLowerCase() === "delete" && resolvedUrl.includes("temp-")) {
+        await removeFromQueue(req.id);
+        synced++;
+        continue;
       }
 
       let resolvedData = req.data;
@@ -276,11 +296,16 @@ export const processSyncQueue = async (
     }
   }
 
-  // Notify UI that sync is complete
-  window.dispatchEvent(new CustomEvent("offline-sync-complete"));
-  await pushFrequencyMapToServer();
+    // Notify UI that sync is complete
+    window.dispatchEvent(new CustomEvent("offline-sync-complete"));
+    if (synced > 0) {
+      await pushFrequencyMapToServer();
+    }
 
-  return { synced, failed: failedItems.length, failedItems };
+    return { synced, failed: failedItems.length, failedItems };
+  } finally {
+    isSyncing = false;
+  }
 };
 
 export async function getFailedQueueItems(): Promise<QueuedRequest[]> {

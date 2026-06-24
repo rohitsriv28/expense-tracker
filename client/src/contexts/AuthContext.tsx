@@ -4,7 +4,8 @@ import {
   useCallback,
   useMemo,
 } from "react";
-import { AuthContext } from "../hooks/useAuth";
+import { AuthContext, type User } from "../hooks/useAuth";
+import { useTheme } from "../hooks/useTheme";
 import type { ReactNode } from "react";
 import apiClient, { setAccessToken } from "../services/apiClient";
 
@@ -13,19 +14,10 @@ import {
   pushFrequencyMapToServer,
 } from "../utils/smartDefaults";
 
-interface User {
-  _id: string;
-  email: string;
-  displayName: string;
-  photoURL?: string;
-}
-
-
-
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const { setTheme } = useTheme();
 
   useEffect(() => {
     const initAuth = async () => {
@@ -33,7 +25,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data } = await apiClient.post("/auth/refresh");
         setAccessToken(data.data.accessToken);
         const meRes = await apiClient.get("/auth/me");
-        setUser(meRes.data.data);
+        const userData = meRes.data.data;
+        setUser(userData);
+        if (userData?.settings?.theme) {
+          setTheme(userData.settings.theme);
+        }
         await pullFrequencyMapFromServer();
       } catch {
         setUser(null);
@@ -42,14 +38,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
     initAuth();
-  }, []);
+  }, [setTheme]);
 
-  const loginWithToken = useCallback(async (accessToken: string) => {
-    const { data } = await apiClient.post("/auth/google", { accessToken });
+  const loginWithToken = useCallback(async (token: string) => {
+    const { data } = await apiClient.post("/auth/google", { idToken: token });
     setAccessToken(data.data.accessToken);
-    setUser(data.data.user);
+    const userData = data.data.user;
+    setUser(userData);
+    if (userData?.settings?.theme) {
+      setTheme(userData.settings.theme);
+    }
     await pullFrequencyMapFromServer();
-  }, []);
+  }, [setTheme]);
 
   const logout = useCallback(async () => {
     try {

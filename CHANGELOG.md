@@ -9,27 +9,40 @@ All notable changes to this project will be documented in this file.
 
 ---
 
-## [3.0.6] - 2026-06-18
+## [3.0.6] - 2026-06-24
 
-A comprehensive optimization, security, and PWA stability update addressing Google OAuth restrictions, PDF export bottlenecks, and database performance issues.
+A comprehensive optimization, security, and PWA stability update addressing Google OAuth restrictions, PDF export bottlenecks, database performance issues, and UI responsiveness.
 
 ### Added
 
-- **Zod Route Validation:** Integrated request body validation using Zod schemas for budget, income, and income source endpoints.
+- **System Theme Selection:** Introduced a "System" theme option in UI toggles, header menus, and settings, enabling the application to align with the OS theme preferences via real-time listeners.
+- **Zod Route & Payload Validation:** Integrated Zod schemas to validate category creation/update payloads, budget, income, and income source endpoints, and expense query listings.
+- **Mongoose Schema Validations:** Added validation constraints to the database model level, limiting tags array size (max 20) on Expenses, and restricting user refresh token counts (max 10) and frequencyMap size (max 500 keys, 50kb max string size) on Users.
 - **PWA Redirect Google OAuth Flow:** Implemented a standalone PWA mode detector that automatically triggers Google OAuth redirects instead of popups, securely passing the access token through URL hashes to bypass security restrictions on isolated webviews.
+- **Startup Config Guard:** Added a pre-flight validation check at server startup to ensure required environment variables (`MONGODB_URI`, `JWT_SECRET`, `JWT_REFRESH_SECRET`, `GOOGLE_CLIENT_ID`) are configured.
 
 ### Changed
 
 - **PDF Generation Web Worker:** Restructured PDF export to capture page snapshots on the main thread and offload compilation (`jsPDF` binary assembly) to a background ES Web Worker, resolving main-thread blocking while preserving correct HTML rendering.
 - **Optimized Server Authentication:** Replaced regular database user queries with a lightweight `authenticateLean` helper on CRUD endpoints to skip redundant user lookups.
-- **Data Retention Pagination:** Updated the nightly database retention job to stream user records via a cursor stream in parallel batches of 10.
+- **Data Retention Optimization:** Updated the nightly database retention job to stream user records via a cursor stream in parallel batches of 10 instead of limit/skip pagination, and extended cleanup to remove expired Income records.
 - **Express Request Cache:** Cached fetched documents in the Express request context (`req.doc`) inside the ownership guard to eliminate duplicate database fetches in update controllers.
+- **Offline Sync & Cache Enhancements:**
+  - Added a concurrency guard (`isSyncing`) to prevent concurrent queue synchronization runs.
+  - Stripped authorization headers before saving requests to the IndexedDB queue to prevent credential leakage.
+  - Switched IndexedDB cache eviction from LRU (`lastAccessed`) to a clean FIFO (`cachedAt`) strategy using batch operations.
+  - Prevented redundant sync attempts by automatically skipping DELETE requests for temporary items whose corresponding POST request failed.
+- **BroadcastChannel Singleton:** Implemented a singleton pattern helper for BroadcastChannel initialization with standard event listener lifecycles (`addEventListener`/`removeEventListener`) to avoid memory/channel leaks.
+- **Vite & PWA Configuration:** Updated Vite settings with worker ES module output, and configured enhanced PWA manifest parameters (`categories`, `lang`, `dir`, `orientation`).
+- **Dev-Friendly Rate Limiting:** Configured higher API rate limits when running in development mode to prevent local test throttling.
 
 ### Fixed
 
 - **Archived Category Duplicate Index:** Replaced the compound unique index on categories with a partial unique index (`isArchived: false`), allowing users to reuse names of archived categories.
 - **Largest Expense Label:** Resolved the largest expense category ID into its human-readable category name in the reports dashboard.
+- **Category Deletion UX:** Enforced strict protection for default categories, returning a standard 403 Forbidden error response rather than failing silently on category lookup.
 - **Token Verification Tests:** Fixed a failing mock authentication test by directing requests to the user settings endpoint which utilizes full database user lookup verification.
+- **Test Suite Updates:** Adjusted backend test suites to match the removal of expense deletion capabilities (updating tests count to 69).
 
 ---
 

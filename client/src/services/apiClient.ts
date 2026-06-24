@@ -47,6 +47,17 @@ const processQueue = (error: any, token: string | null) => {
   failedQueue = [];
 };
 
+const sortParams = (params: Record<string, any> | undefined): Record<string, any> | undefined => {
+  if (!params) return undefined;
+  const sorted: Record<string, any> = {};
+  Object.keys(params)
+    .sort()
+    .forEach((key) => {
+      sorted[key] = params[key];
+    });
+  return sorted;
+};
+
 apiClient.interceptors.response.use(
   async (response) => {
     // Save successful GET requests to Cache Store
@@ -56,7 +67,7 @@ apiClient.interceptors.response.use(
     ) {
       const cacheKey =
         (response.config.url || "") +
-        JSON.stringify(response.config.params || {});
+        JSON.stringify(sortParams(response.config.params) || {});
       await saveToCache(cacheKey, response.data.data);
     }
 
@@ -79,7 +90,7 @@ apiClient.interceptors.response.use(
     if (!error.response && error.code === "ERR_NETWORK") {
       const method = original.method?.toLowerCase();
       const url = original.url || "";
-      const cacheKey = url + JSON.stringify(original.params || {});
+      const cacheKey = url + JSON.stringify(sortParams(original.params) || {});
 
       if (method === "get") {
         const cachedResult = await getFromCache(cacheKey);
@@ -100,13 +111,23 @@ apiClient.interceptors.response.use(
         // Queue the mutation
         const tempId = `temp-${Date.now()}`;
         const parsedData = original.data ? JSON.parse(original.data) : null;
+        const queuedData = parsedData ? JSON.parse(JSON.stringify(parsedData)) : null;
+
+        const headersToSend = { ...original.headers };
+        if (typeof headersToSend.delete === "function") {
+          headersToSend.delete("Authorization");
+          headersToSend.delete("authorization");
+        } else {
+          delete headersToSend.Authorization;
+          delete headersToSend.authorization;
+        }
 
         await addToQueue({
           id: tempId,
           method: method || "post",
           url: url,
-          data: parsedData,
-          headers: original.headers,
+          data: queuedData,
+          headers: headersToSend,
           timestamp: Date.now(),
         });
 
@@ -115,7 +136,7 @@ apiClient.interceptors.response.use(
         await addToRefreshQueue(prefix);
 
         // Mock successful response for optimistic UI update
-        const mockData = parsedData || {};
+        let mockData = parsedData ? JSON.parse(JSON.stringify(parsedData)) : {};
         if (method === "post") {
           mockData._id = tempId;
           mockData.createdAt = new Date().toISOString();

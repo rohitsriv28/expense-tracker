@@ -4,22 +4,16 @@ import Budget from "../models/Budget.model";
 import { AppError } from "../utils/AppError";
 
 export const getBudgets = asyncHandler(async (req: Request, res: Response) => {
-  const budgets = await Budget.find({ userId: req.user!._id });
+  const budgets = await Budget.find({ userId: req.user!._id }).sort({
+    year: -1,
+    month: -1,
+  });
   res.json({ success: true, data: budgets });
 });
 
 export const createBudget = asyncHandler(
   async (req: Request, res: Response) => {
     const { type, name, amount, month, year, allocations } = req.body;
-
-    if (
-      !name ||
-      amount === undefined ||
-      month === undefined ||
-      year === undefined
-    ) {
-      throw new AppError("Missing required fields for budget", 400);
-    }
 
     const budget = await Budget.create({
       userId: req.user!._id,

@@ -28,10 +28,6 @@ export const createCategory = asyncHandler(
   async (req: Request, res: Response) => {
     const { name, icon, color } = req.body;
 
-    if (!name || !icon || !color) {
-      throw new AppError("Missing required fields", 400);
-    }
-
     const category = await Category.create({
       userId: req.user!._id,
       label: name,
@@ -69,16 +65,20 @@ export const updateCategory = asyncHandler(
 
 export const deleteCategory = asyncHandler(
   async (req: Request, res: Response) => {
-    const category = await Category.findOneAndDelete({
+    const exists = await Category.findOne({
       _id: req.params.id,
       userId: req.user!._id,
-      type: "custom", // Prevent deleting default categories
     });
 
-    if (!category) {
-      throw new AppError("Category not found or cannot be deleted", 404);
+    if (!exists) {
+      throw new AppError("Category not found", 404);
     }
 
+    if (exists.type === "default") {
+      throw new AppError("Cannot delete default category", 403);
+    }
+
+    await Category.findByIdAndDelete(exists._id);
     res.json({ success: true, data: {} });
   },
 );

@@ -71,7 +71,7 @@ ${error.stack}
     `);
 
     window.open(
-      `https://github.com/yourorg/cashflow/issues/new?title=${encodeURIComponent(
+      `https://github.com/rohitsriv28/expense-tracker/issues/new?title=${encodeURIComponent(
         `Error: ${error.message}`,
       )}&body=${issueBody}`,
       "_blank",
@@ -253,9 +253,11 @@ ${error.stack}
                   </button>
                 </div>
 
-                <pre className="overflow-auto rounded-xl bg-slate-950 text-slate-300 p-4 text-xs leading-relaxed max-h-72">
-                  {error.stack}
-                </pre>
+                {import.meta.env.DEV && (
+                  <pre className="overflow-auto rounded-xl bg-slate-950 text-slate-300 p-4 text-xs leading-relaxed max-h-72">
+                    {error.stack}
+                  </pre>
+                )}
               </div>
             </details>
           </div>

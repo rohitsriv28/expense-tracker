@@ -39,13 +39,13 @@ CashFlow is a premium, feature-rich expense tracking application built with mode
   - _Compare:_ Period-over-period comparisons (e.g. Month vs Last Month) with delta values and grouped bar charts.
 
 - **Visual analytics & PDF reports**
-  Detailed spending charts and on-demand professional PDF reports powered by a custom React-to-PDF rendering engine (`html2canvas-pro` + `jsPDF`).
+  Detailed spending charts and on-demand professional PDF reports. Offloads resource-heavy PDF compilation (`jsPDF` binary assembly) to a background ES Web Worker, bypassing main-thread UI freezing.
 
-- **Dark mode**
-  System-aware dark mode for comfortable viewing in any environment.
+- **System-Aware Theme Engine**
+  Supports Light, Dark, and System theme selections, dynamically responding to OS-level color scheme preferences in real time.
 
 - **PWA and Advanced Offline Sync**
-  Progressive Web App functionality allows native-like installation on devices. Features a robust custom offline architecture: caches API requests for instant offline viewing, queues mutations locally (logging expenses/incomes offline), and auto-syncs securely in the background when connectivity returns.
+  Progressive Web App functionality with app shortcuts and a standalone PWA mode. Detects webview isolation to trigger Google OAuth redirects (rather than blocked popups), extracting tokens from URL hashes. Custom offline sync engine queues mutations locally, evicts stale entries using FIFO, and reconciles changes securely.
 
 - **Real-time data sync & Multi-Tenant Architecture**
   Seamless synchronization across devices using a custom REST API. Implements a highly scalable, user-centric database structure in MongoDB (Mongoose) to ensure strict data isolation and robust security via Express middlewares.
@@ -149,7 +149,7 @@ CashFlow includes comprehensive automated testing across both frontend and backe
 ### Backend Testing
 
 * Jest + Supertest + MongoDB Memory Server
-* 72 tests across 8 test suites
+* 69 tests across 8 test suites
 * Authentication and JWT validation
 * Expense and Income CRUD operations
 * Budget validation and unique constraints
@@ -169,7 +169,7 @@ CashFlow includes comprehensive automated testing across both frontend and backe
 
 ### Results
 
-* 157 automated tests passing
+* 154 automated tests passing
 * 13 test suites passing
 
 ### Bugs Discovered Through Testing

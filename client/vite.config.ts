@@ -11,13 +11,22 @@ export default defineConfig({
     VitePWA({
       registerType: "autoUpdate",
       includeAssets: ["cashflow.ico", "apple-touch-icon.png"],
+      manifestFilename: "manifest.json",
       manifest: {
-        name: "CashFlow Expense Tracker",
+        name: "CashFlow - Smart Expense Tracker",
         short_name: "CashFlow",
-        description: "Premium Expense Tracking Application",
-        theme_color: "#1e293b",
-        background_color: "#0f172a",
+        description: "Premium Offline-first Personal Finance PWA. Track expenses, analytics, and reports seamlessly.",
+        start_url: "/",
+        scope: "/",
         display: "standalone",
+        orientation: "portrait-primary",
+        background_color: "#ffffff",
+        theme_color: "#4f46e5",
+        categories: ["finance", "productivity", "business"],
+        lang: "en-US",
+        dir: "ltr",
+        prefer_related_applications: false,
+        related_applications: [],
         icons: [
           {
             src: "cashflow.ico",
@@ -27,7 +36,7 @@ export default defineConfig({
           {
             src: "apple-touch-icon.png",
             type: "image/png",
-            sizes: "180x180",
+            sizes: "180x180 192x192 512x512",
           },
         ],
       },

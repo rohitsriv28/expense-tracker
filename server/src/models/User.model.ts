@@ -32,9 +32,32 @@ const UserSchema = new Schema<IUser>(
         enum: ["light", "dark", "system"],
         default: "system",
       },
-      frequencyMap: { type: Schema.Types.Mixed, default: {} },
+      frequencyMap: {
+        type: Schema.Types.Mixed,
+        default: {},
+        validate: {
+          validator: function (v: any) {
+            if (!v || typeof v !== "object") return true;
+            const keys = Object.keys(v);
+            if (keys.length > 500) return false;
+            if (JSON.stringify(v).length > 50000) return false;
+            return true;
+          },
+          message: "Frequency map is too large or invalid",
+        },
+      },
     },
-    refreshTokens: { type: [String], select: false, default: [] },
+    refreshTokens: {
+      type: [String],
+      select: false,
+      default: [],
+      validate: {
+        validator: function (v: string[]) {
+          return v.length <= 10;
+        },
+        message: "Too many active refresh tokens",
+      },
+    },
   },
   { timestamps: true },
 );

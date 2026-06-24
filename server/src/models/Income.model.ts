@@ -22,7 +22,7 @@ const IncomeSchema = new Schema<IIncome>(
       required: true,
       index: true,
     },
-    amount: { type: Number, required: true, min: 0.01 },
+    amount: { type: Number, required: true, min: 0.01, max: 10000000 },
     source: { type: String, required: true, trim: true },
     sourceId: { type: Schema.Types.ObjectId, ref: "IncomeSource" },
     date: { type: Date, required: true, index: true },
@@ -31,6 +31,12 @@ const IncomeSchema = new Schema<IIncome>(
     recurringFrequency: {
       type: String,
       enum: ["weekly", "biweekly", "monthly"],
+      validate: {
+        validator: function (this: any, v: string) {
+          return this.isRecurring ? !!v : true;
+        },
+        message: "recurringFrequency is required when isRecurring is true",
+      },
     },
     notes: { type: String, maxlength: 2000 },
   },

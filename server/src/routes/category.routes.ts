@@ -6,13 +6,22 @@ import {
   updateCategory,
   deleteCategory,
 } from "../controllers/category.controller";
+import { validate } from "../middleware/validate";
+import {
+  createCategorySchema,
+  updateCategorySchema,
+} from "../validation/category.validation";
 
 const router = express.Router();
 
 router.use(authenticateLean);
 
-router.route("/").get(getCategories).post(createCategory);
+router.route("/")
+  .get(getCategories)
+  .post(validate(createCategorySchema), createCategory);
 
-router.route("/:id").put(updateCategory).delete(deleteCategory);
+router.route("/:id")
+  .put(validate(updateCategorySchema), updateCategory)
+  .delete(deleteCategory);
 
 export default router;

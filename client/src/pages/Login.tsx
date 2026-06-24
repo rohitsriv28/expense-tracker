@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-import { useGoogleLogin } from "@react-oauth/google";
+import { useGoogleLogin, GoogleLogin } from "@react-oauth/google";
 import {
   Shield,
   Wallet,
@@ -160,8 +160,8 @@ export default function Login() {
     const hash = window.location.hash;
     if (hash) {
       const params = new URLSearchParams(hash.substring(1)); // Remove the leading '#'
-      const accessToken = params.get("access_token");
-      if (accessToken) {
+      const idToken = params.get("id_token");
+      if (idToken) {
         // Strip hash parameters from location so they don't linger in URL
         window.history.replaceState(
           null,
@@ -172,7 +172,7 @@ export default function Login() {
         const performLogin = async () => {
           try {
             setIsLoading(true);
-            await loginWithToken(accessToken);
+            await loginWithToken(idToken);
           } catch (error) {
             console.error("Redirect login failed:", error);
             setErrorMessage(getErrorMessage(error));
@@ -188,6 +188,7 @@ export default function Login() {
     onSuccess: async (tokenResponse) => {
       try {
         setIsLoading(true);
+        // Fallback or explicit token handler if used elsewhere
         await loginWithToken(tokenResponse.access_token);
       } catch (error) {
         console.error("Login failed:", error);
@@ -207,7 +208,9 @@ export default function Login() {
       const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
       const redirectUri = encodeURIComponent(`${window.location.origin}/login`);
       const scope = encodeURIComponent("openid profile email");
-      const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=token&scope=${scope}`;
+      const nonce = Math.random().toString(36).substring(2);
+      sessionStorage.setItem("google_auth_nonce", nonce);
+      const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=id_token&scope=${scope}&nonce=${nonce}`;
       window.location.href = url;
     } else {
       handleGoogleLogin();
@@ -317,41 +320,66 @@ export default function Login() {
               - Google logo always on a white background
               Reference: https://developers.google.com/identity/branding-guidelines
             */}
-            <button
-              onClick={handleLoginClick}
-              disabled={isLoading}
-              aria-busy={isLoading}
-              className="
-                w-full flex items-center justify-center gap-3
-                px-4 py-3.5
-                bg-white dark:bg-slate-800
-                border border-slate-200 dark:border-slate-700
-                rounded-xl
-                text-sm font-medium text-slate-800 dark:text-slate-100
-                shadow-sm
-                hover:bg-slate-50 dark:hover:bg-slate-700/60
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2
-                active:scale-[0.99]
-                disabled:opacity-60 disabled:cursor-not-allowed
-                transition-all duration-200
-              "
-            >
-              {isLoading ? (
-                <>
-                  {/* Keep layout stable while loading */}
-                  <div
-                    className="w-5 h-5 border-2 border-slate-300 border-t-indigo-500 rounded-full animate-spin flex-shrink-0"
-                    aria-hidden="true"
-                  />
-                  <span>Signing you in…</span>
-                </>
-              ) : (
-                <>
-                  <GoogleIcon className="w-5 h-5 flex-shrink-0" />
-                  <span>Continue with Google</span>
-                </>
-              )}
-            </button>
+            {isStandalone ? (
+              <button
+                onClick={handleLoginClick}
+                disabled={isLoading}
+                aria-busy={isLoading}
+                className="
+                  w-full flex items-center justify-center gap-3
+                  px-4 py-3.5
+                  bg-white dark:bg-slate-800
+                  border border-slate-200 dark:border-slate-700
+                  rounded-xl
+                  text-sm font-medium text-slate-800 dark:text-slate-100
+                  shadow-sm
+                  hover:bg-slate-50 dark:hover:bg-slate-700/60
+                  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2
+                  active:scale-[0.99]
+                  disabled:opacity-60 disabled:cursor-not-allowed
+                  transition-all duration-200
+                "
+              >
+                {isLoading ? (
+                  <>
+                    <div
+                      className="w-5 h-5 border-2 border-slate-300 border-t-indigo-500 rounded-full animate-spin flex-shrink-0"
+                      aria-hidden="true"
+                    />
+                    <span>Signing you in…</span>
+                  </>
+                ) : (
+                  <>
+                    <GoogleIcon className="w-5 h-5 flex-shrink-0" />
+                    <span>Continue with Google (PWA)</span>
+                  </>
+                )}
+              </button>
+            ) : (
+              <div className="flex justify-center w-full min-h-[44px]">
+                <GoogleLogin
+                  onSuccess={async (credentialResponse) => {
+                    if (credentialResponse.credential) {
+                      try {
+                        setIsLoading(true);
+                        await loginWithToken(credentialResponse.credential);
+                      } catch (error) {
+                        console.error("Login failed:", error);
+                        setErrorMessage(getErrorMessage(error));
+                        setIsLoading(false);
+                      }
+                    }
+                  }}
+                  onError={() => {
+                    setErrorMessage("Sign-in failed. Please try again.");
+                  }}
+                  theme="outline"
+                  size="large"
+                  shape="rectangular"
+                  width="384"
+                />
+              </div>
+            )}
 
             {/* Security assurance row */}
             <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400 dark:text-slate-500">

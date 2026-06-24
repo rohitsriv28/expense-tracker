@@ -4,7 +4,7 @@ import User from "../models/User.model";
 
 export const getFrequencyMap = asyncHandler(
   async (req: Request, res: Response) => {
-    const user = await User.findById(req.user!._id);
+    const user = await User.findById(req.user!._id).select("settings.frequencyMap");
     res.json({ success: true, data: user?.settings?.frequencyMap || {} });
   },
 );

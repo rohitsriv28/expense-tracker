@@ -139,11 +139,8 @@ export default function AddExpenseForm({
       amount: finalAmount,
       remarks: fallbackDescription,
       date: date.toISOString(),
-      editCount: expense?.editCount ?? 0,
       category: selectedCategory?._id || selectedCategory?.name || undefined,
       notes: notes.trim() || undefined,
-      updatedAt: new Date().toISOString(),
-      createdAt: expense?.createdAt ?? new Date().toISOString(),
     };
     const sanitizedPayload = Object.fromEntries(
       Object.entries(payload).filter(([, value]) => value !== undefined),
@@ -151,10 +148,7 @@ export default function AddExpenseForm({
 
     try {
       if (expense?._id) {
-        await updateExpense(expense._id, {
-          ...sanitizedPayload,
-          editCount: (expense.editCount ?? 0) + 1,
-        });
+        await updateExpense(expense._id, sanitizedPayload);
         onSaved?.("Expense updated.");
       } else {
         await addExpense(sanitizedPayload);

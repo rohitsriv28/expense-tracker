@@ -32,7 +32,16 @@ const ExpenseSchema = new Schema<IExpense>(
     date: { type: Date, required: true, index: true },
     category: { type: String, trim: true },
     editCount: { type: Number, default: 0 },
-    tags: [{ type: String, trim: true }],
+    tags: {
+      type: [String],
+      trim: true,
+      validate: {
+        validator: function (v: string[]) {
+          return v.length <= 20;
+        },
+        message: "Tags array cannot exceed 20 items",
+      },
+    },
     notes: { type: String, maxlength: 2000, trim: true },
   },
   { timestamps: true },
@@ -41,6 +50,8 @@ const ExpenseSchema = new Schema<IExpense>(
 // Compound indexes for query patterns matching Firestore composite indexes
 ExpenseSchema.index({ userId: 1, date: -1 }); // main listing
 ExpenseSchema.index({ userId: 1, category: 1, date: -1 }); // category filter
+// Note: MongoDB can traverse the { userId: 1, date: -1 } index backwards for ascending sorts,
+// but { userId: 1, date: 1 } is kept explicitly for the retention query to ensure optimal performance.
 ExpenseSchema.index({ userId: 1, date: 1 }); // retention query
 
 export default mongoose.model<IExpense>("Expense", ExpenseSchema);

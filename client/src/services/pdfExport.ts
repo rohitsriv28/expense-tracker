@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
 import html2canvas from "html2canvas-pro";
 import { jsPDF } from "jspdf";
-import PdfReportTemplate from "../components/pdf-preview/PdfReportTemplate";
+import PdfReportTemplate, { TOTAL_PAGES } from "../components/pdf-preview/PdfReportTemplate";
 import PDFWorker from "../workers/pdfWorker?worker";
 
 import type { Income, Expense, Category, MonthlyEnvelopeSummary } from "../types";
@@ -20,6 +20,10 @@ export interface ReportData {
 export let isGenerating = false;
 
 export async function generatePDFReport(data: ReportData): Promise<void> {
+  if (isGenerating) {
+    console.warn("PDF generation is already in progress.");
+    return;
+  }
   isGenerating = true;
   const container = document.createElement("div");
   // Hide it off-screen, but ensure it has dimensions so rendering works
@@ -28,13 +32,14 @@ export async function generatePDFReport(data: ReportData): Promise<void> {
   container.style.top = "0";
   document.body.appendChild(container);
 
-  const root = createRoot(container);
+  let root: any = null;
   const pdfWidth = 595.28;
   const pdfHeight = 841.89;
-  const totalPages = 4; // We know PdfReportTemplate has exactly 4 pages
+  const totalPages = TOTAL_PAGES;
   const images: string[] = [];
 
   try {
+    root = createRoot(container);
     // 1. Capture all pages to images on main thread
     for (let i = 0; i < totalPages; i++) {
       flushSync(() => {

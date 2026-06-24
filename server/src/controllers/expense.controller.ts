@@ -2,40 +2,40 @@ import { Request, Response, NextFunction } from "express";
 import Expense, { IExpense } from "../models/Expense.model";
 import { asyncHandler } from "../utils/asyncHandler";
 import { AppError } from "../utils/AppError";
+import { expenseQuerySchema } from "../validation/expense.validation";
 
 export const getExpenses = asyncHandler(async (req: Request, res: Response) => {
+  const query = expenseQuerySchema.parse(req.query);
   const {
-    page = 1,
-    limit = 10,
+    page,
+    limit,
     startDate,
     endDate,
     category,
-    sortBy = "date",
-    sortDir = "desc",
-  } = req.query;
+    sortBy,
+    sortDir,
+  } = query;
   const userId = req.user!._id;
 
   const filter: Record<string, any> = { userId };
   if (category && category !== "all") filter.category = category;
   if (startDate || endDate) {
     filter.date = {};
-    if (startDate) filter.date.$gte = new Date(startDate as string);
+    if (startDate) filter.date.$gte = new Date(startDate);
     if (endDate) {
-      const end = new Date(endDate as string);
+      const end = new Date(endDate);
       end.setHours(23, 59, 59, 999);
       filter.date.$lte = end;
     }
   }
 
-  const pageNum = Number(page);
-  const limitNum = Number(limit);
-  const skip = (pageNum - 1) * limitNum;
+  const skip = (page - 1) * limit;
   const sort: Record<string, 1 | -1> = {
-    [sortBy as string]: sortDir === "asc" ? 1 : -1,
+    [sortBy]: sortDir === "asc" ? 1 : -1,
   };
 
   const [expenses, total] = await Promise.all([
-    Expense.find(filter).sort(sort).skip(skip).limit(limitNum).lean(),
+    Expense.find(filter).sort(sort).skip(skip).limit(limit).lean(),
     Expense.countDocuments(filter),
   ]);
 
@@ -44,11 +44,11 @@ export const getExpenses = asyncHandler(async (req: Request, res: Response) => {
     data: {
       expenses,
       pagination: {
-        page: pageNum,
-        limit: limitNum,
+        page,
+        limit,
         total,
-        pages: Math.ceil(total / limitNum),
-        hasMore: pageNum * limitNum < total,
+        pages: Math.ceil(total / limit),
+        hasMore: page * limit < total,
       },
     },
   });
@@ -67,7 +67,7 @@ export const getAllExpenses = asyncHandler(
       if (endDate) filter.date.$lte = new Date(endDate as string);
     }
 
-    const expenses = await Expense.find(filter).sort({ date: -1 }).lean();
+    const expenses = await Expense.find(filter).sort({ date: -1 }).limit(1000).lean();
     res.json({ success: true, data: expenses });
   },
 );

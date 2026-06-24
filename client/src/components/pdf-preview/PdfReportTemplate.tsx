@@ -2049,6 +2049,8 @@ function BudgetPerformancePage({ data }: { data: ReportData }) {
 
 // ─── Main Template ────────────────────────────────────────────────────────────
 
+export const TOTAL_PAGES = 4;
+
 export default function PdfReportTemplate({ data, pageIndex }: { data: ReportData; pageIndex?: number }) {
   const pages = [
     <ReportCoverPage key="cover" data={data} />,

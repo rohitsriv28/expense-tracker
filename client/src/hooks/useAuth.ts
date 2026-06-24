@@ -5,12 +5,17 @@ export interface User {
   email: string;
   displayName: string;
   photoURL?: string;
+  settings?: {
+    theme: "light" | "dark" | "system";
+    currency: string;
+    dataRetentionMonths: number;
+  };
 }
 
 export interface AuthContextType {
   user: User | null;
   loading: boolean;
-  loginWithToken: (accessToken: string) => Promise<void>;
+  loginWithToken: (token: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 

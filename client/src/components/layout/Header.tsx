@@ -12,6 +12,7 @@ interface HeaderProps {
 export default function Header({ onLogout }: HeaderProps) {
   const { user } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   return (
     <header className="bg-white dark:bg-slate-900 shadow-sm border-b border-gray-200 dark:border-white/10 sticky top-0 z-40 transition-colors duration-300">
@@ -38,8 +39,26 @@ export default function Header({ onLogout }: HeaderProps) {
               <div className="hidden md:flex items-center space-x-4">
                 <ThemeToggle />
 
-                <div className="relative group z-50">
-                  <div className="cursor-pointer">
+                <div
+                  className="relative z-50"
+                  onMouseEnter={() => setIsProfileOpen(true)}
+                  onMouseLeave={() => setIsProfileOpen(false)}
+                >
+                  <button
+                    onClick={() => setIsProfileOpen(!isProfileOpen)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setIsProfileOpen(!isProfileOpen);
+                      } else if (e.key === "Escape") {
+                        setIsProfileOpen(false);
+                      }
+                    }}
+                    className="cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 rounded-full"
+                    aria-label="User profile menu"
+                    aria-haspopup="true"
+                    aria-expanded={isProfileOpen}
+                  >
                     {user.photoURL ? (
                       <img
                         src={user.photoURL}
@@ -51,10 +70,16 @@ export default function Header({ onLogout }: HeaderProps) {
                         <User className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                       </div>
                     )}
-                  </div>
+                  </button>
 
                   {/* Hover Popover */}
-                  <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 origin-top-right transform scale-95 group-hover:scale-100 p-5 flex flex-col items-center">
+                  <div
+                    className={`absolute right-0 top-full mt-2 w-64 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 transition-all duration-200 origin-top-right transform p-5 flex flex-col items-center ${
+                      isProfileOpen
+                        ? "opacity-100 visible scale-100"
+                        : "opacity-0 invisible pointer-events-none scale-95"
+                    }`}
+                  >
                     {user.photoURL ? (
                       <img
                         src={user.photoURL}
@@ -74,7 +99,10 @@ export default function Header({ onLogout }: HeaderProps) {
                     </p>
 
                     <button
-                      onClick={onLogout}
+                      onClick={() => {
+                        setIsProfileOpen(false);
+                        onLogout();
+                      }}
                       className="w-full inline-flex items-center justify-center px-4 py-2.5 bg-red-50 hover:bg-red-100 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 rounded-xl transition-colors font-semibold text-sm"
                     >
                       <LogOut className="w-4 h-4 mr-2" />

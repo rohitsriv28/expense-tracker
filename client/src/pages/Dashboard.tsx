@@ -95,8 +95,19 @@ export default function Dashboard() {
     if (!user) return;
     fetchData();
 
-    const unsubscribe = subscribeToBroadcast(() => {
-      fetchData();
+    const unsubscribe = subscribeToBroadcast((event) => {
+      if (event.type.startsWith("EXPENSE_")) {
+        getAllExpenses().then(setExpenses).catch(console.error);
+      } else if (event.type.startsWith("INCOME_")) {
+        getIncomes().then(setIncomes).catch(console.error);
+        getIncomeSources().then(setIncomeSources).catch(console.error);
+      } else if (event.type === "BUDGET_UPDATED") {
+        getBudgets().then(setBudgets).catch(console.error);
+      } else if (event.type === "CATEGORY_UPDATED") {
+        getCategories().then(setCategories).catch(console.error);
+      } else {
+        fetchData();
+      }
     });
 
     const handleOfflineSync = () => {

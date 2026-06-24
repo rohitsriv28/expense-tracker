@@ -2,6 +2,7 @@ import cron from "node-cron";
 import mongoose from "mongoose";
 import crypto from "crypto";
 import Expense from "../models/Expense.model";
+import Income from "../models/Income.model";
 import User from "../models/User.model";
 import { logger } from "../utils/logger";
 
@@ -37,7 +38,28 @@ async function releaseLock(lockKey: string): Promise<void> {
     await db
       .collection("_cron_locks")
       .deleteOne({ _id: lockKey as any, instanceId });
-  } catch (err) {}
+  } catch (err) {
+    logger.error(`[DataRetention] Failed to release lock ${lockKey}:`, err);
+  }
+}
+
+async function deleteUserDataForCutoff(user: any): Promise<number> {
+  const retentionMonths = user.settings?.dataRetentionMonths ?? 12;
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - retentionMonths);
+
+  const [expenseResult, incomeResult] = await Promise.all([
+    Expense.deleteMany({
+      userId: user._id,
+      date: { $lt: cutoff },
+    }),
+    Income.deleteMany({
+      userId: user._id,
+      date: { $lt: cutoff },
+    }),
+  ]);
+
+  return (expenseResult.deletedCount || 0) + (incomeResult.deletedCount || 0);
 }
 
 export function startDataRetentionJob() {
@@ -56,26 +78,14 @@ export function startDataRetentionJob() {
 
     try {
       const cursor = User.find({}, "_id settings").cursor();
-      const batchSize = 10;
+      const batchSize = Number(process.env.RETENTION_BATCH_SIZE) || 10;
       let usersBatch = [];
       let doc;
 
       while ((doc = await cursor.next())) {
         usersBatch.push(doc);
         if (usersBatch.length === batchSize) {
-          const deletePromises = usersBatch.map(async (user) => {
-            const retentionMonths = user.settings?.dataRetentionMonths ?? 12;
-            const cutoff = new Date();
-            cutoff.setMonth(cutoff.getMonth() - retentionMonths);
-
-            const result = await Expense.deleteMany({
-              userId: user._id,
-              date: { $lt: cutoff },
-            });
-
-            return result.deletedCount;
-          });
-
+          const deletePromises = usersBatch.map(deleteUserDataForCutoff);
           const counts = await Promise.all(deletePromises);
           totalDeleted += counts.reduce((acc, count) => acc + count, 0);
           usersBatch = [];
@@ -83,19 +93,7 @@ export function startDataRetentionJob() {
       }
 
       if (usersBatch.length > 0) {
-        const deletePromises = usersBatch.map(async (user) => {
-          const retentionMonths = user.settings?.dataRetentionMonths ?? 12;
-          const cutoff = new Date();
-          cutoff.setMonth(cutoff.getMonth() - retentionMonths);
-
-          const result = await Expense.deleteMany({
-            userId: user._id,
-            date: { $lt: cutoff },
-          });
-
-          return result.deletedCount;
-        });
-
+        const deletePromises = usersBatch.map(deleteUserDataForCutoff);
         const counts = await Promise.all(deletePromises);
         totalDeleted += counts.reduce((acc, count) => acc + count, 0);
       }

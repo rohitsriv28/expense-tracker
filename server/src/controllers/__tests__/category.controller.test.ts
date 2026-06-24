@@ -136,8 +136,8 @@ describe('Category Controller', () => {
         .delete(`/api/categories/${cat._id}`)
         .set('Authorization', `Bearer ${token}`);
 
-      // The delete query filters by isDefault: false, so default cats return 404
-      expect(res.status).toBe(404);
+      // Default categories cannot be deleted and return 403 Forbidden
+      expect(res.status).toBe(403);
     });
   });
 });

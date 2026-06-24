@@ -39,47 +39,61 @@ function App() {
   const [failedItems, setFailedItems] = useState<QueuedRequest[]>([]);
 
   useEffect(() => {
+    let syncTimer: ReturnType<typeof setTimeout> | null = null;
+    let toastTimer: ReturnType<typeof setTimeout> | null = null;
+
     // Only show toast when status actually changes from previous state
     if (isOffline !== wasOffline) {
       setShowNetworkToast(true);
       setWasOffline(isOffline);
 
       if (!isOffline && wasOffline) {
-        setTimeout(() => {
-          resetStuckQueueItems().then(() => {
-            processSyncQueue(apiClient).then((summary) => {
-              if (summary && summary.failed > 0) {
-                setFailedItems(summary.failedItems);
-                setShowFailedModal(true);
-              }
-              // After sync queue, refresh stale cached GETs
-              processRefreshQueue((url) => apiClient.get(url));
-            });
-          });
+        syncTimer = setTimeout(() => {
+          resetStuckQueueItems()
+            .then(() => {
+              processSyncQueue(apiClient)
+                .then((summary) => {
+                  if (summary && summary.failed > 0) {
+                    setFailedItems(summary.failedItems);
+                    setShowFailedModal(true);
+                  }
+                  // After sync queue, refresh stale cached GETs
+                  processRefreshQueue((url) => apiClient.get(url)).catch(console.error);
+                })
+                .catch(console.error);
+            })
+            .catch(console.error);
         }, 3000);
       }
 
       // Auto-dismiss toast after 3 seconds
-      const timer = setTimeout(() => {
+      toastTimer = setTimeout(() => {
         setShowNetworkToast(false);
       }, 3000);
-
-      return () => clearTimeout(timer);
     }
+
+    return () => {
+      if (syncTimer) clearTimeout(syncTimer);
+      if (toastTimer) clearTimeout(toastTimer);
+    };
   }, [isOffline, wasOffline]);
 
   useEffect(() => {
     // Run cache eviction once per session
-    evictStaleCacheEntries();
+    evictStaleCacheEntries().catch(console.error);
+  }, []);
 
+  useEffect(() => {
     // Check for existing failed items on mount if online
     if (!isOffline) {
-      getFailedQueueItems().then((items) => {
-        if (items && items.length > 0) {
-          setFailedItems(items);
-          setShowFailedModal(true);
-        }
-      });
+      getFailedQueueItems()
+        .then((items) => {
+          if (items && items.length > 0) {
+            setFailedItems(items);
+            setShowFailedModal(true);
+          }
+        })
+        .catch(console.error);
     }
   }, [isOffline]);
 

@@ -1,6 +1,14 @@
 import dotenv from "dotenv";
 dotenv.config();
 
+const REQUIRED_ENV_VARS = ["MONGODB_URI", "JWT_SECRET", "JWT_REFRESH_SECRET", "GOOGLE_CLIENT_ID"];
+for (const envVar of REQUIRED_ENV_VARS) {
+  if (!process.env[envVar]) {
+    console.error(`Error: Missing required environment variable: ${envVar}`);
+    process.exit(1);
+  }
+}
+
 import mongoose from "mongoose";
 import app from "./app";
 import { logger } from "./utils/logger";
@@ -11,7 +19,7 @@ const MONGODB_URI =
   process.env.MONGODB_URI || "mongodb://localhost:27017/cashflow";
 
 mongoose
-  .connect(MONGODB_URI, { dbName: "cashflow" })
+  .connect(MONGODB_URI)
   .then(async () => {
     logger.info("Connected to MongoDB");
     try {
@@ -21,7 +29,9 @@ mongoose
           { lockedAt: 1 },
           { expireAfterSeconds: 7200, background: true },
         );
-    } catch (e) {}
+    } catch (e) {
+      logger.warn("Failed to create TTL index on _cron_locks:", e);
+    }
     startDataRetentionJob();
     const server = app.listen(PORT, () => {
       logger.info(`Server is running on port ${PORT}`);
@@ -42,10 +52,11 @@ mongoose
       });
 
       // Force exit after 10 seconds if graceful shutdown hangs
-      setTimeout(() => {
+      const forceExit = setTimeout(() => {
         logger.error("Graceful shutdown timed out. Forcing exit.");
         process.exit(1);
       }, 10_000);
+      forceExit.unref();
     };
 
     process.on("SIGTERM", () => shutdown("SIGTERM"));

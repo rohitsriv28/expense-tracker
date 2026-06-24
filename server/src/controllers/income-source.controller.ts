@@ -15,7 +15,7 @@ export const getIncomeSources = asyncHandler(
 
 export const createIncomeSource = asyncHandler(
   async (req: Request, res: Response) => {
-    const { name, icon, color, frequency, expectedAmount, isDefault, type } = req.body;
+    const { name, icon, color, frequency, expectedAmount } = req.body;
 
     if (!name || !icon || !color || !frequency) {
       throw new AppError("Missing required fields", 400);
